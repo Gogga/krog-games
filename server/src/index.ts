@@ -257,6 +257,7 @@ interface Room {
     clock: ClockState;
     clockInterval?: ReturnType<typeof setInterval>;
     drawOffer?: 'white' | 'black';  // Who offered the draw (pending offer)
+    rematchRequest?: 'white' | 'black';  // Who requested the rematch
 }
 
 // Store rooms in memory for MVP
@@ -807,6 +808,127 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('game_over', { reason: 'resignation', winner });
         io.to(roomId).emit('player_resigned', { player: playerColor, winner });
         console.log(`${playerColor} resigned in room ${roomId}, ${winner} wins`);
+    });
+
+    // ==================== REMATCH ====================
+
+    // Request a rematch
+    socket.on('request_rematch', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot request rematches' });
+            return;
+        }
+
+        // Can only request rematch if game is over
+        if (!room.game.isGameOver() && !room.clock.gameStarted) {
+            // Game hasn't started or isn't over - check if it was ended by resignation/draw
+            // We'll allow rematch requests anyway since game_over event was sent
+        }
+
+        // Can't request rematch if you already have a pending request
+        if (room.rematchRequest === playerColor) {
+            socket.emit('error', { message: 'You already have a pending rematch request' });
+            return;
+        }
+
+        // Set the rematch request
+        room.rematchRequest = playerColor;
+
+        // Notify both players
+        io.to(roomId).emit('rematch_requested', { by: playerColor });
+        console.log(`Rematch requested by ${playerColor} in room ${roomId}`);
+    });
+
+    // Accept a rematch request
+    socket.on('accept_rematch', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot accept rematches' });
+            return;
+        }
+
+        // Can only accept if opponent requested
+        if (!room.rematchRequest || room.rematchRequest === playerColor) {
+            socket.emit('error', { message: 'No rematch request to accept' });
+            return;
+        }
+
+        // Clear the rematch request
+        room.rematchRequest = undefined;
+        room.drawOffer = undefined;
+
+        // Swap player colors
+        const whiteSocketId = room.players.white;
+        const blackSocketId = room.players.black;
+        room.players.white = blackSocketId;
+        room.players.black = whiteSocketId;
+
+        // Reset the game
+        room.game.reset();
+
+        // Reset the clock
+        stopClock(room);
+        room.clock = initializeClock(room.timeControl);
+
+        // Notify players of their new colors
+        if (room.players.white) {
+            io.to(room.players.white).emit('player_assigned', { color: 'white' });
+        }
+        if (room.players.black) {
+            io.to(room.players.black).emit('player_assigned', { color: 'black' });
+        }
+
+        // Notify all of rematch accepted and new game state
+        io.to(roomId).emit('rematch_accepted', {});
+        io.to(roomId).emit('game_state', room.game.fen());
+        io.to(roomId).emit('clock_update', {
+            white: room.clock.white,
+            black: room.clock.black,
+            activeColor: null
+        });
+
+        console.log(`Rematch accepted in room ${roomId}, colors swapped`);
+    });
+
+    // Decline a rematch request
+    socket.on('decline_rematch', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot decline rematches' });
+            return;
+        }
+
+        // Can only decline if opponent requested
+        if (!room.rematchRequest || room.rematchRequest === playerColor) {
+            socket.emit('error', { message: 'No rematch request to decline' });
+            return;
+        }
+
+        // Clear the rematch request
+        room.rematchRequest = undefined;
+
+        // Notify both players
+        io.to(roomId).emit('rematch_declined', { by: playerColor });
+        console.log(`Rematch declined by ${playerColor} in room ${roomId}`);
     });
 
     // Get move suggestions for current position

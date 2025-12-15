@@ -6,7 +6,7 @@
 
 **What's Implemented:** Room system, clocks, KROG engine, move explanations, puzzles, openings, PGN export.
 
-**What's Missing:** Board themes, rematch, sound effects.
+**What's Missing:** Board themes, sound effects.
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -16,14 +16,7 @@
 
 ## NEXT TASKS (Priority Order)
 
-### Task 1: Rematch
-**Status:** Not Started
-
-- [ ] Add "Rematch" button after game ends
-- [ ] Swap colors on rematch
-- [ ] Server event: `request_rematch`, `accept_rematch`
-
-### Task 2: Board/Piece Themes
+### Task 1: Board/Piece Themes
 **Status:** Not Started
 
 - [ ] Multiple board color schemes (green, brown, blue, gray)
@@ -31,7 +24,7 @@
 - [ ] Save preference to localStorage
 - [ ] Settings panel in UI
 
-### Task 3: Sound Effects
+### Task 2: Sound Effects
 **Status:** Not Started
 
 - [ ] Move sound
@@ -56,6 +49,7 @@
 - [x] Game over detection (checkmate, stalemate, repetition, insufficient, 50-move)
 - [x] Draw offer with accept/decline
 - [x] Resign with confirmation
+- [x] Rematch with color swap
 
 ### KROG Engine (Phase 1)
 - [x] Full `server/src/krog/` module (12 files)
@@ -192,6 +186,19 @@ chess-project/
 'player_resigned' → { player: string, winner: string }
 ```
 
+### Rematch
+```typescript
+// Client → Server
+'request_rematch' → { roomId: string }
+'accept_rematch'  → { roomId: string }
+'decline_rematch' → { roomId: string }
+
+// Server → Client
+'rematch_requested' → { by: 'white'|'black' }
+'rematch_accepted'  → {}
+'rematch_declined'  → { by: 'white'|'black' }
+```
+
 ### KROG Explanations
 ```typescript
 // Client → Server
@@ -275,7 +282,6 @@ Open 2+ browser tabs to http://localhost:5173
 
 | Issue | Impact | Priority |
 |-------|--------|----------|
-| No rematch | Must create new room | LOW |
 | No themes | Single board style | LOW |
 | No sounds | Less feedback | LOW |
 | In-memory storage | No persistence | LOW (MVP) |

@@ -125,6 +125,7 @@ function App() {
   const [gameOverMessage, setGameOverMessage] = useState<string | null>(null);
   const [drawOffer, setDrawOffer] = useState<'white' | 'black' | null>(null);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
+  const [rematchRequest, setRematchRequest] = useState<'white' | 'black' | null>(null);
   const [moveExplanation, setMoveExplanation] = useState<MoveExplanation | null>(null);
   const [illegalMoveExplanation, setIllegalMoveExplanation] = useState<IllegalMoveExplanation | null>(null);
   const [language, setLanguage] = useState<Language>('en');
@@ -215,6 +216,23 @@ function App() {
       setGameOverMessage(`Resignation - ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins!`);
     }
 
+    function onRematchRequested({ by }: { by: 'white' | 'black' }) {
+      setRematchRequest(by);
+    }
+
+    function onRematchAccepted() {
+      setRematchRequest(null);
+      setGameOverMessage(null);
+      setDrawOffer(null);
+      setMoveExplanation(null);
+      setIllegalMoveExplanation(null);
+      setSuggestions([]);
+    }
+
+    function onRematchDeclined() {
+      setRematchRequest(null);
+    }
+
     function onPlayerAssigned({ color }: { color: PlayerColor }) {
       setPlayerColor(color);
       console.log('Assigned color:', color);
@@ -269,6 +287,9 @@ function App() {
     socket.on('draw_accepted', onDrawAccepted);
     socket.on('draw_declined', onDrawDeclined);
     socket.on('player_resigned', onPlayerResigned);
+    socket.on('rematch_requested', onRematchRequested);
+    socket.on('rematch_accepted', onRematchAccepted);
+    socket.on('rematch_declined', onRematchDeclined);
     socket.on('move_explanation', onMoveExplanation);
     socket.on('illegal_move', onIllegalMove);
     socket.on('move_suggestions', onMoveSuggestions);
@@ -294,6 +315,9 @@ function App() {
       socket.off('draw_accepted', onDrawAccepted);
       socket.off('draw_declined', onDrawDeclined);
       socket.off('player_resigned', onPlayerResigned);
+      socket.off('rematch_requested', onRematchRequested);
+      socket.off('rematch_accepted', onRematchAccepted);
+      socket.off('rematch_declined', onRematchDeclined);
       socket.off('move_explanation', onMoveExplanation);
       socket.off('illegal_move', onIllegalMove);
       socket.off('move_suggestions', onMoveSuggestions);
@@ -359,6 +383,21 @@ function App() {
     if (!roomCode) return;
     setShowResignConfirm(false);
     socket.emit('resign', { roomId: roomCode });
+  };
+
+  const requestRematch = () => {
+    if (!roomCode) return;
+    socket.emit('request_rematch', { roomId: roomCode });
+  };
+
+  const acceptRematch = () => {
+    if (!roomCode) return;
+    socket.emit('accept_rematch', { roomId: roomCode });
+  };
+
+  const declineRematch = () => {
+    if (!roomCode) return;
+    socket.emit('decline_rematch', { roomId: roomCode });
   };
 
   const requestSuggestions = () => {
@@ -896,6 +935,66 @@ function App() {
         </div>
       )}
 
+      {/* Rematch Notification */}
+      {rematchRequest && playerColor !== 'spectator' && gameOverMessage && (
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          background: rematchRequest === playerColor
+            ? 'rgba(74, 144, 217, 0.15)'
+            : 'rgba(129, 182, 76, 0.2)',
+          border: rematchRequest === playerColor
+            ? '2px solid #4a90d9'
+            : '2px solid #81b64c',
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          {rematchRequest === playerColor ? (
+            <div style={{ color: '#4a90d9' }}>
+              Rematch requested. Waiting for opponent...
+            </div>
+          ) : (
+            <div>
+              <div style={{ color: '#81b64c', marginBottom: '12px', fontWeight: 600 }}>
+                Your opponent wants a rematch!
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  onClick={acceptRematch}
+                  style={{
+                    background: '#81b64c',
+                    border: 'none',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontWeight: 600
+                  }}
+                >
+                  Accept Rematch
+                </button>
+                <button
+                  onClick={declineRematch}
+                  style={{
+                    background: '#e74c3c',
+                    border: 'none',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontWeight: 600
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button
           onClick={() => setLearnMode(!learnMode)}
@@ -951,6 +1050,27 @@ function App() {
               Resign
             </button>
           </>
+        )}
+
+        {/* Rematch button - only for players, only after game over */}
+        {playerColor !== 'spectator' && gameOverMessage && (
+          <button
+            onClick={requestRematch}
+            disabled={rematchRequest === playerColor}
+            style={{
+              background: rematchRequest === playerColor ? '#666' : '#81b64c',
+              border: 'none',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '6px',
+              cursor: rematchRequest === playerColor ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              fontWeight: 600,
+              opacity: rematchRequest === playerColor ? 0.6 : 1
+            }}
+          >
+            {rematchRequest === playerColor ? 'Rematch Requested' : 'Rematch'}
+          </button>
         )}
 
         {playerColor !== 'spectator' && (
