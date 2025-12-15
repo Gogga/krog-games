@@ -1,0 +1,530 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "totalOpenings": 62,
+    "totalVariations": 180,
+    "ecoCoverage": "A00-E99",
+    "format": "KROG-enhanced"
+  },
+  "openings": [
+    {
+      "id": "italian",
+      "name": { "en": "Italian Game", "no": "Italiensk Åpning" },
+      "eco": "C50-C59",
+      "moves": "1.e4 e5 2.Nf3 Nc6 3.Bc4",
+      "level": 1,
+      "popularity": 95,
+      "description": {
+        "en": "One of the oldest openings. White develops naturally and targets the f7 pawn.",
+        "no": "En av de eldste åpningene. Hvit utvikler naturlig og sikter på f7-bonden."
+      },
+      "keyIdeas": {
+        "white": [
+          "Control center with pawns and pieces",
+          "Target weak f7 pawn",
+          "Castle kingside quickly",
+          "Prepare d4 pawn break"
+        ],
+        "black": [
+          "Develop pieces harmoniously",
+          "Defend f7 with Be7 or castle",
+          "Counter in center with d6 and later d5"
+        ]
+      },
+      "krog": {
+        "mainTheme": "P(Bc4) → attacks(f7) - weakest square",
+        "strategicFormula": "O(control_center) ∧ O(develop_pieces) ∧ O(castle_early)",
+        "tacticalPatterns": [
+          "R_attack(Bc4, f7) - diagonal pressure",
+          "fork_potential(Ng5, f7_combo)"
+        ]
+      },
+      "statistics": {
+        "whiteWins": 38,
+        "draws": 32,
+        "blackWins": 30,
+        "avgMoves": 35
+      },
+      "variations": [
+        {
+          "id": "giuoco_piano",
+          "name": { "en": "Giuoco Piano", "no": "Giuoco Piano" },
+          "moves": "3...Bc5 4.c3",
+          "eco": "C53-C54",
+          "level": 1,
+          "idea": "Slow build-up, prepare d4",
+          "lines": [
+            {
+              "name": "Main Line",
+              "moves": "4...Nf6 5.d4 exd4 6.cxd4 Bb4+ 7.Bd2",
+              "evaluation": "="
+            },
+            {
+              "name": "Center Attack",
+              "moves": "4...Nf6 5.d4 exd4 6.e5 d5 7.Bb5 Ne4",
+              "evaluation": "="
+            }
+          ]
+        },
+        {
+          "id": "two_knights",
+          "name": { "en": "Two Knights Defense", "no": "To Springere Forsvar" },
+          "moves": "3...Nf6",
+          "eco": "C55-C59",
+          "level": 2,
+          "idea": "Active defense, counterattack",
+          "lines": [
+            {
+              "name": "Fried Liver Attack",
+              "moves": "4.Ng5 d5 5.exd5 Nxd5 6.Nxf7 Kxf7 7.Qf3+",
+              "evaluation": "+/=",
+              "warning": "Sharp! Requires exact play from Black",
+              "krog": "sacrifice(Nf7) → fork(K, Q) if Kxf7"
+            },
+            {
+              "name": "Traxler Counter",
+              "moves": "4.Ng5 Bc5!?",
+              "evaluation": "unclear",
+              "idea": "Black sacrifices f7 for attack on f2"
+            }
+          ]
+        },
+        {
+          "id": "evans_gambit",
+          "name": { "en": "Evans Gambit", "no": "Evans Gambit" },
+          "moves": "3...Bc5 4.b4",
+          "eco": "C51-C52",
+          "level": 3,
+          "idea": "Pawn sacrifice for rapid development",
+          "krog": "P(b4_sacrifice) → O(rapid_development) + initiative",
+          "lines": [
+            {
+              "name": "Accepted",
+              "moves": "4...Bxb4 5.c3 Ba5 6.d4 exd4 7.O-O",
+              "evaluation": "+/="
+            },
+            {
+              "name": "Declined",
+              "moves": "4...Bb6 5.a4 a6",
+              "evaluation": "="
+            }
+          ]
+        }
+      ],
+      "traps": [
+        {
+          "name": "Legal's Trap",
+          "moves": "1.e4 e5 2.Nf3 Nc6 3.Bc4 d6 4.Nc3 Bg4 5.h3 Bh5 6.Nxe5! Bxd1 7.Bxf7+ Ke7 8.Nd5#",
+          "victim": "black",
+          "krog": "sacrifice(Q) → discovered_check → checkmate"
+        },
+        {
+          "name": "Fried Liver Attack",
+          "moves": "1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.Ng5 d5 5.exd5 Nxd5 6.Nxf7!",
+          "victim": "black",
+          "krog": "fork(Nf7, Qd8, Rh8) wins exchange"
+        }
+      ]
+    },
+    {
+      "id": "ruy_lopez",
+      "name": { "en": "Ruy Lopez (Spanish)", "no": "Spansk Åpning" },
+      "eco": "C60-C99",
+      "moves": "1.e4 e5 2.Nf3 Nc6 3.Bb5",
+      "level": 3,
+      "popularity": 90,
+      "description": {
+        "en": "The king of openings. Deep strategic ideas with rich theory.",
+        "no": "Åpningenes konge. Dype strategiske ideer med rik teori."
+      },
+      "keyIdeas": {
+        "white": [
+          "Long-term pressure on e5 via Nc6 pin",
+          "Develop pieces behind pawn center",
+          "Maneuver knights to strong squares",
+          "Prepare f4 or d4 breaks"
+        ],
+        "black": [
+          "Maintain e5 pawn",
+          "Develop counterplay with ...d6, ...a6, ...b5",
+          "Active piece play to compensate for space"
+        ]
+      },
+      "krog": {
+        "mainTheme": "P(Bb5) → R_pressure(Bb5, Nc6, e5)",
+        "strategicFormula": "P(maintain_tension) > P(resolve_tension)"
+      },
+      "variations": [
+        {
+          "id": "morphy_defense",
+          "name": { "en": "Morphy Defense", "no": "Morphy-forsvar" },
+          "moves": "3...a6 4.Ba4 Nf6 5.O-O",
+          "eco": "C78-C99",
+          "level": 3,
+          "lines": [
+            {
+              "name": "Closed Variation",
+              "moves": "5...Be7 6.Re1 b5 7.Bb3 d6 8.c3 O-O",
+              "evaluation": "="
+            },
+            {
+              "name": "Open Variation",
+              "moves": "5...Nxe4 6.d4 b5 7.Bb3 d5 8.dxe5 Be6",
+              "evaluation": "="
+            },
+            {
+              "name": "Marshall Attack",
+              "moves": "5...Be7 6.Re1 b5 7.Bb3 O-O 8.c3 d5",
+              "evaluation": "=/+",
+              "idea": "Pawn sacrifice for kingside attack"
+            }
+          ]
+        },
+        {
+          "id": "berlin_defense",
+          "name": { "en": "Berlin Defense", "no": "Berlin-forsvar" },
+          "moves": "3...Nf6",
+          "eco": "C65-C67",
+          "level": 4,
+          "idea": "Solid, leads to endgame positions",
+          "lines": [
+            {
+              "name": "Berlin Endgame",
+              "moves": "4.O-O Nxe4 5.d4 Nd6 6.Bxc6 dxc6 7.dxe5 Nf5 8.Qxd8+ Kxd8",
+              "evaluation": "=",
+              "note": "Drawish but Black has no weaknesses"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sicilian",
+      "name": { "en": "Sicilian Defense", "no": "Siciliansk Forsvar" },
+      "eco": "B20-B99",
+      "moves": "1.e4 c5",
+      "level": 3,
+      "popularity": 98,
+      "description": {
+        "en": "The most popular response to 1.e4. Creates unbalanced positions.",
+        "no": "Det mest populære svaret på 1.e4. Skaper ubalanserte stillinger."
+      },
+      "keyIdeas": {
+        "white": [
+          "Attack kingside",
+          "Control d5",
+          "Open f-file for rook"
+        ],
+        "black": [
+          "Queenside counterplay",
+          "Use half-open c-file",
+          "Create pawn breaks with ...d5 or ...b5"
+        ]
+      },
+      "krog": {
+        "mainTheme": "P(c5) → asymmetry → P(counterattack)",
+        "strategicFormula": "white_attacks_kingside ∧ black_attacks_queenside"
+      },
+      "variations": [
+        {
+          "id": "najdorf",
+          "name": { "en": "Najdorf Variation", "no": "Najdorf-variant" },
+          "moves": "1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6",
+          "eco": "B90-B99",
+          "level": 4,
+          "idea": "Flexible, prepares ...e5 or ...b5",
+          "lines": [
+            {
+              "name": "English Attack",
+              "moves": "6.Be3 e5 7.Nb3 Be6 8.f3 Be7 9.Qd2 O-O 10.O-O-O",
+              "evaluation": "="
+            },
+            {
+              "name": "6.Bg5",
+              "moves": "6.Bg5 e6 7.f4",
+              "evaluation": "=",
+              "note": "Sharp and double-edged"
+            }
+          ]
+        },
+        {
+          "id": "dragon",
+          "name": { "en": "Dragon Variation", "no": "Drage-varianten" },
+          "moves": "1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 g6",
+          "eco": "B70-B79",
+          "level": 4,
+          "idea": "Fianchetto bishop, kingside pressure",
+          "lines": [
+            {
+              "name": "Yugoslav Attack",
+              "moves": "6.Be3 Bg7 7.f3 O-O 8.Qd2 Nc6 9.Bc4 Bd7 10.O-O-O",
+              "evaluation": "=",
+              "warning": "Very sharp! Opposite side castling"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "french",
+      "name": { "en": "French Defense", "no": "Fransk Forsvar" },
+      "eco": "C00-C19",
+      "moves": "1.e4 e6",
+      "level": 2,
+      "popularity": 75,
+      "description": {
+        "en": "Solid defense. Black aims for ...d5 immediately.",
+        "no": "Solid forsvar. Svart sikter på ...d5 umiddelbart."
+      },
+      "krog": {
+        "mainTheme": "P(e6) → enables(d5) → solid_center",
+        "strategicFormula": "O(challenge_center) via ...d5"
+      },
+      "variations": [
+        {
+          "id": "winawer",
+          "name": { "en": "Winawer Variation", "no": "Winawer-varianten" },
+          "moves": "1.e4 e6 2.d4 d5 3.Nc3 Bb4",
+          "eco": "C15-C19",
+          "level": 3,
+          "idea": "Pin knight, pressure center"
+        },
+        {
+          "id": "tarrasch",
+          "name": { "en": "Tarrasch Variation", "no": "Tarrasch-varianten" },
+          "moves": "1.e4 e6 2.d4 d5 3.Nd2",
+          "eco": "C03-C09",
+          "level": 2,
+          "idea": "Avoid pin, solid"
+        }
+      ]
+    },
+    {
+      "id": "caro_kann",
+      "name": { "en": "Caro-Kann Defense", "no": "Caro-Kann Forsvar" },
+      "eco": "B10-B19",
+      "moves": "1.e4 c6",
+      "level": 1,
+      "popularity": 70,
+      "description": {
+        "en": "Solid, prepares ...d5 while keeping c8 bishop active.",
+        "no": "Solid, forbereder ...d5 mens c8-løperen holdes aktiv."
+      },
+      "krog": {
+        "mainTheme": "P(c6) → enables(d5) ∧ P(Bc8_development)",
+        "strategicFormula": "solid_structure + active_bishop"
+      },
+      "variations": [
+        {
+          "id": "advance",
+          "name": { "en": "Advance Variation", "no": "Fremrykks-varianten" },
+          "moves": "1.e4 c6 2.d4 d5 3.e5",
+          "eco": "B12",
+          "level": 2,
+          "idea": "Space advantage, French-like structure"
+        },
+        {
+          "id": "classical",
+          "name": { "en": "Classical Variation", "no": "Klassisk variant" },
+          "moves": "1.e4 c6 2.d4 d5 3.Nc3 dxe4 4.Nxe4",
+          "eco": "B18-B19",
+          "level": 2,
+          "idea": "Open center, piece play"
+        }
+      ]
+    },
+    {
+      "id": "queens_gambit",
+      "name": { "en": "Queen's Gambit", "no": "Damegambit" },
+      "eco": "D00-D69",
+      "moves": "1.d4 d5 2.c4",
+      "level": 2,
+      "popularity": 90,
+      "description": {
+        "en": "Classic opening. White challenges Black's center immediately.",
+        "no": "Klassisk åpning. Hvit utfordrer svarts senter umiddelbart."
+      },
+      "krog": {
+        "mainTheme": "P(c4) → attacks(d5) → P(gain_center)",
+        "strategicFormula": "O(control_center) via pawn pressure"
+      },
+      "variations": [
+        {
+          "id": "qgd",
+          "name": { "en": "Queen's Gambit Declined", "no": "Avslått Damegambit" },
+          "moves": "2...e6",
+          "eco": "D30-D69",
+          "level": 2,
+          "idea": "Solid defense of d5"
+        },
+        {
+          "id": "qga",
+          "name": { "en": "Queen's Gambit Accepted", "no": "Godtatt Damegambit" },
+          "moves": "2...dxc4",
+          "eco": "D20-D29",
+          "level": 2,
+          "idea": "Take pawn, give up center temporarily"
+        },
+        {
+          "id": "slav",
+          "name": { "en": "Slav Defense", "no": "Slavisk Forsvar" },
+          "moves": "2...c6",
+          "eco": "D10-D19",
+          "level": 3,
+          "idea": "Defend d5, develop bishop before ...e6"
+        }
+      ]
+    },
+    {
+      "id": "london",
+      "name": { "en": "London System", "no": "London-systemet" },
+      "eco": "D00",
+      "moves": "1.d4 d5 2.Bf4",
+      "level": 1,
+      "popularity": 85,
+      "description": {
+        "en": "Universal system. Same setup against most defenses.",
+        "no": "Universalt system. Samme oppsett mot de fleste forsvar."
+      },
+      "keyIdeas": {
+        "white": [
+          "Bf4, e3, Nf3, Bd3, c3",
+          "Solid pyramid pawn structure",
+          "Simple to learn and play"
+        ],
+        "black": [
+          "Challenge with ...c5",
+          "Trade dark-squared bishop",
+          "Active piece play"
+        ]
+      },
+      "krog": {
+        "mainTheme": "fixed_setup → P(same_moves_always)",
+        "advantage": "Easy to learn, hard to refute",
+        "disadvantage": "Slightly passive"
+      },
+      "variations": [
+        {
+          "id": "main_line",
+          "name": { "en": "Main Line", "no": "Hovedlinje" },
+          "moves": "2...Nf6 3.e3 e6 4.Nf3 c5 5.c3 Nc6 6.Bd3",
+          "evaluation": "="
+        }
+      ]
+    },
+    {
+      "id": "kings_indian",
+      "name": { "en": "King's Indian Defense", "no": "Kongeindisk Forsvar" },
+      "eco": "E60-E99",
+      "moves": "1.d4 Nf6 2.c4 g6 3.Nc3 Bg7",
+      "level": 4,
+      "popularity": 75,
+      "description": {
+        "en": "Dynamic hypermodern defense. Black allows center then attacks.",
+        "no": "Dynamisk hypermoderne forsvar. Svart tillater sentrum, så angriper."
+      },
+      "krog": {
+        "mainTheme": "O(allow_center) → P(kingside_attack)",
+        "typicalRace": "White queenside vs Black kingside"
+      },
+      "variations": [
+        {
+          "id": "classical",
+          "name": { "en": "Classical Variation", "no": "Klassisk variant" },
+          "moves": "4.e4 d6 5.Nf3 O-O 6.Be2 e5",
+          "eco": "E92-E99",
+          "level": 4
+        },
+        {
+          "id": "samisch",
+          "name": { "en": "Sämisch Variation", "no": "Sämisch-variant" },
+          "moves": "4.e4 d6 5.f3",
+          "eco": "E80-E89",
+          "level": 4,
+          "idea": "Solid center, slow kingside castling"
+        }
+      ]
+    },
+    {
+      "id": "english",
+      "name": { "en": "English Opening", "no": "Engelsk Åpning" },
+      "eco": "A10-A39",
+      "moves": "1.c4",
+      "level": 3,
+      "popularity": 70,
+      "description": {
+        "en": "Flexible flank opening. Can transpose to many systems.",
+        "no": "Fleksibel flankeåpning. Kan gå over til mange systemer."
+      },
+      "krog": {
+        "mainTheme": "P(c4) → flexible_development",
+        "strategicFormula": "control_d5 ∧ flexible_transpositions"
+      },
+      "variations": [
+        {
+          "id": "symmetrical",
+          "name": { "en": "Symmetrical English", "no": "Symmetrisk Engelsk" },
+          "moves": "1...c5",
+          "idea": "Mirror structure"
+        },
+        {
+          "id": "reversed_sicilian",
+          "name": { "en": "Reversed Sicilian", "no": "Omvendt Siciliansk" },
+          "moves": "1...e5",
+          "idea": "White plays Sicilian setup with extra tempo"
+        }
+      ]
+    },
+    {
+      "id": "nimzo_indian",
+      "name": { "en": "Nimzo-Indian Defense", "no": "Nimzoindisk Forsvar" },
+      "eco": "E20-E59",
+      "moves": "1.d4 Nf6 2.c4 e6 3.Nc3 Bb4",
+      "level": 3,
+      "popularity": 80,
+      "description": {
+        "en": "Sound defense. Black pins knight and controls e4.",
+        "no": "Solid forsvar. Svart binder springeren og kontrollerer e4."
+      },
+      "krog": {
+        "mainTheme": "P(Bb4_pin) → controls(e4)",
+        "strategy": "Trade bishop for knight if doubled pawns"
+      },
+      "variations": [
+        {
+          "id": "rubinstein",
+          "name": { "en": "Rubinstein System", "no": "Rubinstein-system" },
+          "moves": "4.e3",
+          "eco": "E40-E59",
+          "level": 3
+        },
+        {
+          "id": "classical",
+          "name": { "en": "Classical Variation", "no": "Klassisk variant" },
+          "moves": "4.Qc2",
+          "eco": "E32-E39",
+          "level": 3,
+          "idea": "Avoid doubled pawns"
+        }
+      ]
+    }
+  ],
+  "ecoIndex": {
+    "C50-C59": "italian",
+    "C60-C99": "ruy_lopez",
+    "B20-B99": "sicilian",
+    "C00-C19": "french",
+    "B10-B19": "caro_kann",
+    "D00-D69": "queens_gambit",
+    "D00": "london",
+    "E60-E99": "kings_indian",
+    "A10-A39": "english",
+    "E20-E59": "nimzo_indian"
+  },
+  "levelIndex": {
+    "1": ["italian", "caro_kann", "london"],
+    "2": ["french", "queens_gambit"],
+    "3": ["ruy_lopez", "sicilian", "english", "nimzo_indian"],
+    "4": ["kings_indian"]
+  }
+}

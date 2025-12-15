@@ -1,0 +1,430 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "totalLessons": 45,
+    "levelsCovered": [0, 1, 2],
+    "languages": ["en", "no"],
+    "format": "interactive_tutorial"
+  },
+  "levels": [
+    {
+      "level": 0,
+      "name": { "en": "Absolute Beginner", "no": "Helt Nybegynner" },
+      "description": { "en": "Learn how the pieces move", "no": "Lær hvordan brikkene flytter" },
+      "estimatedTime": "2-3 hours",
+      "modules": [
+        {
+          "id": "M0_1",
+          "name": { "en": "The Chess Board", "no": "Sjakkbrettet" },
+          "lessons": [
+            {
+              "id": "L0_1_1",
+              "title": { "en": "Welcome to Chess!", "no": "Velkommen til Sjakk!" },
+              "duration": 5,
+              "content": {
+                "en": "Chess is one of the oldest and most popular games in the world! Two players face each other across a board of 64 squares. Each player commands an army of 16 pieces. The goal? Trap your opponent's King so it cannot escape - checkmate!",
+                "no": "Sjakk er et av de eldste og mest populære spillene i verden! To spillere møtes over et brett med 64 ruter. Hver spiller kommanderer en hær på 16 brikker. Målet? Fang motstanderens Konge slik at den ikke kan flykte - sjakkmatt!"
+              },
+              "keyPoints": [
+                { "en": "64 squares total (8×8)", "no": "64 ruter totalt (8×8)" },
+                { "en": "Alternating light and dark colors", "no": "Vekslende lyse og mørke farger" },
+                { "en": "White square in bottom-right corner", "no": "Hvit rute nederst til høyre" }
+              ],
+              "quiz": [
+                {
+                  "question": { "en": "How many squares are on a chess board?", "no": "Hvor mange ruter er det på et sjakkbrett?" },
+                  "options": ["32", "48", "64", "100"],
+                  "correct": 2
+                }
+              ]
+            },
+            {
+              "id": "L0_1_2",
+              "title": { "en": "Files, Ranks, and Squares", "no": "Linjer, Rader og Ruter" },
+              "duration": 8,
+              "content": {
+                "en": "Every square on the chess board has a name! Files are vertical columns (a-h). Ranks are horizontal rows (1-8). Combine them to name any square: e4, h1, a8.",
+                "no": "Hver rute på sjakkbrettet har et navn! Linjer er vertikale kolonner (a-h). Rader er horisontale rekker (1-8). Kombiner dem for å navngi enhver rute: e4, h1, a8."
+              },
+              "krog": {
+                "formula": "square(file, rank) where file ∈ {a-h}, rank ∈ {1-8}",
+                "note": "KROG: Board = 8×8 matrix with coordinates (file, rank)"
+              },
+              "exercises": [
+                { "type": "click_square", "target": "e4", "instruction": { "en": "Click on square e4", "no": "Klikk på rute e4" } },
+                { "type": "click_square", "target": "a1", "instruction": { "en": "Click on square a1", "no": "Klikk på rute a1" } },
+                { "type": "click_square", "target": "h8", "instruction": { "en": "Click on square h8", "no": "Klikk på rute h8" } }
+              ],
+              "quiz": [
+                {
+                  "question": { "en": "What is the name of the bottom-right corner square?", "no": "Hva heter ruten nederst til høyre?" },
+                  "options": ["a1", "h1", "a8", "h8"],
+                  "correct": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "M0_2",
+          "name": { "en": "The Chess Pieces", "no": "Sjakkbrikkene" },
+          "lessons": [
+            {
+              "id": "L0_2_1",
+              "title": { "en": "The King", "no": "Kongen" },
+              "duration": 8,
+              "piece": "K",
+              "content": {
+                "en": "The King is the most important piece! If your King is trapped (checkmate), you lose. The King moves ONE square in any direction - up, down, left, right, or diagonally.",
+                "no": "Kongen er den viktigste brikken! Hvis din Konge er fanget (sjakkmatt), taper du. Kongen flytter EN rute i hvilken som helst retning."
+              },
+              "krog": {
+                "formula": "P(K_move) ↔ distance = 1 ∧ ¬occupied_by_own ∧ ¬check",
+                "note": "King moves one square unless blocked or would be in check"
+              },
+              "exercises": [
+                { "type": "move_piece", "fen": "8/8/8/4K3/8/8/8/8 w - - 0 1", "validMoves": ["Kd4", "Kd5", "Kd6", "Ke4", "Ke6", "Kf4", "Kf5", "Kf6"] }
+              ],
+              "quiz": [
+                {
+                  "question": { "en": "How many squares can the King move at once?", "no": "Hvor mange ruter kan Kongen flytte om gangen?" },
+                  "options": ["1", "2", "As many as it wants"],
+                  "correct": 0
+                }
+              ]
+            },
+            {
+              "id": "L0_2_2",
+              "title": { "en": "The Queen", "no": "Dronningen" },
+              "duration": 8,
+              "piece": "Q",
+              "content": {
+                "en": "The Queen is the most POWERFUL piece! She combines the Rook and Bishop - she can move any number of squares horizontally, vertically, OR diagonally.",
+                "no": "Dronningen er den KRAFTIGSTE brikken! Hun kombinerer Tårn og Løper - hun kan flytte et hvilket som helst antall ruter horisontalt, vertikalt ELLER diagonalt."
+              },
+              "krog": {
+                "formula": "P(Q_move) ↔ (rank_same ∨ file_same ∨ diagonal) ∧ path_clear",
+                "note": "Queen = Rook + Bishop movement combined"
+              },
+              "quiz": [
+                {
+                  "question": { "en": "The Queen moves like which two pieces combined?", "no": "Dronningen beveger seg som hvilke to brikker kombinert?" },
+                  "options": ["King and Knight", "Rook and Bishop", "Knight and Pawn"],
+                  "correct": 1
+                }
+              ]
+            },
+            {
+              "id": "L0_2_3",
+              "title": { "en": "The Rook", "no": "Tårnet" },
+              "duration": 7,
+              "piece": "R",
+              "content": {
+                "en": "The Rook moves in straight lines - horizontally or vertically - any number of squares. Think of it like a plus sign (+).",
+                "no": "Tårnet flytter i rette linjer - horisontalt eller vertikalt - et hvilket som helst antall ruter. Tenk på det som et plusstegn (+)."
+              },
+              "krog": {
+                "formula": "P(R_move) ↔ (rank_same ∨ file_same) ∧ path_clear",
+                "note": "Rook moves along ranks and files"
+              }
+            },
+            {
+              "id": "L0_2_4",
+              "title": { "en": "The Bishop", "no": "Løperen" },
+              "duration": 7,
+              "piece": "B",
+              "content": {
+                "en": "The Bishop moves diagonally - any number of squares. Each Bishop stays on its starting color forever! You have a light-squared and a dark-squared Bishop.",
+                "no": "Løperen flytter diagonalt - et hvilket som helst antall ruter. Hver Løper forblir på sin startfarge for alltid! Du har en lysfelt og en mørkfelt Løper."
+              },
+              "krog": {
+                "formula": "P(B_move) ↔ diagonal ∧ path_clear ∧ same_color_squares",
+                "note": "Bishop moves diagonally, stays on same color"
+              }
+            },
+            {
+              "id": "L0_2_5",
+              "title": { "en": "The Knight", "no": "Springeren" },
+              "duration": 8,
+              "piece": "N",
+              "content": {
+                "en": "The Knight is unique - it moves in an 'L' shape: 2 squares in one direction, then 1 square perpendicular. The Knight is the ONLY piece that can JUMP over other pieces!",
+                "no": "Springeren er unik - den beveger seg i en 'L'-form: 2 ruter i én retning, så 1 rute vinkelrett. Springeren er den ENESTE brikken som kan HOPPE over andre brikker!"
+              },
+              "krog": {
+                "formula": "P(N_move) ↔ (|Δfile| = 2 ∧ |Δrank| = 1) ∨ (|Δfile| = 1 ∧ |Δrank| = 2)",
+                "note": "Knight jumps in L-shape, ignores obstacles"
+              },
+              "quiz": [
+                {
+                  "question": { "en": "What makes the Knight special?", "no": "Hva gjør Springeren spesiell?" },
+                  "options": ["It's the strongest piece", "It can jump over other pieces", "It can move anywhere"],
+                  "correct": 1
+                }
+              ]
+            },
+            {
+              "id": "L0_2_6",
+              "title": { "en": "The Pawn", "no": "Bonden" },
+              "duration": 10,
+              "piece": "P",
+              "content": {
+                "en": "Pawns move FORWARD only - one square at a time. On their first move, they can choose to move TWO squares. Pawns CAPTURE diagonally. If a pawn reaches the other side, it promotes to another piece!",
+                "no": "Bønder flytter bare FREMOVER - én rute om gangen. På sitt første trekk kan de velge å flytte TO ruter. Bønder SLÅR diagonalt. Hvis en bonde når den andre siden, forvandles den til en annen brikke!"
+              },
+              "krog": {
+                "formula": "P(P_move) ↔ forward(1) ∨ (start_rank ∧ forward(2))\nP(P_capture) ↔ forward_diagonal(1)\npawn_reaches_8th → O(promote)",
+                "note": "Pawns move forward, capture diagonally, must promote on last rank"
+              },
+              "quiz": [
+                {
+                  "question": { "en": "Can a pawn move backwards?", "no": "Kan en bonde gå bakover?" },
+                  "options": ["Yes", "No"],
+                  "correct": 1
+                },
+                {
+                  "question": { "en": "How does a pawn capture?", "no": "Hvordan slår en bonde?" },
+                  "options": ["Straight ahead", "Diagonally", "Sideways"],
+                  "correct": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "level": 1,
+      "name": { "en": "Beginner", "no": "Nybegynner" },
+      "description": { "en": "Master special moves and basic tactics", "no": "Mestre spesielle trekk og grunnleggende taktikk" },
+      "estimatedTime": "3-4 hours",
+      "modules": [
+        {
+          "id": "M1_3",
+          "name": { "en": "Check, Checkmate, and Stalemate", "no": "Sjakk, Sjakkmatt og Patt" },
+          "lessons": [
+            {
+              "id": "L1_3_1",
+              "title": { "en": "Check!", "no": "Sjakk!" },
+              "duration": 8,
+              "content": {
+                "en": "When your King is attacked, you're in CHECK. You MUST get out of check! Three ways: Move the King, Block the attack, Capture the attacker.",
+                "no": "Når Kongen din er angrepet, er du i SJAKK. Du MÅ komme ut av sjakk! Tre måter: Flytt Kongen, Blokker angrepet, Ta angriperen."
+              },
+              "krog": {
+                "formula": "check(K) → O(escape_check)\nP(escape) ↔ move_K ∨ block ∨ capture_attacker",
+                "note": "When in check, you must respond to it"
+              }
+            },
+            {
+              "id": "L1_3_2",
+              "title": { "en": "Checkmate!", "no": "Sjakkmatt!" },
+              "duration": 10,
+              "content": {
+                "en": "CHECKMATE = Check with no escape. The game is over! Your opponent's King is attacked AND cannot escape, block, or capture the attacker.",
+                "no": "SJAKKMATT = Sjakk uten utvei. Partiet er over! Motstanderens Konge er angrepet OG kan ikke flykte, blokkere eller ta angriperen."
+              },
+              "krog": {
+                "formula": "checkmate(K) ↔ check(K) ∧ ¬∃legal_move",
+                "note": "Checkmate = check with no escape = game over"
+              }
+            },
+            {
+              "id": "L1_3_3",
+              "title": { "en": "Stalemate", "no": "Patt" },
+              "duration": 8,
+              "content": {
+                "en": "STALEMATE = Not in check, but NO legal moves. This is a DRAW! Be careful not to accidentally stalemate when you're winning.",
+                "no": "PATT = Ikke i sjakk, men INGEN lovlige trekk. Dette er REMIS! Pass på å ikke gi utilsiktet patt når du vinner."
+              },
+              "krog": {
+                "formula": "stalemate ↔ ¬check(K) ∧ ¬∃legal_move → draw",
+                "note": "Stalemate (no moves, not in check) = draw"
+              }
+            }
+          ]
+        },
+        {
+          "id": "M1_4",
+          "name": { "en": "Special Moves", "no": "Spesielle Trekk" },
+          "lessons": [
+            {
+              "id": "L1_4_1",
+              "title": { "en": "Castling", "no": "Rokade" },
+              "duration": 12,
+              "content": {
+                "en": "Castling moves your King AND Rook in ONE turn! King moves 2 squares toward a Rook, Rook jumps over to the other side. Requirements: Neither piece has moved, squares between are empty, King not in check and doesn't pass through check.",
+                "no": "Rokade flytter Kongen OG Tårnet i ETT trekk! Kongen går 2 ruter mot et Tårn, Tårnet hopper over til den andre siden. Krav: Ingen brikke har flyttet, rutene mellom er tomme, Kongen er ikke i sjakk og passerer ikke gjennom sjakk."
+              },
+              "krog": {
+                "formula": "P(castle) ↔ ¬moved(K) ∧ ¬moved(R) ∧ ¬check ∧ clear_path ∧ ¬attacked(king_path) ∧ ¬attacked(king_dest)",
+                "fide": "Article 3.8"
+              },
+              "exercises": [
+                { "type": "castle", "fen": "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1", "validMoves": ["O-O", "O-O-O"] }
+              ],
+              "quiz": [
+                {
+                  "question": { "en": "How many squares does the King move when castling?", "no": "Hvor mange ruter flytter Kongen ved rokade?" },
+                  "options": ["1", "2", "3"],
+                  "correct": 1
+                },
+                {
+                  "question": { "en": "Can you castle if you're in check?", "no": "Kan du rokere hvis du er i sjakk?" },
+                  "options": ["Yes", "No"],
+                  "correct": 1
+                }
+              ]
+            },
+            {
+              "id": "L1_4_2",
+              "title": { "en": "En Passant", "no": "En Passant" },
+              "duration": 10,
+              "content": {
+                "en": "EN PASSANT (French for 'in passing') - the trickiest rule! Your pawn on 5th rank, enemy pawn moves 2 squares to land beside yours - capture it as if it moved only 1 square. ONLY works on your VERY NEXT MOVE!",
+                "no": "EN PASSANT (Fransk for 'i forbifarten') - den vanskeligste regelen! Din bonde på 5. rad, fiendtlig bonde flytter 2 ruter til å lande ved siden av din - ta den som om den bare flyttet 1 rute. Gjelder KUN på ditt HELT NESTE trekk!"
+              },
+              "krog": {
+                "formula": "P(en_passant) ↔ own_pawn_on_5th ∧ adjacent_enemy_pawn ∧ X⁻¹(double_pawn_advance)\nF[>1_move](en_passant) - Window closes after 1 move",
+                "fide": "Article 3.7.4"
+              }
+            },
+            {
+              "id": "L1_4_3",
+              "title": { "en": "Pawn Promotion", "no": "Bondeforvandling" },
+              "duration": 8,
+              "content": {
+                "en": "When a pawn reaches the end, it MUST become Queen, Rook, Bishop, or Knight. You cannot stay as a pawn or become a King. Usually choose Queen - but sometimes Knight is better (underpromotion)!",
+                "no": "Når en bonde når enden, MÅ den bli Dronning, Tårn, Løper eller Springer. Du kan ikke forbli bonde eller bli Konge. Vanligvis velg Dronning - men noen ganger er Springer bedre (underforvandling)!"
+              },
+              "krog": {
+                "formula": "pawn_reaches_8th → O(promote)\nP(promote_to) ∈ {Q, R, B, N} ∧ F(promote_to_K) ∧ F(remain_P)",
+                "fide": "Article 3.7.5"
+              }
+            }
+          ]
+        },
+        {
+          "id": "M1_5",
+          "name": { "en": "Basic Tactics", "no": "Grunnleggende Taktikk" },
+          "lessons": [
+            {
+              "id": "L1_5_1",
+              "title": { "en": "The Fork", "no": "Gaffelen" },
+              "duration": 10,
+              "content": {
+                "en": "A FORK attacks TWO pieces at once! Knights are famous for forks because of their unique movement. The opponent can only save one piece - you win the other!",
+                "no": "En GAFFEL angriper TO brikker samtidig! Springere er kjent for gafler på grunn av sin unike bevegelse. Motstanderen kan bare redde én brikke - du vinner den andre!"
+              },
+              "krog": {
+                "formula": "fork(attacker, t1, t2) ↔ attacks(attacker, t1) ∧ attacks(attacker, t2)\n→ O(opponent, lose_one)",
+                "note": "Fork attacks two pieces, opponent loses one"
+              }
+            },
+            {
+              "id": "L1_5_2",
+              "title": { "en": "The Pin", "no": "Bindingen" },
+              "duration": 10,
+              "content": {
+                "en": "A PIN restricts a piece from moving because it would expose something more valuable behind it. ABSOLUTE PIN = piece can't legally move (exposes King). RELATIVE PIN = piece can move, but loses material.",
+                "no": "En BINDING hindrer en brikke fra å flytte fordi det ville eksponere noe mer verdifullt bak den. ABSOLUTT BINDING = brikken kan ikke lovlig flytte (eksponerer Kongen). RELATIV BINDING = brikken kan flytte, men taper materiell."
+              },
+              "krog": {
+                "formula": "absolute_pin(piece) ↔ in_line(attacker, piece, king) → F(move_piece)\nrelative_pin(piece, valuable) ↔ in_line(attacker, piece, valuable) → loses_valuable",
+                "note": "Absolute pin to king = piece cannot move legally"
+              }
+            },
+            {
+              "id": "L1_5_3",
+              "title": { "en": "The Skewer", "no": "Spiddet" },
+              "duration": 8,
+              "content": {
+                "en": "A SKEWER is like a reverse pin - the MORE valuable piece is attacked first. When it moves, you capture the piece behind it!",
+                "no": "Et SPIDD er som en omvendt binding - den MER verdifulle brikken angripes først. Når den flytter, tar du brikken bak den!"
+              },
+              "krog": {
+                "formula": "skewer(attacker, valuable, less_valuable) ↔ attacks(attacker, valuable) ∧ in_line(valuable, less_valuable)\n→ captures(less_valuable) after valuable_moves",
+                "note": "Skewer attacks valuable piece, wins piece behind it"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "name": { "en": "Novice", "no": "Novise" },
+      "description": { "en": "Opening principles and strategic thinking", "no": "Åpningsprinsipper og strategisk tenkning" },
+      "estimatedTime": "4-5 hours",
+      "modules": [
+        {
+          "id": "M2_6",
+          "name": { "en": "Opening Principles", "no": "Åpningsprinsipper" },
+          "lessons": [
+            {
+              "id": "L2_6_1",
+              "title": { "en": "Control the Center", "no": "Kontroller Sentrum" },
+              "duration": 10,
+              "content": {
+                "en": "The CENTER (d4, d5, e4, e5) is the most important area! Control it with pawns and pieces. Central pieces can reach more squares.",
+                "no": "SENTRUM (d4, d5, e4, e5) er det viktigste området! Kontroller det med bønder og brikker. Sentrale brikker kan nå flere ruter."
+              },
+              "krog": {
+                "formula": "O(control_center) ↔ maximize(piece_influence, {d4, d5, e4, e5})",
+                "note": "Central control is the most important opening principle"
+              }
+            },
+            {
+              "id": "L2_6_2",
+              "title": { "en": "Develop Your Pieces", "no": "Utvikle Brikkene Dine" },
+              "duration": 10,
+              "content": {
+                "en": "Move your pieces off the back rank! Knights before bishops (usually). Don't move the same piece twice without good reason. Don't bring out your Queen too early.",
+                "no": "Flytt brikkene dine fra bakerste rad! Springere før løpere (vanligvis). Ikke flytt samme brikke to ganger uten god grunn. Ikke ta ut Dronningen for tidlig."
+              },
+              "krog": {
+                "formula": "O(develop_piece) > O(move_developed_piece_again)\nO(develop_minor_pieces) before O(develop_queen)",
+                "note": "Development is key in the opening"
+              }
+            },
+            {
+              "id": "L2_6_3",
+              "title": { "en": "Castle Early", "no": "Roker Tidlig" },
+              "duration": 8,
+              "content": {
+                "en": "Castle to protect your King and connect your Rooks! Usually castle kingside by move 10. Don't leave your King in the center too long.",
+                "no": "Roker for å beskytte Kongen og koble sammen Tårnene! Vanligvis roker kort innen trekk 10. Ikke la Kongen stå i sentrum for lenge."
+              },
+              "krog": {
+                "formula": "O(castle) by move_10 unless tactical_exception\nO(king_safety) → P(castle) ∨ P(artificial_castle)",
+                "note": "Castle early to protect your king"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "lessonIndex": {
+    "L0_1_1": { "level": 0, "module": "M0_1", "next": "L0_1_2" },
+    "L0_1_2": { "level": 0, "module": "M0_1", "next": "L0_2_1" },
+    "L0_2_1": { "level": 0, "module": "M0_2", "next": "L0_2_2" },
+    "L0_2_2": { "level": 0, "module": "M0_2", "next": "L0_2_3" },
+    "L0_2_3": { "level": 0, "module": "M0_2", "next": "L0_2_4" },
+    "L0_2_4": { "level": 0, "module": "M0_2", "next": "L0_2_5" },
+    "L0_2_5": { "level": 0, "module": "M0_2", "next": "L0_2_6" },
+    "L0_2_6": { "level": 0, "module": "M0_2", "next": "L1_3_1" },
+    "L1_3_1": { "level": 1, "module": "M1_3", "next": "L1_3_2" },
+    "L1_3_2": { "level": 1, "module": "M1_3", "next": "L1_3_3" },
+    "L1_3_3": { "level": 1, "module": "M1_3", "next": "L1_4_1" },
+    "L1_4_1": { "level": 1, "module": "M1_4", "next": "L1_4_2" },
+    "L1_4_2": { "level": 1, "module": "M1_4", "next": "L1_4_3" },
+    "L1_4_3": { "level": 1, "module": "M1_4", "next": "L1_5_1" },
+    "L1_5_1": { "level": 1, "module": "M1_5", "next": "L1_5_2" },
+    "L1_5_2": { "level": 1, "module": "M1_5", "next": "L1_5_3" },
+    "L1_5_3": { "level": 1, "module": "M1_5", "next": "L2_6_1" },
+    "L2_6_1": { "level": 2, "module": "M2_6", "next": "L2_6_2" },
+    "L2_6_2": { "level": 2, "module": "M2_6", "next": "L2_6_3" },
+    "L2_6_3": { "level": 2, "module": "M2_6", "next": null }
+  }
+}

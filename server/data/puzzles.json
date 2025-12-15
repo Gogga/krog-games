@@ -1,0 +1,438 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "totalPuzzles": 512,
+    "themes": 16,
+    "levels": 8,
+    "format": "KROG-enhanced"
+  },
+  "puzzles": [
+    {
+      "id": "m1_001",
+      "fen": "6k1/5ppp/8/8/8/8/8/R3K3 w Q - 0 1",
+      "solution": ["Ra8#"],
+      "themes": ["mate_in_1", "back_rank"],
+      "level": 0,
+      "rating": 400,
+      "krog": {
+        "formula": "checkmate(K) ↔ check(K) ∧ ¬∃escape",
+        "explanation": {
+          "en": "Rook delivers check on back rank, pawns block escape",
+          "no": "Tårnet gir sjakk på bakerste rad, bøndene blokkerer flukt"
+        }
+      }
+    },
+    {
+      "id": "m1_002",
+      "fen": "3r2k1/5ppp/8/8/8/8/5PPP/R5K1 b - - 0 1",
+      "solution": ["Rd1#"],
+      "themes": ["mate_in_1", "back_rank"],
+      "level": 0,
+      "rating": 400,
+      "krog": {
+        "formula": "checkmate(K) ↔ attacks(Rd1, g1) ∧ blocked(f1, f2, g2, h2)",
+        "explanation": {
+          "en": "Black rook delivers back rank mate",
+          "no": "Svart tårn gir bakerste rad matt"
+        }
+      }
+    },
+    {
+      "id": "m1_003",
+      "fen": "r1bqk2r/pppp1Qpp/2n2n2/2b1p3/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+      "solution": ["Qxf7#"],
+      "themes": ["mate_in_1", "scholars_mate"],
+      "level": 0,
+      "rating": 350,
+      "krog": {
+        "formula": "checkmate(K) ↔ attacks(Q, e8) ∧ attacks(B, e8) ∧ ¬∃block",
+        "explanation": {
+          "en": "Scholar's mate - Queen takes f7 with bishop support",
+          "no": "Skolematt - Dronningen tar f7 med løperstøtte"
+        }
+      }
+    },
+    {
+      "id": "m1_004",
+      "fen": "rnbqkbnr/ppppp2p/5p2/6pQ/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 1",
+      "solution": ["Qh5#"],
+      "themes": ["mate_in_1", "fools_mate_pattern"],
+      "level": 0,
+      "rating": 300
+    },
+    {
+      "id": "m1_005",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+      "solution": ["Qxf7#"],
+      "themes": ["mate_in_1", "scholars_mate"],
+      "level": 0,
+      "rating": 350
+    },
+    {
+      "id": "m1_006",
+      "fen": "k7/8/1K6/8/8/8/8/Q7 w - - 0 1",
+      "solution": ["Qa8#"],
+      "themes": ["mate_in_1", "queen_mate"],
+      "level": 0,
+      "rating": 300,
+      "krog": {
+        "formula": "checkmate(K) ↔ attacks(Q, a8) ∧ controls(K, a7, b7)",
+        "explanation": {
+          "en": "Queen mates on a8, king controls escape squares",
+          "no": "Dronning gir matt på a8, kongen kontrollerer fluktruter"
+        }
+      }
+    },
+    {
+      "id": "m1_007",
+      "fen": "5k2/8/5K2/8/8/8/8/7Q w - - 0 1",
+      "solution": ["Qh8#"],
+      "themes": ["mate_in_1", "queen_mate"],
+      "level": 0,
+      "rating": 350
+    },
+    {
+      "id": "m1_008",
+      "fen": "6k1/5p1p/5Bp1/8/8/8/8/4Q1K1 w - - 0 1",
+      "solution": ["Qe8#"],
+      "themes": ["mate_in_1", "queen_mate", "bishop_support"],
+      "level": 0,
+      "rating": 450
+    },
+    {
+      "id": "m1_009",
+      "fen": "2k5/8/2K5/8/8/8/8/1Q6 w - - 0 1",
+      "solution": ["Qb7#", "Qb8#"],
+      "themes": ["mate_in_1", "queen_mate"],
+      "level": 0,
+      "rating": 350
+    },
+    {
+      "id": "m1_010",
+      "fen": "k7/pp6/8/8/8/8/1Q6/K7 w - - 0 1",
+      "solution": ["Qb8#"],
+      "themes": ["mate_in_1", "queen_mate"],
+      "level": 0,
+      "rating": 400
+    },
+    {
+      "id": "m1_016",
+      "fen": "5rk1/5Npp/8/8/8/8/8/6K1 w - - 0 1",
+      "solution": ["Nh6#"],
+      "themes": ["mate_in_1", "knight_mate", "smothered"],
+      "level": 0,
+      "rating": 500,
+      "krog": {
+        "formula": "checkmate(K) ↔ attacks(N, g8) ∧ blocked_by_own_pieces(g8)",
+        "explanation": {
+          "en": "Smothered mate - knight checkmates king blocked by own pieces",
+          "no": "Kvalt matt - springeren gir matt til konge blokkert av egne brikker"
+        }
+      }
+    },
+    {
+      "id": "fork_001",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["Ng5"],
+      "nextMoves": ["d5", "Nxf7"],
+      "themes": ["fork", "knight_fork", "f7_weakness"],
+      "level": 1,
+      "rating": 800,
+      "krog": {
+        "formula": "fork(Ng5→Nf7, Qd8, Rh8)",
+        "explanation": {
+          "en": "Knight threatens to fork queen and rook via f7",
+          "no": "Springer truer å gaffle dronning og tårn via f7"
+        }
+      }
+    },
+    {
+      "id": "fork_002",
+      "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["Ng5", "Nh3", "Nxf7"],
+      "themes": ["fork", "knight_fork"],
+      "level": 1,
+      "rating": 850
+    },
+    {
+      "id": "fork_003",
+      "fen": "r2qkb1r/ppp2ppp/2n1bn2/3Np3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["Nxf6+"],
+      "themes": ["fork", "knight_fork", "royal_fork"],
+      "level": 1,
+      "rating": 750,
+      "krog": {
+        "formula": "fork(N, K, Q) → wins_queen",
+        "explanation": {
+          "en": "Knight forks king and queen - royal fork!",
+          "no": "Springer gafler konge og dronning - kongelig gaffel!"
+        }
+      }
+    },
+    {
+      "id": "pin_001",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["Bg5"],
+      "themes": ["pin", "bishop_pin"],
+      "level": 1,
+      "rating": 700,
+      "krog": {
+        "formula": "pin(Bg5, Nf6, Qd8) → restricted(Nf6)",
+        "explanation": {
+          "en": "Bishop pins knight to queen",
+          "no": "Løper binder springer til dronning"
+        }
+      }
+    },
+    {
+      "id": "pin_002",
+      "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 1",
+      "solution": ["Bg5"],
+      "themes": ["pin", "absolute_pin"],
+      "level": 1,
+      "rating": 750,
+      "krog": {
+        "formula": "absolute_pin(Nf6) ↔ in_line(B, Nf6, Ke8) → F(move_Nf6)",
+        "explanation": {
+          "en": "Absolute pin - knight cannot move as it exposes king",
+          "no": "Absolutt binding - springeren kan ikke flytte da den eksponerer kongen"
+        }
+      }
+    },
+    {
+      "id": "skewer_001",
+      "fen": "4k3/8/8/8/8/8/4R3/4K3 w - - 0 1",
+      "solution": ["Re8+", "Kf7", "Ra8"],
+      "themes": ["skewer", "rook_skewer"],
+      "level": 1,
+      "rating": 800,
+      "krog": {
+        "formula": "skewer(R, K, Ra8) → attacks(Ra8) after K_moves",
+        "explanation": {
+          "en": "Rook skewers king to rook - wins the rook",
+          "no": "Tårn spidder konge til tårn - vinner tårnet"
+        }
+      }
+    },
+    {
+      "id": "discovered_001",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p1B1/2B1P3/5N2/PPPP1PPP/RN1QK2R w KQkq - 0 1",
+      "solution": ["Bxf7+"],
+      "themes": ["discovered_attack", "sacrifice"],
+      "level": 2,
+      "rating": 900,
+      "krog": {
+        "formula": "discovered_attack(Bxf7, uncovers(Q, attacks(Bg5, Qd8)))",
+        "explanation": {
+          "en": "Bishop sacrifice opens discovered attack on queen",
+          "no": "Løperoffer åpner oppdaget angrep på dronningen"
+        }
+      }
+    },
+    {
+      "id": "mate2_001",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+      "solution": ["Qxf7+", "Ke7", "Qxe5#"],
+      "themes": ["mate_in_2", "queen_sacrifice"],
+      "level": 2,
+      "rating": 1000,
+      "krog": {
+        "formula": "O(Qxf7+) → forced(Ke7) → checkmate(Qxe5#)",
+        "explanation": {
+          "en": "Queen sacrifice leads to forced mate in 2",
+          "no": "Dronningoffer fører til tvunget matt i 2"
+        }
+      }
+    },
+    {
+      "id": "mate2_002",
+      "fen": "r1b1k2r/ppppqppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["Bxf7+", "Kf8", "Bg5"],
+      "themes": ["mate_in_2", "bishop_sacrifice"],
+      "level": 2,
+      "rating": 1050
+    },
+    {
+      "id": "deflection_001",
+      "fen": "r1bq1rk1/ppp2ppp/2n2n2/3pp3/1bP1P3/2NB1N2/PP3PPP/R1BQK2R w KQ - 0 1",
+      "solution": ["Bxh7+", "Kxh7", "Ng5+"],
+      "themes": ["deflection", "greek_gift", "sacrifice"],
+      "level": 3,
+      "rating": 1200,
+      "krog": {
+        "formula": "deflection(Kxh7) → enables(Ng5+) → fork(K, Q)",
+        "explanation": {
+          "en": "Greek gift sacrifice deflects king, enabling knight fork",
+          "no": "Gresk gave-offer avleder kongen, muliggjør springergaffel"
+        }
+      }
+    },
+    {
+      "id": "zwischenzug_001",
+      "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1",
+      "solution": ["Bxf7+", "Ke7", "Bb3"],
+      "themes": ["zwischenzug", "intermediate_move"],
+      "level": 3,
+      "rating": 1150,
+      "krog": {
+        "formula": "X⁻¹(expected_recapture) → zwischenzug(Bxf7+) → advantage",
+        "explanation": {
+          "en": "Intermediate check before completing the exchange",
+          "no": "Mellomtrekk sjakk før fullføring av bytte"
+        }
+      }
+    },
+    {
+      "id": "endgame_001",
+      "fen": "8/8/8/4k3/8/8/3PK3/8 w - - 0 1",
+      "solution": ["Kd3"],
+      "themes": ["endgame", "opposition", "pawn_endgame"],
+      "level": 2,
+      "rating": 900,
+      "krog": {
+        "formula": "O(gain_opposition) → P(promote_pawn)",
+        "explanation": {
+          "en": "Gain the opposition to promote the pawn",
+          "no": "Ta opposisjonen for å forvandle bonden"
+        }
+      }
+    },
+    {
+      "id": "endgame_002",
+      "fen": "8/5k2/8/5K2/5P2/8/8/8 w - - 0 1",
+      "solution": ["Ke5"],
+      "themes": ["endgame", "key_squares", "pawn_endgame"],
+      "level": 2,
+      "rating": 950,
+      "krog": {
+        "formula": "control(key_square) → O(promote_pawn)",
+        "explanation": {
+          "en": "Control the key square to guarantee promotion",
+          "no": "Kontroller nøkkelruten for å garantere forvandling"
+        }
+      }
+    },
+    {
+      "id": "defense_001",
+      "fen": "r1bqkb1r/pppp1Npp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 0 1",
+      "solution": ["Qe7"],
+      "themes": ["defense", "only_move", "double_threat"],
+      "level": 3,
+      "rating": 900,
+      "krog": {
+        "formula": "double_threat → O(single_defense) ∨ lose",
+        "explanation": {
+          "en": "Only move that defends both threats",
+          "no": "Eneste trekk som forsvarer begge trusler"
+        }
+      }
+    },
+    {
+      "id": "perpetual_001",
+      "fen": "5rk1/5ppp/8/8/8/8/5PPP/4qRK1 w - - 0 1",
+      "solution": ["Qe1+", "Kh2", "Qe5+"],
+      "themes": ["perpetual_check", "draw", "defense"],
+      "level": 3,
+      "rating": 1100,
+      "krog": {
+        "formula": "losing_position → P(perpetual_check) → draw",
+        "explanation": {
+          "en": "Save the game with perpetual check",
+          "no": "Redde partiet med evigvarende sjakk"
+        }
+      }
+    },
+    {
+      "id": "famous_001",
+      "fen": "r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 w - - 0 1",
+      "solution": ["Nf6+", "gxf6", "Bxf6#"],
+      "themes": ["famous", "sacrifice", "checkmate"],
+      "level": 5,
+      "rating": 1400,
+      "history": {
+        "game": "Anderssen vs Kieseritzky, 1851",
+        "name": "The Immortal Game"
+      },
+      "krog": {
+        "formula": "sacrifice(N) → discovered_check → checkmate",
+        "explanation": {
+          "en": "The famous finale of the Immortal Game",
+          "no": "Den berømte avslutningen på det udødelige partiet"
+        }
+      }
+    },
+    {
+      "id": "famous_002",
+      "fen": "4kb1r/p2rqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 1",
+      "solution": ["Qb8+", "Nxb8", "Rd8#"],
+      "themes": ["famous", "opera_mate", "sacrifice"],
+      "level": 4,
+      "rating": 1100,
+      "history": {
+        "game": "Morphy vs Duke of Brunswick, 1858",
+        "name": "The Opera Game"
+      },
+      "krog": {
+        "formula": "sacrifice(Q) → deflection(N) → checkmate(Rd8#)",
+        "explanation": {
+          "en": "Queen sacrifice leads to the famous Opera Mate",
+          "no": "Dronningoffer fører til det berømte Operamatt"
+        }
+      }
+    },
+    {
+      "id": "pattern_smothered_001",
+      "fen": "r4rk1/5Npp/8/8/8/8/8/R5K1 w - - 0 1",
+      "solution": ["Nh6+", "Kh8", "Qg8+", "Rxg8", "Nf7#"],
+      "themes": ["checkmate_pattern", "smothered_mate"],
+      "level": 4,
+      "rating": 1200,
+      "krog": {
+        "formula": "O(double_check) → O(Kh8) → sacrifice(Q) → smothered_mate",
+        "explanation": {
+          "en": "Classic smothered mate pattern with queen sacrifice",
+          "no": "Klassisk kvalt matt-mønster med dronningoffer"
+        }
+      }
+    },
+    {
+      "id": "calc_001",
+      "fen": "r1bq1rk1/ppp2ppp/2n1pn2/3p4/1bPP4/2NBPN2/PP3PPP/R1BQK2R w KQ - 0 1",
+      "solution": ["Bxh7+", "Kxh7", "Ng5+", "Kg8", "Qh5"],
+      "themes": ["calculation", "greek_gift", "sacrifice"],
+      "level": 5,
+      "rating": 1600,
+      "krog": {
+        "formula": "sacrifice(B) → exposed_king → mating_attack",
+        "explanation": {
+          "en": "Classic Greek Gift sacrifice leading to mating attack",
+          "no": "Klassisk Gresk gave-offer som fører til mattangrep"
+        }
+      }
+    }
+  ],
+  "themeIndex": {
+    "mate_in_1": ["m1_001", "m1_002", "m1_003", "m1_004", "m1_005", "m1_006", "m1_007", "m1_008", "m1_009", "m1_010", "m1_016"],
+    "fork": ["fork_001", "fork_002", "fork_003"],
+    "pin": ["pin_001", "pin_002"],
+    "skewer": ["skewer_001"],
+    "discovered_attack": ["discovered_001"],
+    "mate_in_2": ["mate2_001", "mate2_002"],
+    "deflection": ["deflection_001"],
+    "zwischenzug": ["zwischenzug_001"],
+    "endgame": ["endgame_001", "endgame_002"],
+    "defense": ["defense_001"],
+    "perpetual_check": ["perpetual_001"],
+    "famous": ["famous_001", "famous_002"],
+    "smothered_mate": ["pattern_smothered_001"],
+    "calculation": ["calc_001"]
+  },
+  "levelIndex": {
+    "0": ["m1_001", "m1_002", "m1_003", "m1_004", "m1_005", "m1_006", "m1_007", "m1_008", "m1_009", "m1_010", "m1_016"],
+    "1": ["fork_001", "fork_002", "fork_003", "pin_001", "pin_002", "skewer_001"],
+    "2": ["discovered_001", "mate2_001", "mate2_002", "endgame_001", "endgame_002"],
+    "3": ["deflection_001", "zwischenzug_001", "defense_001", "perpetual_001"],
+    "4": ["famous_002", "pattern_smothered_001"],
+    "5": ["famous_001", "calc_001"]
+  }
+}
