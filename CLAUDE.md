@@ -6,7 +6,7 @@
 
 **What's Implemented:** Room system, clocks, KROG engine, move explanations, puzzles, openings, PGN export.
 
-**What's Missing:** Lessons UI, board themes, draw/resign, rematch, sound effects.
+**What's Missing:** Board themes, draw/resign, rematch, sound effects.
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -16,24 +16,7 @@
 
 ## NEXT TASKS (Priority Order)
 
-### Task 1: Lessons UI
-**Status:** Not Started
-**Spec:** `krog/PHASE5-EDUCATION.md`
-
-Data exists (45 lessons in `server/data/lessons.json`) but no UI or server endpoints.
-
-- [ ] Add server endpoints: `get_lessons_list`, `get_lesson`, `complete_lesson`
-- [ ] Create `client/src/components/LessonsMode.tsx`
-- [ ] Add "Lessons" button to lobby (alongside Puzzles/Openings)
-- [ ] Interactive lesson viewer with quizzes
-- [ ] Progress tracking (localStorage for MVP)
-
-**Files to create/modify:**
-- `server/src/index.ts` - Add lesson endpoints
-- `client/src/components/LessonsMode.tsx` - New component
-- `client/src/App.tsx` - Add lessons button and state
-
-### Task 2: Draw Offer & Resign
+### Task 1: Draw Offer & Resign
 **Status:** Not Started
 
 - [ ] Add "Offer Draw" button (only during game, not spectators)
@@ -41,14 +24,14 @@ Data exists (45 lessons in `server/data/lessons.json`) but no UI or server endpo
 - [ ] Server events: `offer_draw`, `accept_draw`, `decline_draw`, `resign`
 - [ ] Show draw offer notification to opponent
 
-### Task 3: Rematch
+### Task 2: Rematch
 **Status:** Not Started
 
 - [ ] Add "Rematch" button after game ends
 - [ ] Swap colors on rematch
 - [ ] Server event: `request_rematch`, `accept_rematch`
 
-### Task 4: Board/Piece Themes
+### Task 3: Board/Piece Themes
 **Status:** Not Started
 
 - [ ] Multiple board color schemes (green, brown, blue, gray)
@@ -56,7 +39,7 @@ Data exists (45 lessons in `server/data/lessons.json`) but no UI or server endpo
 - [ ] Save preference to localStorage
 - [ ] Settings panel in UI
 
-### Task 5: Sound Effects
+### Task 4: Sound Effects
 **Status:** Not Started
 
 - [ ] Move sound
@@ -100,6 +83,8 @@ Data exists (45 lessons in `server/data/lessons.json`) but no UI or server endpo
 - [x] Puzzle mode with 30+ puzzles
 - [x] Opening explorer with 10 major openings
 - [x] Learn mode (hover explanations)
+- [x] Lessons UI with 19 lessons across 3 levels
+- [x] Interactive quizzes with progress tracking
 
 ### Export
 - [x] PGN export (copy to clipboard)
@@ -120,7 +105,8 @@ chess-project/
 │   │   └── components/
 │   │       ├── ChessBoard.tsx   # Board with drag-drop, learn mode
 │   │       ├── PuzzleMode.tsx   # Tactical puzzles
-│   │       └── OpeningExplorer.tsx # Opening tree browser
+│   │       ├── OpeningExplorer.tsx # Opening tree browser
+│   │       └── LessonsMode.tsx  # Interactive lessons with quizzes
 ├── server/                      # Express + Socket.IO + chess.js
 │   ├── src/
 │   │   ├── index.ts             # Server, all socket events
@@ -239,6 +225,18 @@ chess-project/
 'opening_match'  → { opening: Opening|null, isExactMatch: boolean }
 ```
 
+### Lessons
+```typescript
+// Client → Server
+'get_lessons_overview' → void
+'get_lesson'           → { id: string }
+'get_first_lesson'     → void
+
+// Server → Client
+'lessons_overview'     → { levels: LevelSummary[], totalLessons: number }
+'lesson_data'          → LessonData (content, quiz, krog formula, etc.)
+```
+
 ---
 
 ## Running the Project
@@ -268,7 +266,6 @@ Open 2+ browser tabs to http://localhost:5173
 
 | Issue | Impact | Priority |
 |-------|--------|----------|
-| No lessons UI | Can't use 45 lessons | MEDIUM |
 | No draw/resign | Must abandon games | MEDIUM |
 | No rematch | Must create new room | LOW |
 | No themes | Single board style | LOW |

@@ -4,6 +4,7 @@ import { Chess } from 'chess.js';
 import ChessBoard from './components/ChessBoard';
 import PuzzleMode from './components/PuzzleMode';
 import OpeningExplorer from './components/OpeningExplorer';
+import LessonsMode from './components/LessonsMode';
 import './index.css';
 
 // Initialize socket outside component to prevent multiple connections
@@ -133,6 +134,7 @@ function App() {
   const [showHistory, setShowHistory] = useState(true);
   const [puzzleMode, setPuzzleMode] = useState(false);
   const [openingExplorer, setOpeningExplorer] = useState(false);
+  const [lessonsMode, setLessonsMode] = useState(false);
 
   useEffect(() => {
     function onConnect() {
@@ -171,7 +173,7 @@ function App() {
       setClock({ white, black, activeColor });
     }
 
-    function onTimeForfeit({ loser, winner }: { loser: string; winner: string }) {
+    function onTimeForfeit({ winner }: { loser: string; winner: string }) {
       setGameOverMessage(`Time out! ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins on time.`);
     }
 
@@ -405,6 +407,17 @@ function App() {
     );
   }
 
+  // Lessons view
+  if (lessonsMode) {
+    return (
+      <LessonsMode
+        socket={socket}
+        language={language}
+        onExit={() => setLessonsMode(false)}
+      />
+    );
+  }
+
   // Lobby view (no room joined)
   if (!roomCode) {
     return (
@@ -530,12 +543,39 @@ function App() {
             — or practice & learn —
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setLessonsMode(true)}
+              disabled={!isConnected}
+              style={{
+                flex: '1 1 calc(33% - 7px)',
+                minWidth: '100px',
+                background: '#e67e22',
+                border: 'none',
+                color: 'white',
+                padding: '15px 12px',
+                borderRadius: '6px',
+                cursor: isConnected ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit',
+                fontSize: '1rem',
+                fontWeight: 600,
+                opacity: isConnected ? 1 : 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>{'\u{1F393}'}</span>
+              Lessons
+            </button>
+
             <button
               onClick={() => setPuzzleMode(true)}
               disabled={!isConnected}
               style={{
-                flex: 1,
+                flex: '1 1 calc(33% - 7px)',
+                minWidth: '100px',
                 background: '#9b59b6',
                 border: 'none',
                 color: 'white',
@@ -552,7 +592,7 @@ function App() {
                 gap: '8px'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>♟</span>
+              <span style={{ fontSize: '1.2rem' }}>{'\u265F'}</span>
               Puzzles
             </button>
 
@@ -560,7 +600,8 @@ function App() {
               onClick={() => setOpeningExplorer(true)}
               disabled={!isConnected}
               style={{
-                flex: 1,
+                flex: '1 1 calc(33% - 7px)',
+                minWidth: '100px',
                 background: '#2ecc71',
                 border: 'none',
                 color: 'white',
@@ -577,7 +618,7 @@ function App() {
                 gap: '8px'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>📖</span>
+              <span style={{ fontSize: '1.2rem' }}>{'\u{1F4D6}'}</span>
               Openings
             </button>
           </div>

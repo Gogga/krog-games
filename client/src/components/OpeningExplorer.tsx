@@ -123,10 +123,6 @@ const OpeningExplorer: React.FC<OpeningExplorerProps> = ({ socket, language, onE
         setExpandedVariations(newExpanded);
     };
 
-    const selectOpening = (opening: OpeningSummary) => {
-        socket.emit('get_opening', { id: opening.id });
-    };
-
     const playMoves = (moves: string, baseMoves?: string) => {
         const newGame = new Chess();
         const fullMoves = baseMoves ? `${baseMoves} ${moves}` : moves;

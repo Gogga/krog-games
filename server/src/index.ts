@@ -128,6 +128,88 @@ try {
     console.error('Failed to load openings:', error);
 }
 
+// Lesson types
+interface LocalizedText {
+    en: string;
+    no: string;
+}
+
+interface QuizQuestion {
+    question: LocalizedText;
+    options: string[];
+    correct: number;
+}
+
+interface LessonExercise {
+    type: string;
+    target?: string;
+    instruction?: LocalizedText;
+    fen?: string;
+    validMoves?: string[];
+}
+
+interface Lesson {
+    id: string;
+    title: LocalizedText;
+    duration: number;
+    piece?: string;
+    content: LocalizedText;
+    keyPoints?: LocalizedText[];
+    krog?: {
+        formula: string;
+        note?: string;
+        fide?: string;
+    };
+    exercises?: LessonExercise[];
+    quiz?: QuizQuestion[];
+}
+
+interface LessonModule {
+    id: string;
+    name: LocalizedText;
+    lessons: Lesson[];
+}
+
+interface LessonLevel {
+    level: number;
+    name: LocalizedText;
+    description: LocalizedText;
+    estimatedTime: string;
+    modules: LessonModule[];
+}
+
+interface LessonIndex {
+    [key: string]: {
+        level: number;
+        module: string;
+        next: string | null;
+    };
+}
+
+interface LessonData {
+    metadata: {
+        version: string;
+        totalLessons: number;
+        levelsCovered: number[];
+        languages: string[];
+        format: string;
+    };
+    levels: LessonLevel[];
+    lessonIndex: LessonIndex;
+}
+
+// Load lessons from JSON
+let lessonData: LessonData | null = null;
+try {
+    const lessonPath = path.join(__dirname, '../data/lessons.json');
+    lessonData = JSON.parse(fs.readFileSync(lessonPath, 'utf8'));
+    const totalLessons = lessonData!.levels.reduce((acc, level) =>
+        acc + level.modules.reduce((acc2, mod) => acc2 + mod.lessons.length, 0), 0);
+    console.log(`Loaded ${totalLessons} lessons across ${lessonData!.levels.length} levels`);
+} catch (error) {
+    console.error('Failed to load lessons:', error);
+}
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
@@ -856,6 +938,106 @@ io.on('connection', (socket) => {
         } else {
             socket.emit('opening_match', { opening: null, isExactMatch: false });
         }
+    });
+
+    // ==================== LESSONS ====================
+
+    // Get all levels with modules (for navigation)
+    socket.on('get_lessons_overview', () => {
+        if (!lessonData) {
+            socket.emit('error', { message: 'Lessons not available' });
+            return;
+        }
+
+        const overview = lessonData.levels.map(level => ({
+            level: level.level,
+            name: level.name,
+            description: level.description,
+            estimatedTime: level.estimatedTime,
+            modules: level.modules.map(mod => ({
+                id: mod.id,
+                name: mod.name,
+                lessonCount: mod.lessons.length,
+                lessons: mod.lessons.map(l => ({
+                    id: l.id,
+                    title: l.title,
+                    duration: l.duration,
+                    piece: l.piece
+                }))
+            }))
+        }));
+
+        socket.emit('lessons_overview', {
+            levels: overview,
+            totalLessons: lessonData.metadata.totalLessons
+        });
+    });
+
+    // Get a specific lesson by ID
+    socket.on('get_lesson', ({ id }: { id: string }) => {
+        if (!lessonData) {
+            socket.emit('error', { message: 'Lessons not available' });
+            return;
+        }
+
+        // Find the lesson across all levels and modules
+        let foundLesson: Lesson | undefined;
+        let foundLevel: number | undefined;
+        let foundModule: string | undefined;
+
+        for (const level of lessonData.levels) {
+            for (const mod of level.modules) {
+                const lesson = mod.lessons.find(l => l.id === id);
+                if (lesson) {
+                    foundLesson = lesson;
+                    foundLevel = level.level;
+                    foundModule = mod.id;
+                    break;
+                }
+            }
+            if (foundLesson) break;
+        }
+
+        if (!foundLesson) {
+            socket.emit('error', { message: 'Lesson not found' });
+            return;
+        }
+
+        // Get navigation info
+        const indexInfo = lessonData.lessonIndex[id];
+
+        socket.emit('lesson_data', {
+            ...foundLesson,
+            level: foundLevel,
+            module: foundModule,
+            nextLessonId: indexInfo?.next || null
+        });
+    });
+
+    // Get first lesson (for starting fresh)
+    socket.on('get_first_lesson', () => {
+        if (!lessonData || lessonData.levels.length === 0) {
+            socket.emit('error', { message: 'Lessons not available' });
+            return;
+        }
+
+        const firstLevel = lessonData.levels[0];
+        const firstModule = firstLevel.modules[0];
+        const firstLesson = firstModule.lessons[0];
+
+        if (!firstLesson) {
+            socket.emit('error', { message: 'No lessons available' });
+            return;
+        }
+
+        const indexInfo = lessonData.lessonIndex[firstLesson.id];
+
+        socket.emit('lesson_data', {
+            ...firstLesson,
+            level: firstLevel.level,
+            module: firstModule.id,
+            nextLessonId: indexInfo?.next || null
+        });
     });
 
     // Handle disconnection
