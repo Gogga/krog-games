@@ -61,6 +61,73 @@ try {
     console.error('Failed to load puzzles:', error);
 }
 
+// Opening types
+interface OpeningVariationLine {
+    name: string;
+    moves: string;
+    evaluation: string;
+    warning?: string;
+    idea?: string;
+    krog?: string;
+}
+
+interface OpeningVariation {
+    id: string;
+    name: { en: string; no: string };
+    moves: string;
+    eco: string;
+    level: number;
+    idea: string;
+    krog?: string;
+    lines?: OpeningVariationLine[];
+}
+
+interface Opening {
+    id: string;
+    name: { en: string; no: string };
+    eco: string;
+    moves: string;
+    level: number;
+    popularity: number;
+    description: { en: string; no: string };
+    keyIdeas?: {
+        white: string[];
+        black: string[];
+    };
+    krog?: {
+        mainTheme: string;
+        strategicFormula: string;
+        tacticalPatterns?: string[];
+    };
+    statistics?: {
+        whiteWins: number;
+        draws: number;
+        blackWins: number;
+        avgMoves: number;
+    };
+    variations?: OpeningVariation[];
+}
+
+interface OpeningData {
+    metadata: {
+        version: string;
+        totalOpenings: number;
+        totalVariations: number;
+    };
+    openings: Opening[];
+}
+
+// Load openings from JSON
+let openings: Opening[] = [];
+try {
+    const openingPath = path.join(__dirname, '../data/openings.json');
+    const openingData: OpeningData = JSON.parse(fs.readFileSync(openingPath, 'utf8'));
+    openings = openingData.openings;
+    console.log(`Loaded ${openings.length} openings`);
+} catch (error) {
+    console.error('Failed to load openings:', error);
+}
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
@@ -725,6 +792,70 @@ io.on('connection', (socket) => {
             currentIndex: newIndex,
             totalPuzzles: puzzles.length
         });
+    });
+
+    // ==================== OPENING EXPLORER ====================
+
+    // Get all openings (for tree view)
+    socket.on('get_openings', () => {
+        const openingsList = openings.map(o => ({
+            id: o.id,
+            name: o.name,
+            eco: o.eco,
+            moves: o.moves,
+            level: o.level,
+            popularity: o.popularity,
+            description: o.description,
+            statistics: o.statistics,
+            variationCount: o.variations?.length || 0
+        }));
+
+        socket.emit('openings_list', {
+            openings: openingsList,
+            total: openings.length
+        });
+    });
+
+    // Get specific opening with full details
+    socket.on('get_opening', ({ id }: { id: string }) => {
+        const opening = openings.find(o => o.id === id);
+        if (!opening) {
+            socket.emit('error', { message: 'Opening not found' });
+            return;
+        }
+
+        socket.emit('opening_data', opening);
+    });
+
+    // Get opening by current position (match moves)
+    socket.on('get_opening_by_moves', ({ moves }: { moves: string }) => {
+        // Find opening that matches these moves
+        const matchingOpening = openings.find(o => {
+            if (moves.startsWith(o.moves) || o.moves.startsWith(moves)) {
+                return true;
+            }
+            // Check variations too
+            return o.variations?.some(v => {
+                const fullMoves = o.moves + ' ' + v.moves;
+                return moves.startsWith(fullMoves) || fullMoves.startsWith(moves);
+            });
+        });
+
+        if (matchingOpening) {
+            socket.emit('opening_match', {
+                opening: {
+                    id: matchingOpening.id,
+                    name: matchingOpening.name,
+                    eco: matchingOpening.eco,
+                    moves: matchingOpening.moves,
+                    description: matchingOpening.description,
+                    krog: matchingOpening.krog
+                },
+                isExactMatch: matchingOpening.moves === moves
+            });
+        } else {
+            socket.emit('opening_match', { opening: null, isExactMatch: false });
+        }
     });
 
     // Handle disconnection
