@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
 import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
@@ -52,6 +52,10 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
     const [solvedKrog, setSolvedKrog] = useState<PuzzleData['krog'] | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Ref to track current game state for use in callbacks
+    const gameRef = useRef<Chess>(game);
+    gameRef.current = game;
+
     // Determine who plays (based on whose turn it is in the puzzle FEN)
     const playerColor = game.turn() === 'w' ? 'white' : 'black';
 
@@ -93,9 +97,10 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                 if (result.hint) {
                     setHint(result.hint);
                 }
-                // Undo the incorrect move
-                game.undo();
-                setGame(new Chess(game.fen()));
+                // Undo the incorrect move using ref to get current state
+                const currentGame = gameRef.current;
+                currentGame.undo();
+                setGame(new Chess(currentGame.fen()));
             }
         };
 
