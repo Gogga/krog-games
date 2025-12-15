@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard from './components/ChessBoard';
+import PuzzleMode from './components/PuzzleMode';
 import './index.css';
 
 // Initialize socket outside component to prevent multiple connections
@@ -129,6 +130,7 @@ function App() {
   const [suggestions, setSuggestions] = useState<MoveSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
+  const [puzzleMode, setPuzzleMode] = useState(false);
 
   useEffect(() => {
     function onConnect() {
@@ -318,6 +320,17 @@ function App() {
     }
   };
 
+  // Puzzle Mode view
+  if (puzzleMode) {
+    return (
+      <PuzzleMode
+        socket={socket}
+        language={language}
+        onExit={() => setPuzzleMode(false)}
+      />
+    );
+  }
+
   // Lobby view (no room joined)
   if (!roomCode) {
     return (
@@ -437,6 +450,36 @@ function App() {
               {error}
             </div>
           )}
+
+          {/* Puzzle Mode */}
+          <div style={{ textAlign: 'center', color: '#666', margin: '20px 0' }}>
+            — or practice tactics —
+          </div>
+
+          <button
+            onClick={() => setPuzzleMode(true)}
+            disabled={!isConnected}
+            style={{
+              width: '100%',
+              background: '#9b59b6',
+              border: 'none',
+              color: 'white',
+              padding: '15px 20px',
+              borderRadius: '6px',
+              cursor: isConnected ? 'pointer' : 'not-allowed',
+              fontFamily: 'inherit',
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              opacity: isConnected ? 1 : 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px'
+            }}
+          >
+            <span style={{ fontSize: '1.3rem' }}>♟</span>
+            Puzzle Mode
+          </button>
         </div>
       </div>
     );

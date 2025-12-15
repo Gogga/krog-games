@@ -3,6 +3,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { Chess } from 'chess.js';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
     explainMove,
     Square,
@@ -20,6 +22,44 @@ app.use(cors());
 
 // Load opening book at startup
 loadOpeningBook();
+
+// Puzzle types
+interface Puzzle {
+    id: string;
+    fen: string;
+    solution: string[];
+    themes: string[];
+    level: number;
+    rating: number;
+    krog?: {
+        formula: string;
+        explanation: {
+            en: string;
+            no: string;
+        };
+    };
+}
+
+interface PuzzleData {
+    metadata: {
+        version: string;
+        totalPuzzles: number;
+        themes: number;
+        levels: number;
+    };
+    puzzles: Puzzle[];
+}
+
+// Load puzzles from JSON
+let puzzles: Puzzle[] = [];
+try {
+    const puzzlePath = path.join(__dirname, '../data/puzzles.json');
+    const puzzleData: PuzzleData = JSON.parse(fs.readFileSync(puzzlePath, 'utf8'));
+    puzzles = puzzleData.puzzles;
+    console.log(`Loaded ${puzzles.length} puzzles`);
+} catch (error) {
+    console.error('Failed to load puzzles:', error);
+}
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -544,6 +584,147 @@ io.on('connection', (socket) => {
             console.error('Error evaluating position:', error);
             socket.emit('error', { message: 'Failed to evaluate position' });
         }
+    });
+
+    // ==================== PUZZLE MODE ====================
+
+    // Get list of puzzles with optional filters
+    socket.on('get_puzzles_list', ({ theme, level, limit }: { theme?: string; level?: number; limit?: number }) => {
+        let filtered = puzzles;
+
+        if (theme) {
+            filtered = filtered.filter(p => p.themes.includes(theme));
+        }
+        if (level !== undefined) {
+            filtered = filtered.filter(p => p.level === level);
+        }
+
+        const result = (limit ? filtered.slice(0, limit) : filtered).map(p => ({
+            id: p.id,
+            themes: p.themes,
+            level: p.level,
+            rating: p.rating
+        }));
+
+        socket.emit('puzzles_list', {
+            puzzles: result,
+            total: filtered.length,
+            themes: [...new Set(puzzles.flatMap(p => p.themes))],
+            levels: [...new Set(puzzles.map(p => p.level))].sort((a, b) => a - b)
+        });
+    });
+
+    // Get a specific puzzle or random one
+    socket.on('get_puzzle', ({ id, random, theme, level }: { id?: string; random?: boolean; theme?: string; level?: number }) => {
+        let puzzle: Puzzle | undefined;
+
+        if (id) {
+            puzzle = puzzles.find(p => p.id === id);
+        } else if (random) {
+            let candidates = puzzles;
+            if (theme) {
+                candidates = candidates.filter(p => p.themes.includes(theme));
+            }
+            if (level !== undefined) {
+                candidates = candidates.filter(p => p.level === level);
+            }
+            if (candidates.length > 0) {
+                puzzle = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+        } else {
+            // Return first puzzle
+            puzzle = puzzles[0];
+        }
+
+        if (!puzzle) {
+            socket.emit('error', { message: 'Puzzle not found' });
+            return;
+        }
+
+        // Find index for navigation
+        const currentIndex = puzzles.findIndex(p => p.id === puzzle!.id);
+
+        socket.emit('puzzle_data', {
+            id: puzzle.id,
+            fen: puzzle.fen,
+            themes: puzzle.themes,
+            level: puzzle.level,
+            rating: puzzle.rating,
+            solutionLength: puzzle.solution.length,
+            krog: puzzle.krog,
+            currentIndex,
+            totalPuzzles: puzzles.length
+        });
+    });
+
+    // Check if a move is correct for the puzzle
+    socket.on('check_puzzle_move', ({ puzzleId, moveIndex, move }: { puzzleId: string; moveIndex: number; move: string }) => {
+        const puzzle = puzzles.find(p => p.id === puzzleId);
+        if (!puzzle) {
+            socket.emit('error', { message: 'Puzzle not found' });
+            return;
+        }
+
+        // Get expected move(s) at this index
+        const expectedMoves = puzzle.solution[moveIndex];
+        if (!expectedMoves) {
+            socket.emit('puzzle_move_result', {
+                correct: false,
+                message: 'No more moves expected',
+                completed: true
+            });
+            return;
+        }
+
+        // Check if move matches (solution can have multiple correct answers separated by commas or as array)
+        const correctMoves = Array.isArray(expectedMoves) ? expectedMoves : [expectedMoves];
+        const isCorrect = correctMoves.some(cm => cm === move || cm.replace(/[+#]/, '') === move.replace(/[+#]/, ''));
+
+        if (isCorrect) {
+            const isComplete = moveIndex >= puzzle.solution.length - 1;
+            socket.emit('puzzle_move_result', {
+                correct: true,
+                completed: isComplete,
+                message: isComplete ? 'Puzzle solved!' : 'Correct! Keep going...',
+                krog: isComplete ? puzzle.krog : undefined
+            });
+        } else {
+            socket.emit('puzzle_move_result', {
+                correct: false,
+                completed: false,
+                message: 'Incorrect move. Try again!',
+                hint: `The correct move starts with ${expectedMoves.toString().charAt(0)}...`
+            });
+        }
+    });
+
+    // Get next/previous puzzle
+    socket.on('get_adjacent_puzzle', ({ currentId, direction }: { currentId: string; direction: 'next' | 'prev' }) => {
+        const currentIndex = puzzles.findIndex(p => p.id === currentId);
+        if (currentIndex === -1) {
+            socket.emit('error', { message: 'Current puzzle not found' });
+            return;
+        }
+
+        let newIndex: number;
+        if (direction === 'next') {
+            newIndex = (currentIndex + 1) % puzzles.length;
+        } else {
+            newIndex = currentIndex === 0 ? puzzles.length - 1 : currentIndex - 1;
+        }
+
+        const puzzle = puzzles[newIndex];
+        socket.emit('puzzle_data', {
+            id: puzzle.id,
+            fen: puzzle.fen,
+            themes: puzzle.themes,
+            level: puzzle.level,
+            rating: puzzle.rating,
+            solutionLength: puzzle.solution.length,
+            krog: puzzle.krog,
+            currentIndex: newIndex,
+            totalPuzzles: puzzles.length
+        });
     });
 
     // Handle disconnection
