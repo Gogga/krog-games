@@ -128,6 +128,7 @@ function App() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<MoveSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
 
   useEffect(() => {
     function onConnect() {
@@ -1087,6 +1088,111 @@ function App() {
                 {game.isGameOver()
                   ? (language === 'en' ? 'Game is over' : 'Spillet er over')
                   : (language === 'en' ? 'Click Refresh to get suggestions' : 'Klikk Oppdater for å få forslag')}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Move History Panel */}
+      <div style={{
+        marginTop: '20px',
+        background: 'var(--bg-secondary)',
+        borderRadius: '12px',
+        overflow: 'hidden'
+      }}>
+        {/* Header with toggle */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 16px',
+          background: 'rgba(0,0,0,0.2)',
+          borderBottom: showHistory ? '1px solid #333' : 'none'
+        }}>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '1rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <span style={{ transform: showHistory ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
+              ▶
+            </span>
+            {language === 'en' ? 'Move History' : 'Trekkhistorikk'}
+          </button>
+          {showHistory && game.history().length > 0 && (
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>
+              {Math.ceil(game.history().length / 2)} {language === 'en' ? 'moves' : 'trekk'}
+            </span>
+          )}
+        </div>
+
+        {/* History content */}
+        {showHistory && (
+          <div style={{ padding: '16px' }}>
+            {game.history().length > 0 ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr 1fr',
+                gap: '4px 12px',
+                fontFamily: 'monospace',
+                fontSize: '0.95rem'
+              }}>
+                {(() => {
+                  const moves = game.history();
+                  const rows = [];
+                  for (let i = 0; i < moves.length; i += 2) {
+                    const moveNumber = Math.floor(i / 2) + 1;
+                    const whiteMove = moves[i];
+                    const blackMove = moves[i + 1];
+                    const isLastWhite = i === moves.length - 1 || i === moves.length - 2;
+                    const isLastBlack = i + 1 === moves.length - 1;
+
+                    rows.push(
+                      <React.Fragment key={moveNumber}>
+                        {/* Move number */}
+                        <span style={{ color: '#666', textAlign: 'right' }}>
+                          {moveNumber}.
+                        </span>
+                        {/* White's move */}
+                        <span style={{
+                          color: isLastWhite && !blackMove ? '#81b64c' : '#fff',
+                          fontWeight: isLastWhite && !blackMove ? 700 : 400,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: isLastWhite && !blackMove ? 'rgba(129, 182, 76, 0.2)' : 'transparent'
+                        }}>
+                          {whiteMove}
+                        </span>
+                        {/* Black's move */}
+                        <span style={{
+                          color: isLastBlack ? '#81b64c' : '#ccc',
+                          fontWeight: isLastBlack ? 700 : 400,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: isLastBlack ? 'rgba(129, 182, 76, 0.2)' : 'transparent'
+                        }}>
+                          {blackMove || ''}
+                        </span>
+                      </React.Fragment>
+                    );
+                  }
+                  return rows;
+                })()}
+              </div>
+            ) : (
+              <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
+                {language === 'en' ? 'No moves yet' : 'Ingen trekk ennå'}
               </div>
             )}
           </div>
