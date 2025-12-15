@@ -123,6 +123,8 @@ function App() {
   const [timeControl, setTimeControl] = useState<TimeControl | null>(null);
   const [clock, setClock] = useState<ClockState>({ white: 0, black: 0, activeColor: null });
   const [gameOverMessage, setGameOverMessage] = useState<string | null>(null);
+  const [drawOffer, setDrawOffer] = useState<'white' | 'black' | null>(null);
+  const [showResignConfirm, setShowResignConfirm] = useState(false);
   const [moveExplanation, setMoveExplanation] = useState<MoveExplanation | null>(null);
   const [illegalMoveExplanation, setIllegalMoveExplanation] = useState<IllegalMoveExplanation | null>(null);
   const [language, setLanguage] = useState<Language>('en');
@@ -184,13 +186,33 @@ function App() {
         repetition: 'Threefold repetition - Draw',
         insufficient: 'Insufficient material - Draw',
         fifty_moves: 'Fifty-move rule - Draw',
-        timeout: 'Time out'
+        timeout: 'Time out',
+        agreement: 'Draw by agreement',
+        resignation: 'Resignation'
       };
+      setDrawOffer(null); // Clear any pending draw offer
       if (winner === 'draw') {
         setGameOverMessage(reasonText[reason] || 'Game Over - Draw');
       } else {
         setGameOverMessage(`${reasonText[reason] || 'Game Over'} - ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins!`);
       }
+    }
+
+    function onDrawOffered({ by }: { by: 'white' | 'black' }) {
+      setDrawOffer(by);
+    }
+
+    function onDrawAccepted() {
+      setDrawOffer(null);
+    }
+
+    function onDrawDeclined() {
+      setDrawOffer(null);
+    }
+
+    function onPlayerResigned({ winner }: { player: string; winner: string }) {
+      setDrawOffer(null);
+      setGameOverMessage(`Resignation - ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins!`);
     }
 
     function onPlayerAssigned({ color }: { color: PlayerColor }) {
@@ -243,6 +265,10 @@ function App() {
     socket.on('clock_update', onClockUpdate);
     socket.on('time_forfeit', onTimeForfeit);
     socket.on('game_over', onGameOver);
+    socket.on('draw_offered', onDrawOffered);
+    socket.on('draw_accepted', onDrawAccepted);
+    socket.on('draw_declined', onDrawDeclined);
+    socket.on('player_resigned', onPlayerResigned);
     socket.on('move_explanation', onMoveExplanation);
     socket.on('illegal_move', onIllegalMove);
     socket.on('move_suggestions', onMoveSuggestions);
@@ -264,6 +290,10 @@ function App() {
       socket.off('clock_update', onClockUpdate);
       socket.off('time_forfeit', onTimeForfeit);
       socket.off('game_over', onGameOver);
+      socket.off('draw_offered', onDrawOffered);
+      socket.off('draw_accepted', onDrawAccepted);
+      socket.off('draw_declined', onDrawDeclined);
+      socket.off('player_resigned', onPlayerResigned);
       socket.off('move_explanation', onMoveExplanation);
       socket.off('illegal_move', onIllegalMove);
       socket.off('move_suggestions', onMoveSuggestions);
@@ -306,7 +336,29 @@ function App() {
     setMoveExplanation(null);
     setIllegalMoveExplanation(null);
     setSuggestions([]);
+    setDrawOffer(null);
     socket.emit('reset_game', roomCode);
+  };
+
+  const offerDraw = () => {
+    if (!roomCode) return;
+    socket.emit('offer_draw', { roomId: roomCode });
+  };
+
+  const acceptDraw = () => {
+    if (!roomCode) return;
+    socket.emit('accept_draw', { roomId: roomCode });
+  };
+
+  const declineDraw = () => {
+    if (!roomCode) return;
+    socket.emit('decline_draw', { roomId: roomCode });
+  };
+
+  const resign = () => {
+    if (!roomCode) return;
+    setShowResignConfirm(false);
+    socket.emit('resign', { roomId: roomCode });
   };
 
   const requestSuggestions = () => {
@@ -737,6 +789,113 @@ function App() {
         )}
       </div>
 
+      {/* Draw Offer Notification */}
+      {drawOffer && playerColor !== 'spectator' && !gameOverMessage && (
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          background: drawOffer === playerColor
+            ? 'rgba(74, 144, 217, 0.15)'
+            : 'rgba(230, 126, 34, 0.2)',
+          border: drawOffer === playerColor
+            ? '2px solid #4a90d9'
+            : '2px solid #e67e22',
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          {drawOffer === playerColor ? (
+            <div style={{ color: '#4a90d9' }}>
+              Draw offer sent. Waiting for opponent...
+            </div>
+          ) : (
+            <div>
+              <div style={{ color: '#e67e22', marginBottom: '12px', fontWeight: 600 }}>
+                Your opponent offers a draw
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  onClick={acceptDraw}
+                  style={{
+                    background: '#81b64c',
+                    border: 'none',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontWeight: 600
+                  }}
+                >
+                  Accept Draw
+                </button>
+                <button
+                  onClick={declineDraw}
+                  style={{
+                    background: '#e74c3c',
+                    border: 'none',
+                    color: 'white',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontWeight: 600
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Resign Confirmation */}
+      {showResignConfirm && (
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          background: 'rgba(231, 76, 60, 0.2)',
+          border: '2px solid #e74c3c',
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}>
+          <div style={{ color: '#e74c3c', marginBottom: '12px', fontWeight: 600 }}>
+            Are you sure you want to resign?
+          </div>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <button
+              onClick={resign}
+              style={{
+                background: '#e74c3c',
+                border: 'none',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontWeight: 600
+              }}
+            >
+              Yes, Resign
+            </button>
+            <button
+              onClick={() => setShowResignConfirm(false)}
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid #444',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button
           onClick={() => setLearnMode(!learnMode)}
@@ -754,9 +913,46 @@ function App() {
             gap: '6px'
           }}
         >
-          <span style={{ fontSize: '1.1rem' }}>📚</span>
+          <span style={{ fontSize: '1.1rem' }}>{'\u{1F4DA}'}</span>
           {learnMode ? 'Learn Mode ON' : 'Learn Mode'}
         </button>
+
+        {/* Draw/Resign buttons - only for players, only during active game */}
+        {playerColor !== 'spectator' && !gameOverMessage && (
+          <>
+            <button
+              onClick={offerDraw}
+              disabled={drawOffer === playerColor}
+              style={{
+                background: drawOffer === playerColor ? '#666' : '#e67e22',
+                border: 'none',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: drawOffer === playerColor ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+                opacity: drawOffer === playerColor ? 0.6 : 1
+              }}
+            >
+              {drawOffer === playerColor ? 'Draw Offered' : 'Offer Draw'}
+            </button>
+            <button
+              onClick={() => setShowResignConfirm(true)}
+              style={{
+                background: '#c0392b',
+                border: 'none',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              Resign
+            </button>
+          </>
+        )}
+
         {playerColor !== 'spectator' && (
           <button
             onClick={resetGame}

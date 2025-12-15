@@ -6,7 +6,7 @@
 
 **What's Implemented:** Room system, clocks, KROG engine, move explanations, puzzles, openings, PGN export.
 
-**What's Missing:** Board themes, draw/resign, rematch, sound effects.
+**What's Missing:** Board themes, rematch, sound effects.
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -16,22 +16,14 @@
 
 ## NEXT TASKS (Priority Order)
 
-### Task 1: Draw Offer & Resign
-**Status:** Not Started
-
-- [ ] Add "Offer Draw" button (only during game, not spectators)
-- [ ] Add "Resign" button with confirmation
-- [ ] Server events: `offer_draw`, `accept_draw`, `decline_draw`, `resign`
-- [ ] Show draw offer notification to opponent
-
-### Task 2: Rematch
+### Task 1: Rematch
 **Status:** Not Started
 
 - [ ] Add "Rematch" button after game ends
 - [ ] Swap colors on rematch
 - [ ] Server event: `request_rematch`, `accept_rematch`
 
-### Task 3: Board/Piece Themes
+### Task 2: Board/Piece Themes
 **Status:** Not Started
 
 - [ ] Multiple board color schemes (green, brown, blue, gray)
@@ -39,7 +31,7 @@
 - [ ] Save preference to localStorage
 - [ ] Settings panel in UI
 
-### Task 4: Sound Effects
+### Task 3: Sound Effects
 **Status:** Not Started
 
 - [ ] Move sound
@@ -62,6 +54,8 @@
 - [x] Promotion UI (piece selection modal)
 - [x] Move history panel
 - [x] Game over detection (checkmate, stalemate, repetition, insufficient, 50-move)
+- [x] Draw offer with accept/decline
+- [x] Resign with confirmation
 
 ### KROG Engine (Phase 1)
 - [x] Full `server/src/krog/` module (12 files)
@@ -183,6 +177,21 @@ chess-project/
 'error'           → { message: string }
 ```
 
+### Draw & Resign
+```typescript
+// Client → Server
+'offer_draw'      → { roomId: string }
+'accept_draw'     → { roomId: string }
+'decline_draw'    → { roomId: string }
+'resign'          → { roomId: string }
+
+// Server → Client
+'draw_offered'    → { by: 'white'|'black' }
+'draw_accepted'   → {}
+'draw_declined'   → { by: 'white'|'black' }
+'player_resigned' → { player: string, winner: string }
+```
+
 ### KROG Explanations
 ```typescript
 // Client → Server
@@ -266,7 +275,6 @@ Open 2+ browser tabs to http://localhost:5173
 
 | Issue | Impact | Priority |
 |-------|--------|----------|
-| No draw/resign | Must abandon games | MEDIUM |
 | No rematch | Must create new room | LOW |
 | No themes | Single board style | LOW |
 | No sounds | Less feedback | LOW |

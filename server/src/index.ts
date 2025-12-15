@@ -256,6 +256,7 @@ interface Room {
     timeControl: TimeControl;
     clock: ClockState;
     clockInterval?: ReturnType<typeof setInterval>;
+    drawOffer?: 'white' | 'black';  // Who offered the draw (pending offer)
 }
 
 // Store rooms in memory for MVP
@@ -675,6 +676,137 @@ io.on('connection', (socket) => {
             activeColor: null
         });
         console.log(`Room ${roomId} reset by ${socket.id}`);
+    });
+
+    // ==================== DRAW & RESIGN ====================
+
+    // Offer a draw
+    socket.on('offer_draw', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot offer draws' });
+            return;
+        }
+
+        // Can't offer draw if game is over
+        if (room.game.isGameOver()) {
+            socket.emit('error', { message: 'Game is already over' });
+            return;
+        }
+
+        // Can't offer draw if there's already a pending offer from you
+        if (room.drawOffer === playerColor) {
+            socket.emit('error', { message: 'You already have a pending draw offer' });
+            return;
+        }
+
+        // Set the draw offer
+        room.drawOffer = playerColor;
+
+        // Notify both players
+        io.to(roomId).emit('draw_offered', { by: playerColor });
+        console.log(`Draw offered by ${playerColor} in room ${roomId}`);
+    });
+
+    // Accept a draw offer
+    socket.on('accept_draw', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot accept draws' });
+            return;
+        }
+
+        // Can only accept if opponent offered
+        if (!room.drawOffer || room.drawOffer === playerColor) {
+            socket.emit('error', { message: 'No draw offer to accept' });
+            return;
+        }
+
+        // Stop the clock
+        stopClock(room);
+
+        // Clear the draw offer
+        room.drawOffer = undefined;
+
+        // End the game as a draw
+        io.to(roomId).emit('game_over', { reason: 'agreement', winner: 'draw' });
+        io.to(roomId).emit('draw_accepted', {});
+        console.log(`Draw accepted in room ${roomId}`);
+    });
+
+    // Decline a draw offer
+    socket.on('decline_draw', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot decline draws' });
+            return;
+        }
+
+        // Can only decline if opponent offered
+        if (!room.drawOffer || room.drawOffer === playerColor) {
+            socket.emit('error', { message: 'No draw offer to decline' });
+            return;
+        }
+
+        // Clear the draw offer
+        room.drawOffer = undefined;
+
+        // Notify both players
+        io.to(roomId).emit('draw_declined', { by: playerColor });
+        console.log(`Draw declined by ${playerColor} in room ${roomId}`);
+    });
+
+    // Resign the game
+    socket.on('resign', ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        const playerColor = getPlayerColor(room, socket.id);
+        if (playerColor === 'spectator') {
+            socket.emit('error', { message: 'Spectators cannot resign' });
+            return;
+        }
+
+        // Can't resign if game is over
+        if (room.game.isGameOver()) {
+            socket.emit('error', { message: 'Game is already over' });
+            return;
+        }
+
+        // Stop the clock
+        stopClock(room);
+
+        // Clear any pending draw offer
+        room.drawOffer = undefined;
+
+        // Determine winner
+        const winner = playerColor === 'white' ? 'black' : 'white';
+
+        // End the game
+        io.to(roomId).emit('game_over', { reason: 'resignation', winner });
+        io.to(roomId).emit('player_resigned', { player: playerColor, winner });
+        console.log(`${playerColor} resigned in room ${roomId}, ${winner} wins`);
     });
 
     // Get move suggestions for current position
