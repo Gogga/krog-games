@@ -320,6 +320,67 @@ function App() {
     }
   };
 
+  // Export game as PGN
+  const exportPGN = () => {
+    const date = new Date();
+    const dateStr = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+
+    // Determine result
+    let result = '*';
+    if (game.isGameOver()) {
+      if (game.isCheckmate()) {
+        result = game.turn() === 'w' ? '0-1' : '1-0';
+      } else {
+        result = '1/2-1/2';
+      }
+    }
+
+    // Build PGN with headers
+    const headers = [
+      `[Event "KROG Chess Game"]`,
+      `[Site "localhost"]`,
+      `[Date "${dateStr}"]`,
+      `[White "Player"]`,
+      `[Black "Player"]`,
+      `[Result "${result}"]`,
+      roomCode ? `[Room "${roomCode}"]` : null,
+      timeControl ? `[TimeControl "${timeControl.type}"]` : null
+    ].filter(Boolean).join('\n');
+
+    const pgn = `${headers}\n\n${game.pgn()}`;
+    return pgn;
+  };
+
+  const copyPGN = async () => {
+    const pgn = exportPGN();
+    try {
+      await navigator.clipboard.writeText(pgn);
+      alert(language === 'en' ? 'PGN copied to clipboard!' : 'PGN kopiert til utklippstavlen!');
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = pgn;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert(language === 'en' ? 'PGN copied to clipboard!' : 'PGN kopiert til utklippstavlen!');
+    }
+  };
+
+  const downloadPGN = () => {
+    const pgn = exportPGN();
+    const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `krog-chess-${roomCode || 'game'}-${Date.now()}.pgn`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Puzzle Mode view
   if (puzzleMode) {
     return (
@@ -646,6 +707,48 @@ function App() {
           Leave Room
         </button>
       </div>
+
+      {/* PGN Export buttons */}
+      {game.history().length > 0 && (
+        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <button
+            onClick={copyPGN}
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid #444',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>📋</span> Copy PGN
+          </button>
+          <button
+            onClick={downloadPGN}
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid #444',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>💾</span> Download PGN
+          </button>
+        </div>
+      )}
 
       <div style={{ marginTop: '15px', textAlign: 'center' }}>
         <div style={{
