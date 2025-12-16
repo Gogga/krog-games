@@ -2,11 +2,11 @@
 
 ## QUICK START FOR CLAUDE CODE
 
-**Current State:** Feature-rich multiplayer chess with KROG move explanations, puzzles, opening explorer, and full game mechanics.
+**Current State:** Feature-complete multiplayer chess with KROG move explanations, puzzles, opening explorer, lessons, and polished UI/UX.
 
-**What's Implemented:** Room system, clocks, KROG engine, move explanations, puzzles, openings, PGN export.
+**What's Implemented:** Room system, clocks, KROG engine, move explanations, puzzles, openings, lessons, PGN export, board themes, sound effects.
 
-**What's Missing:** Board themes, sound effects.
+**What's Missing:** User accounts, ELO rating, matchmaking (Phase 2+).
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -14,25 +14,32 @@
 
 ---
 
-## NEXT TASKS (Priority Order)
+## NEXT TASKS (Phase 2+)
 
-### Task 1: Board/Piece Themes
+### Task 1: User Accounts
 **Status:** Not Started
+**Spec:** `krog/PHASE2-FEATURES.md`
 
-- [ ] Multiple board color schemes (green, brown, blue, gray)
-- [ ] Alternative piece sets (or keep Wikipedia SVGs)
-- [ ] Save preference to localStorage
-- [ ] Settings panel in UI
+- [ ] User registration/login
+- [ ] Profile page
+- [ ] Game history storage
+- [ ] PostgreSQL database
 
-### Task 2: Sound Effects
+### Task 2: ELO Rating System
 **Status:** Not Started
+**Spec:** `krog/PHASE2-FEATURES.md`
 
-- [ ] Move sound
-- [ ] Capture sound
-- [ ] Check sound
-- [ ] Game over sound
-- [ ] Clock low time warning
-- [ ] Mute toggle
+- [ ] Rating calculation
+- [ ] Rating display
+- [ ] Leaderboard
+
+### Task 3: Matchmaking Queue
+**Status:** Not Started
+**Spec:** `krog/PHASE2-FEATURES.md`
+
+- [ ] Queue by time control
+- [ ] Rating-based matching
+- [ ] Auto-pairing
 
 ---
 
@@ -78,6 +85,14 @@
 - [x] PGN export (copy to clipboard)
 - [x] PGN download
 
+### UI/UX Polish
+- [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
+- [x] Theme selector with visual previews
+- [x] Theme persistence to localStorage
+- [x] Sound effects (11 sounds: move, capture, check, castle, promote, gameStart, gameEnd, illegal, drawOffer, notify, timeout)
+- [x] Web Audio API sound generation (no external files)
+- [x] Sound toggle with persistence
+
 ---
 
 ## Project Structure
@@ -90,11 +105,13 @@ chess-project/
 │   │   ├── main.tsx
 │   │   ├── App.tsx              # Main app, lobby, game view
 │   │   ├── index.css
-│   │   └── components/
-│   │       ├── ChessBoard.tsx   # Board with drag-drop, learn mode
-│   │       ├── PuzzleMode.tsx   # Tactical puzzles
-│   │       ├── OpeningExplorer.tsx # Opening tree browser
-│   │       └── LessonsMode.tsx  # Interactive lessons with quizzes
+│   │   ├── components/
+│   │   │   ├── ChessBoard.tsx   # Board with drag-drop, learn mode, themes
+│   │   │   ├── PuzzleMode.tsx   # Tactical puzzles
+│   │   │   ├── OpeningExplorer.tsx # Opening tree browser
+│   │   │   └── LessonsMode.tsx  # Interactive lessons with quizzes
+│   │   └── utils/
+│   │       └── sounds.ts        # Web Audio API sound effects
 ├── server/                      # Express + Socket.IO + chess.js
 │   ├── src/
 │   │   ├── index.ts             # Server, all socket events
@@ -282,10 +299,10 @@ Open 2+ browser tabs to http://localhost:5173
 
 | Issue | Impact | Priority |
 |-------|--------|----------|
-| No themes | Single board style | LOW |
-| No sounds | Less feedback | LOW |
-| In-memory storage | No persistence | LOW (MVP) |
+| In-memory storage | No game persistence | LOW (MVP) |
 | Wikipedia piece images | External dependency | LOW |
+| No user accounts | Anonymous play only | MEDIUM (Phase 2) |
+| No rating system | No skill matching | MEDIUM (Phase 2) |
 
 ---
 
@@ -316,12 +333,15 @@ Open 2+ browser tabs to http://localhost:5173
 - Clean separation (ChessBoard is presentational)
 - TypeScript throughout
 - KROG engine is well-modularized
+- Web Audio API for sounds (no external dependencies)
+- localStorage for user preferences (theme, sound, lesson progress)
 
 **Current state:**
-- All core features working
+- Phase 1 feature-complete
 - Bilingual support (EN/NO)
 - Learn mode with hover explanations
 - Comprehensive move explanations
+- Polished UI with themes and sound feedback
 
 ---
 
