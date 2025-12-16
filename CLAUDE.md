@@ -52,7 +52,7 @@
 - [x] Chess clocks (bullet 1+0, blitz 3+2, rapid 10+0, unlimited)
 - [x] Time forfeit detection
 - [x] Promotion UI (piece selection modal)
-- [x] Move history panel
+- [x] Move history panel (synced via PGN across clients)
 - [x] Game over detection (checkmate, stalemate, repetition, insufficient, 50-move)
 - [x] Draw offer with accept/decline
 - [x] Resign with confirmation
@@ -70,6 +70,7 @@
 ### Move Evaluation (Phase 7)
 - [x] Position evaluator
 - [x] Move suggestions with KROG scoring
+- [x] Click-to-move on suggestions (click to play suggested move)
 - [x] Opening book integration
 - [x] Tactical pattern detection
 - [x] Principle-based scoring
@@ -82,8 +83,8 @@
 - [x] Interactive quizzes with progress tracking
 
 ### Export
-- [x] PGN export (copy to clipboard)
-- [x] PGN download
+- [x] PGN export (copy to clipboard) with proper headers
+- [x] PGN download with game metadata (event, date, room, time control)
 
 ### UI/UX Polish
 - [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
@@ -181,7 +182,7 @@ chess-project/
 'reset_game'      → roomId: string
 
 // Server → Client
-'game_state'      → fen: string
+'game_state'      → { pgn: string, fen: string, lastMove: MoveInfo | null }
 'clock_update'    → { white: number, black: number, activeColor: string|null }
 'time_forfeit'    → { loser: string, winner: string }
 'game_over'       → { reason: string, winner: string }
