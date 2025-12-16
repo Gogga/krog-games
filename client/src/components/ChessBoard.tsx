@@ -31,6 +31,23 @@ interface PotentialMoveExplanation {
     }[];
 }
 
+export interface BoardTheme {
+    name: string;
+    light: string;
+    dark: string;
+}
+
+export const BOARD_THEMES: BoardTheme[] = [
+    { name: 'Classic', light: '#f0d9b5', dark: '#b58863' },
+    { name: 'Green', light: '#ffffdd', dark: '#86a666' },
+    { name: 'Blue', light: '#dee3e6', dark: '#8ca2ad' },
+    { name: 'Purple', light: '#e8dff0', dark: '#9b7bb8' },
+    { name: 'Gray', light: '#e0e0e0', dark: '#888888' },
+    { name: 'Wood', light: '#e6c889', dark: '#a37e45' },
+    { name: 'Ice', light: '#e0f0ff', dark: '#5fa8d3' },
+    { name: 'Tournament', light: '#f5f5dc', dark: '#228b22' },
+];
+
 interface ChessBoardProps {
     game: Chess;
     onMove: (move: { from: string; to: string; promotion?: string }) => void;
@@ -39,6 +56,7 @@ interface ChessBoardProps {
     roomCode?: string | null;
     socket?: Socket;
     language?: 'en' | 'no';
+    theme?: BoardTheme;
 }
 
 const PIECE_IMAGES: Record<string, Record<string, string>> = {
@@ -75,7 +93,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     learnMode = false,
     roomCode,
     socket,
-    language = 'en'
+    language = 'en',
+    theme = BOARD_THEMES[0]
 }) => {
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
     const [optionSquares, setOptionSquares] = useState<Square[]>([]);
@@ -274,7 +293,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 const row = Math.floor(index / 8);
                 const col = index % 8;
                 const isDark = (row + col) % 2 === 1;
-                const color = isDark ? 'var(--board-dark)' : 'var(--board-light)';
+                const color = isDark ? theme.dark : theme.light;
 
                 const piece = game.get(square as Square);
                 const isSelected = selectedSquare === square;
@@ -392,7 +411,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 left: 2,
                                 fontSize: '10px',
                                 fontWeight: 'bold',
-                                color: isDark ? 'var(--board-light)' : 'var(--board-dark)'
+                                color: isDark ? theme.light : theme.dark
                             }}>
                                 {orientation === 'white' ? (8 - row) : (row + 1)}
                             </span>
@@ -404,7 +423,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 right: 2,
                                 fontSize: '10px',
                                 fontWeight: 'bold',
-                                color: isDark ? 'var(--board-light)' : 'var(--board-dark)'
+                                color: isDark ? theme.light : theme.dark
                             }}>
                                 {orientation === 'white' ? files[col] : files[7 - col]}
                             </span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
-import ChessBoard from './components/ChessBoard';
+import ChessBoard, { BoardTheme, BOARD_THEMES } from './components/ChessBoard';
 import PuzzleMode from './components/PuzzleMode';
 import OpeningExplorer from './components/OpeningExplorer';
 import LessonsMode from './components/LessonsMode';
@@ -138,6 +138,14 @@ function App() {
   const [puzzleMode, setPuzzleMode] = useState(false);
   const [openingExplorer, setOpeningExplorer] = useState(false);
   const [lessonsMode, setLessonsMode] = useState(false);
+  const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
+    const saved = localStorage.getItem('krog-board-theme');
+    if (saved) {
+      const found = BOARD_THEMES.find(t => t.name === saved);
+      if (found) return found;
+    }
+    return BOARD_THEMES[0];
+  });
 
   useEffect(() => {
     function onConnect() {
@@ -476,6 +484,11 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const changeTheme = (theme: BoardTheme) => {
+    setBoardTheme(theme);
+    localStorage.setItem('krog-board-theme', theme.name);
+  };
+
   // Puzzle Mode view
   if (puzzleMode) {
     return (
@@ -799,6 +812,7 @@ function App() {
           roomCode={roomCode}
           socket={socket}
           language={language}
+          theme={boardTheme}
         />
 
         {/* Player's clock (bottom) */}
@@ -1146,6 +1160,40 @@ function App() {
           </button>
         </div>
       )}
+
+      {/* Board Theme Selector */}
+      <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <span style={{ color: '#888', fontSize: '0.85rem' }}>
+          {language === 'en' ? 'Board Theme:' : 'Bretttema:'}
+        </span>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {BOARD_THEMES.map((theme) => (
+            <button
+              key={theme.name}
+              onClick={() => changeTheme(theme)}
+              title={theme.name}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '4px',
+                border: boardTheme.name === theme.name ? '2px solid #81b64c' : '2px solid transparent',
+                cursor: 'pointer',
+                padding: '2px',
+                background: 'transparent',
+                display: 'flex',
+                flexWrap: 'wrap',
+                overflow: 'hidden'
+              }}
+            >
+              {/* 2x2 preview of the theme colors */}
+              <span style={{ width: '50%', height: '50%', background: theme.light }} />
+              <span style={{ width: '50%', height: '50%', background: theme.dark }} />
+              <span style={{ width: '50%', height: '50%', background: theme.dark }} />
+              <span style={{ width: '50%', height: '50%', background: theme.light }} />
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div style={{ marginTop: '15px', textAlign: 'center' }}>
         <div style={{
