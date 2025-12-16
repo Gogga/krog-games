@@ -426,7 +426,7 @@ io.on('connection', (socket) => {
         socket.join(code);
         socket.emit('room_created', { code, timeControl });
         socket.emit('player_assigned', { color: 'white' });
-        socket.emit('game_state', room.game.fen());
+        socket.emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
         socket.emit('clock_update', {
             white: room.clock.white,
             black: room.clock.black,
@@ -470,7 +470,7 @@ io.on('connection', (socket) => {
 
         socket.emit('room_joined', { code: roomCode, timeControl: room.timeControl });
         socket.emit('player_assigned', { color: assignedColor });
-        socket.emit('game_state', room.game.fen());
+        socket.emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
 
         // Send current clock state
         const times = getCurrentClockTimes(room);
@@ -541,8 +541,21 @@ io.on('connection', (socket) => {
                 switchClock(room, currentTurn);
             }
 
-            // Broadcast game state with KROG explanation
-            io.to(roomId).emit('game_state', room.game.fen());
+            // Broadcast game state with KROG explanation (send PGN for history + last move for sounds)
+            const history = room.game.history({ verbose: true });
+            const lastMove = history[history.length - 1];
+            io.to(roomId).emit('game_state', {
+                pgn: room.game.pgn(),
+                fen: room.game.fen(),
+                lastMove: lastMove ? {
+                    san: lastMove.san,
+                    from: lastMove.from,
+                    to: lastMove.to,
+                    captured: lastMove.captured,
+                    flags: lastMove.flags,
+                    promotion: lastMove.promotion
+                } : null
+            });
 
             // Send move explanation to all clients
             const legalExplanation = krogExplanation as MoveExplanation;
@@ -670,7 +683,7 @@ io.on('connection', (socket) => {
         room.clock = initializeClock(room.timeControl);
 
         room.game.reset();
-        io.to(roomId).emit('game_state', room.game.fen());
+        io.to(roomId).emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
         io.to(roomId).emit('clock_update', {
             white: room.clock.white,
             black: room.clock.black,
@@ -893,7 +906,7 @@ io.on('connection', (socket) => {
 
         // Notify all of rematch accepted and new game state
         io.to(roomId).emit('rematch_accepted', {});
-        io.to(roomId).emit('game_state', room.game.fen());
+        io.to(roomId).emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
         io.to(roomId).emit('clock_update', {
             white: room.clock.white,
             black: room.clock.black,

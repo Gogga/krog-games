@@ -171,15 +171,34 @@ function App() {
       setPlayerColor(null);
     }
 
-    function onGameState(fen: string) {
-      const newGame = new Chess(fen);
+    interface GameStateData {
+      pgn: string;
+      fen: string;
+      lastMove: {
+        san: string;
+        from: string;
+        to: string;
+        captured?: string;
+        flags: string;
+        promotion?: string;
+      } | null;
+    }
+
+    function onGameState(data: GameStateData) {
+      const newGame = new Chess();
+      // Load from PGN to preserve move history
+      if (data.pgn) {
+        newGame.loadPgn(data.pgn);
+      } else {
+        newGame.load(data.fen);
+      }
+
       const prevFen = prevFenRef.current;
+      const currentFen = newGame.fen();
 
       // Detect what happened by comparing positions
-      if (prevFen !== fen) {
-        // Get the last move from the new game state
-        const history = newGame.history({ verbose: true });
-        const lastMove = history[history.length - 1];
+      if (prevFen !== currentFen) {
+        const lastMove = data.lastMove;
 
         if (lastMove && soundEnabledRef.current) {
           // Determine which sound to play
@@ -200,12 +219,12 @@ function App() {
             // Regular move
             ChessSounds.move();
           }
-        } else if (history.length === 0 && prevFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+        } else if (!data.lastMove && prevFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
           // Game was reset (not initial load)
           if (soundEnabledRef.current) ChessSounds.gameStart();
         }
 
-        prevFenRef.current = fen;
+        prevFenRef.current = currentFen;
       }
 
       setGame(newGame);
@@ -504,7 +523,17 @@ function App() {
       timeControl ? `[TimeControl "${timeControl.type}"]` : null
     ].filter(Boolean).join('\n');
 
-    const pgn = `${headers}\n\n${game.pgn()}`;
+    // Get just the moves (without chess.js default headers)
+    const moves = game.history();
+    let moveText = '';
+    for (let i = 0; i < moves.length; i += 2) {
+      const moveNum = Math.floor(i / 2) + 1;
+      const whiteMove = moves[i];
+      const blackMove = moves[i + 1] || '';
+      moveText += `${moveNum}. ${whiteMove}${blackMove ? ' ' + blackMove : ''} `;
+    }
+
+    const pgn = `${headers}\n\n${moveText.trim()} ${result}`;
     return pgn;
   };
 
@@ -1653,6 +1682,16 @@ function App() {
         {/* Suggestions content */}
         {showSuggestions && (
           <div style={{ padding: '16px' }}>
+            {isMyTurn && suggestions.length > 0 && !loadingSuggestions && (
+              <div style={{
+                color: '#81b64c',
+                fontSize: '0.8rem',
+                marginBottom: '12px',
+                textAlign: 'center'
+              }}>
+                {language === 'en' ? 'Click a move to play it' : 'Klikk et trekk for å spille det'}
+              </div>
+            )}
             {loadingSuggestions ? (
               <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
                 {language === 'en' ? 'Analyzing position...' : 'Analyserer posisjon...'}
@@ -1662,11 +1701,29 @@ function App() {
                 {suggestions.map((suggestion, index) => (
                   <div
                     key={suggestion.move}
+                    onClick={() => {
+                      if (isMyTurn) {
+                        handleMove({ from: suggestion.from, to: suggestion.to });
+                        setShowSuggestions(false);
+                      }
+                    }}
                     style={{
                       background: index === 0 ? 'rgba(129, 182, 76, 0.15)' : 'rgba(255,255,255,0.05)',
                       border: index === 0 ? '2px solid #81b64c' : '1px solid #333',
                       borderRadius: '8px',
-                      padding: '12px'
+                      padding: '12px',
+                      cursor: isMyTurn ? 'pointer' : 'default',
+                      transition: 'transform 0.1s, box-shadow 0.1s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (isMyTurn) {
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
                     {/* Move header */}
