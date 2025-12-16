@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES } from './components/ChessBoard';
 import PuzzleMode from './components/PuzzleMode';
 import OpeningExplorer from './components/OpeningExplorer';
 import LessonsMode from './components/LessonsMode';
+import { ChessSounds, resumeAudio } from './utils/sounds';
 import './index.css';
 
 // Initialize socket outside component to prevent multiple connections
@@ -146,6 +147,17 @@ function App() {
     }
     return BOARD_THEMES[0];
   });
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('krog-sound-enabled');
+    return saved !== 'false'; // Default to true
+  });
+  const soundEnabledRef = useRef(soundEnabled);
+  const prevFenRef = useRef<string>(game.fen());
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   useEffect(() => {
     function onConnect() {
@@ -161,6 +173,41 @@ function App() {
 
     function onGameState(fen: string) {
       const newGame = new Chess(fen);
+      const prevFen = prevFenRef.current;
+
+      // Detect what happened by comparing positions
+      if (prevFen !== fen) {
+        // Get the last move from the new game state
+        const history = newGame.history({ verbose: true });
+        const lastMove = history[history.length - 1];
+
+        if (lastMove && soundEnabledRef.current) {
+          // Determine which sound to play
+          if (newGame.isCheckmate()) {
+            ChessSounds.gameEnd();
+          } else if (newGame.isCheck()) {
+            ChessSounds.check();
+          } else if (lastMove.flags.includes('k') || lastMove.flags.includes('q')) {
+            // Castling (k = kingside, q = queenside)
+            ChessSounds.castle();
+          } else if (lastMove.flags.includes('p')) {
+            // Promotion
+            ChessSounds.promote();
+          } else if (lastMove.captured) {
+            // Capture (including en passant)
+            ChessSounds.capture();
+          } else {
+            // Regular move
+            ChessSounds.move();
+          }
+        } else if (history.length === 0 && prevFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+          // Game was reset (not initial load)
+          if (soundEnabledRef.current) ChessSounds.gameStart();
+        }
+
+        prevFenRef.current = fen;
+      }
+
       setGame(newGame);
     }
 
@@ -186,6 +233,7 @@ function App() {
 
     function onTimeForfeit({ winner }: { loser: string; winner: string }) {
       setGameOverMessage(`Time out! ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins on time.`);
+      if (soundEnabledRef.current) ChessSounds.timeout();
     }
 
     function onGameOver({ reason, winner }: { reason: string; winner: string }) {
@@ -205,10 +253,12 @@ function App() {
       } else {
         setGameOverMessage(`${reasonText[reason] || 'Game Over'} - ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins!`);
       }
+      if (soundEnabledRef.current) ChessSounds.gameEnd();
     }
 
     function onDrawOffered({ by }: { by: 'white' | 'black' }) {
       setDrawOffer(by);
+      if (soundEnabledRef.current) ChessSounds.drawOffer();
     }
 
     function onDrawAccepted() {
@@ -226,6 +276,7 @@ function App() {
 
     function onRematchRequested({ by }: { by: 'white' | 'black' }) {
       setRematchRequest(by);
+      if (soundEnabledRef.current) ChessSounds.notify();
     }
 
     function onRematchAccepted() {
@@ -235,6 +286,7 @@ function App() {
       setMoveExplanation(null);
       setIllegalMoveExplanation(null);
       setSuggestions([]);
+      if (soundEnabledRef.current) ChessSounds.gameStart();
     }
 
     function onRematchDeclined() {
@@ -261,6 +313,7 @@ function App() {
       setIllegalMoveExplanation(explanation);
       setError(null); // Clear generic error
       console.log('Illegal move explanation:', explanation);
+      if (soundEnabledRef.current) ChessSounds.illegal();
       // Auto-clear after 10 seconds
       setTimeout(() => setIllegalMoveExplanation(null), 10000);
     }
@@ -273,6 +326,7 @@ function App() {
 
     function onPlayerJoined({ color }: { color: string }) {
       console.log('Another player joined as:', color);
+      if (soundEnabledRef.current) ChessSounds.notify();
     }
 
     function onPlayerLeft({ color }: { color: string }) {
@@ -487,6 +541,23 @@ function App() {
   const changeTheme = (theme: BoardTheme) => {
     setBoardTheme(theme);
     localStorage.setItem('krog-board-theme', theme.name);
+  };
+
+  const toggleSound = async () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('krog-sound-enabled', String(newValue));
+    if (newValue) {
+      await resumeAudio();
+      ChessSounds.notify(); // Play a sound to confirm it's working
+    }
+  };
+
+  // Helper to play sound if enabled
+  const playSound = (sound: keyof typeof ChessSounds) => {
+    if (soundEnabled) {
+      ChessSounds[sound]();
+    }
   };
 
   // Puzzle Mode view
@@ -1161,38 +1232,63 @@ function App() {
         </div>
       )}
 
-      {/* Board Theme Selector */}
-      <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-        <span style={{ color: '#888', fontSize: '0.85rem' }}>
-          {language === 'en' ? 'Board Theme:' : 'Bretttema:'}
-        </span>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {BOARD_THEMES.map((theme) => (
-            <button
-              key={theme.name}
-              onClick={() => changeTheme(theme)}
-              title={theme.name}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '4px',
-                border: boardTheme.name === theme.name ? '2px solid #81b64c' : '2px solid transparent',
-                cursor: 'pointer',
-                padding: '2px',
-                background: 'transparent',
-                display: 'flex',
-                flexWrap: 'wrap',
-                overflow: 'hidden'
-              }}
-            >
-              {/* 2x2 preview of the theme colors */}
-              <span style={{ width: '50%', height: '50%', background: theme.light }} />
-              <span style={{ width: '50%', height: '50%', background: theme.dark }} />
-              <span style={{ width: '50%', height: '50%', background: theme.dark }} />
-              <span style={{ width: '50%', height: '50%', background: theme.light }} />
-            </button>
-          ))}
+      {/* Board Theme & Sound Settings */}
+      <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        {/* Theme selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: '#888', fontSize: '0.85rem' }}>
+            {language === 'en' ? 'Theme:' : 'Tema:'}
+          </span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {BOARD_THEMES.map((theme) => (
+              <button
+                key={theme.name}
+                onClick={() => changeTheme(theme)}
+                title={theme.name}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '4px',
+                  border: boardTheme.name === theme.name ? '2px solid #81b64c' : '2px solid transparent',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  background: 'transparent',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* 2x2 preview of the theme colors */}
+                <span style={{ width: '50%', height: '50%', background: theme.light }} />
+                <span style={{ width: '50%', height: '50%', background: theme.dark }} />
+                <span style={{ width: '50%', height: '50%', background: theme.dark }} />
+                <span style={{ width: '50%', height: '50%', background: theme.light }} />
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Sound toggle */}
+        <button
+          onClick={toggleSound}
+          title={language === 'en' ? (soundEnabled ? 'Sound On' : 'Sound Off') : (soundEnabled ? 'Lyd på' : 'Lyd av')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            border: soundEnabled ? '2px solid #81b64c' : '1px solid #444',
+            background: soundEnabled ? 'rgba(129, 182, 76, 0.2)' : 'transparent',
+            color: soundEnabled ? '#81b64c' : '#888',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: '0.85rem'
+          }}
+        >
+          <span style={{ fontSize: '1.1rem' }}>{soundEnabled ? '\u{1F50A}' : '\u{1F507}'}</span>
+          {language === 'en' ? 'Sound' : 'Lyd'}
+        </button>
       </div>
 
       <div style={{ marginTop: '15px', textAlign: 'center' }}>
