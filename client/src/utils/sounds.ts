@@ -25,7 +25,7 @@ function playTone(
     type: OscillatorType = 'sine',
     volume: number = 0.3,
     attack: number = 0.01,
-    decay: number = 0.1
+    _decay: number = 0.1
 ): void {
     const ctx = getAudioContext();
     const oscillator = ctx.createOscillator();

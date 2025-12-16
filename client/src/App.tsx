@@ -553,13 +553,6 @@ function App() {
     }
   };
 
-  // Helper to play sound if enabled
-  const playSound = (sound: keyof typeof ChessSounds) => {
-    if (soundEnabled) {
-      ChessSounds[sound]();
-    }
-  };
-
   // Puzzle Mode view
   if (puzzleMode) {
     return (
