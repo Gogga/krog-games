@@ -16,9 +16,91 @@ import {
     ScoringContext,
     MoveSuggestion
 } from './krog';
+import { dbOperations, calculateEloChange, User, Game } from './db';
+import * as auth from './auth';
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+
+// ==================== AUTH REST ENDPOINTS ====================
+
+// Register a new user
+app.post('/api/auth/register', async (req, res) => {
+    const { username, email, password } = req.body;
+    const result = await auth.register(username, email, password);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(400).json(result);
+    }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    const { usernameOrEmail, password } = req.body;
+    const result = await auth.login(usernameOrEmail, password);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(401).json(result);
+    }
+});
+
+// Get current user (verify token)
+app.get('/api/auth/me', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        res.status(401).json({ success: false, message: 'No token provided' });
+        return;
+    }
+    const user = auth.getUserFromToken(token);
+    if (user) {
+        res.json({ success: true, user });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+});
+
+// Refresh token
+app.post('/api/auth/refresh', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        res.status(401).json({ success: false, message: 'No token provided' });
+        return;
+    }
+    const result = auth.refreshToken(token);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(401).json(result);
+    }
+});
+
+// Get user profile
+app.get('/api/profile/:userId', (req, res) => {
+    const profile = auth.getUserProfile(req.params.userId);
+    if (profile) {
+        res.json({ success: true, ...profile });
+    } else {
+        res.status(404).json({ success: false, message: 'User not found' });
+    }
+});
+
+// Get leaderboard
+app.get('/api/leaderboard', (req, res) => {
+    const limit = parseInt(req.query.limit as string) || 100;
+    const leaderboard = auth.getLeaderboard(limit);
+    res.json({ success: true, leaderboard });
+});
+
+// Get user's game history
+app.get('/api/games/:userId', (req, res) => {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const games = dbOperations.getUserGames(req.params.userId, limit, offset);
+    res.json({ success: true, games });
+});
 
 // Load opening book at startup
 loadOpeningBook();
@@ -225,6 +307,17 @@ interface RoomPlayers {
     spectators: string[];
 }
 
+// Authenticated player info
+interface AuthenticatedPlayer {
+    socketId: string;
+    userId?: string;
+    username?: string;
+    rating?: number;
+}
+
+// Map socket.id to authenticated user
+const authenticatedSockets = new Map<string, { userId: string; username: string; rating: number }>();
+
 // Time control presets (time in ms, increment in ms)
 type TimeControlType = 'bullet' | 'blitz' | 'rapid' | 'unlimited';
 
@@ -258,6 +351,9 @@ interface Room {
     clockInterval?: ReturnType<typeof setInterval>;
     drawOffer?: 'white' | 'black';  // Who offered the draw (pending offer)
     rematchRequest?: 'white' | 'black';  // Who requested the rematch
+    dbGameId?: string;  // Database game ID for storing results
+    whiteUserId?: string;
+    blackUserId?: string;
 }
 
 // Store rooms in memory for MVP
@@ -329,16 +425,14 @@ function checkTimeoutAndHandle(room: Room, roomCode: string): boolean {
     const times = getCurrentClockTimes(room);
 
     if (times.white <= 0) {
-        stopClock(room);
         io.to(roomCode).emit('time_forfeit', { loser: 'white', winner: 'black' });
-        io.to(roomCode).emit('game_over', { reason: 'timeout', winner: 'black' });
+        endGameAndUpdateRatings(room, roomCode, '0-1', 'timeout');
         return true;
     }
 
     if (times.black <= 0) {
-        stopClock(room);
         io.to(roomCode).emit('time_forfeit', { loser: 'black', winner: 'white' });
-        io.to(roomCode).emit('game_over', { reason: 'timeout', winner: 'white' });
+        endGameAndUpdateRatings(room, roomCode, '1-0', 'timeout');
         return true;
     }
 
@@ -406,19 +500,239 @@ function switchClock(room: Room, fromColor: 'white' | 'black') {
     room.clock.lastUpdate = now;
 }
 
+// Helper function to end game and update ratings
+function endGameAndUpdateRatings(
+    room: Room,
+    roomCode: string,
+    result: '1-0' | '0-1' | '1/2-1/2',
+    reason: string
+) {
+    stopClock(room);
+
+    // Calculate ELO changes if both players are authenticated
+    let whiteChange = 0;
+    let blackChange = 0;
+
+    if (room.whiteUserId && room.blackUserId) {
+        const whiteUser = dbOperations.getUserById(room.whiteUserId);
+        const blackUser = dbOperations.getUserById(room.blackUserId);
+
+        if (whiteUser && blackUser) {
+            let whiteResult: 0 | 0.5 | 1;
+            let blackResult: 0 | 0.5 | 1;
+
+            if (result === '1-0') {
+                whiteResult = 1;
+                blackResult = 0;
+            } else if (result === '0-1') {
+                whiteResult = 0;
+                blackResult = 1;
+            } else {
+                whiteResult = 0.5;
+                blackResult = 0.5;
+            }
+
+            whiteChange = calculateEloChange(whiteUser.rating, blackUser.rating, whiteResult);
+            blackChange = calculateEloChange(blackUser.rating, whiteUser.rating, blackResult);
+
+            // Update ratings
+            dbOperations.updateUserRating(room.whiteUserId, whiteUser.rating + whiteChange);
+            dbOperations.updateUserRating(room.blackUserId, blackUser.rating + blackChange);
+
+            // Update stats
+            dbOperations.updateUserStats(room.whiteUserId, whiteResult === 1 ? 'win' : whiteResult === 0 ? 'loss' : 'draw');
+            dbOperations.updateUserStats(room.blackUserId, blackResult === 1 ? 'win' : blackResult === 0 ? 'loss' : 'draw');
+
+            // Add rating history
+            dbOperations.addRatingHistory(room.whiteUserId, whiteUser.rating + whiteChange, whiteChange, room.dbGameId || null);
+            dbOperations.addRatingHistory(room.blackUserId, blackUser.rating + blackChange, blackChange, room.dbGameId || null);
+
+            // Update authenticated socket ratings
+            const whiteSocketAuth = authenticatedSockets.get(room.players.white || '');
+            const blackSocketAuth = authenticatedSockets.get(room.players.black || '');
+            if (whiteSocketAuth) whiteSocketAuth.rating = whiteUser.rating + whiteChange;
+            if (blackSocketAuth) blackSocketAuth.rating = blackUser.rating + blackChange;
+        }
+    }
+
+    // Store game in database
+    if (room.dbGameId) {
+        dbOperations.endGame(room.dbGameId, room.game.pgn(), result, whiteChange, blackChange);
+    }
+
+    // Notify clients
+    const winner = result === '1-0' ? 'white' : result === '0-1' ? 'black' : 'draw';
+    io.to(roomCode).emit('game_over', {
+        reason,
+        winner,
+        result,
+        ratingChanges: (room.whiteUserId && room.blackUserId) ? {
+            white: whiteChange,
+            black: blackChange
+        } : null
+    });
+}
+
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
+
+    // ==================== SOCKET AUTHENTICATION ====================
+
+    // Authenticate socket with JWT token
+    socket.on('authenticate', ({ token }: { token: string }) => {
+        const user = auth.getUserFromToken(token);
+        if (user) {
+            authenticatedSockets.set(socket.id, {
+                userId: user.id,
+                username: user.username,
+                rating: user.rating
+            });
+            socket.emit('authenticated', {
+                success: true,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    rating: user.rating
+                }
+            });
+            console.log(`Socket ${socket.id} authenticated as ${user.username}`);
+        } else {
+            socket.emit('authenticated', { success: false, message: 'Invalid token' });
+        }
+    });
+
+    // Logout (clear socket authentication)
+    socket.on('logout', () => {
+        authenticatedSockets.delete(socket.id);
+        // Also remove from matchmaking queue
+        dbOperations.removeFromQueueBySocket(socket.id);
+        socket.emit('logged_out', { success: true });
+    });
+
+    // ==================== MATCHMAKING ====================
+
+    // Join matchmaking queue
+    socket.on('join_matchmaking', ({ timeControl }: { timeControl: TimeControlType }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to use matchmaking' });
+            return;
+        }
+
+        // Add to queue
+        dbOperations.addToQueue(authInfo.userId, socket.id, authInfo.rating, timeControl);
+        socket.emit('matchmaking_joined', { timeControl, rating: authInfo.rating });
+
+        // Try to find a match (rating range starts at 100, expands over time)
+        const match = dbOperations.findMatch(authInfo.userId, authInfo.rating, timeControl, 200);
+        if (match) {
+            // Found a match! Create a room
+            dbOperations.removeFromQueue(authInfo.userId);
+            dbOperations.removeFromQueue(match.user_id);
+
+            const code = generateRoomCode();
+            const tc = TIME_CONTROLS[timeControl];
+
+            // Get both users
+            const user1 = dbOperations.getUserById(authInfo.userId);
+            const user2 = dbOperations.getUserById(match.user_id);
+
+            // Randomly assign colors
+            const user1White = Math.random() < 0.5;
+            const whiteUser = user1White ? user1 : user2;
+            const blackUser = user1White ? user2 : user1;
+            const whiteSocketId = user1White ? socket.id : match.socket_id;
+            const blackSocketId = user1White ? match.socket_id : socket.id;
+
+            // Create the room
+            const room: Room = {
+                game: new Chess(),
+                players: {
+                    white: whiteSocketId,
+                    black: blackSocketId,
+                    spectators: []
+                },
+                code,
+                timeControl: tc,
+                clock: initializeClock(tc),
+                whiteUserId: whiteUser?.id,
+                blackUserId: blackUser?.id
+            };
+
+            // Create database game record
+            const dbGame = dbOperations.createGame(
+                code,
+                whiteUser?.id || null,
+                blackUser?.id || null,
+                timeControl,
+                whiteUser?.rating || null,
+                blackUser?.rating || null
+            );
+            room.dbGameId = dbGame.id;
+
+            rooms.set(code, room);
+            socketToRoom.set(whiteSocketId, code);
+            socketToRoom.set(blackSocketId, code);
+
+            // Join both sockets to the room
+            const whiteSocket = io.sockets.sockets.get(whiteSocketId);
+            const blackSocket = io.sockets.sockets.get(blackSocketId);
+
+            if (whiteSocket) whiteSocket.join(code);
+            if (blackSocket) blackSocket.join(code);
+
+            // Notify both players
+            io.to(whiteSocketId).emit('match_found', {
+                roomCode: code,
+                color: 'white',
+                opponent: { username: blackUser?.username, rating: blackUser?.rating },
+                timeControl
+            });
+            io.to(blackSocketId).emit('match_found', {
+                roomCode: code,
+                color: 'black',
+                opponent: { username: whiteUser?.username, rating: whiteUser?.rating },
+                timeControl
+            });
+
+            // Send initial game state
+            io.to(code).emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
+            io.to(code).emit('clock_update', {
+                white: room.clock.white,
+                black: room.clock.black,
+                activeColor: null
+            });
+
+            console.log(`Match found: ${whiteUser?.username} vs ${blackUser?.username} in room ${code}`);
+        } else {
+            // No match yet, notify position in queue
+            const position = dbOperations.getQueuePosition(authInfo.userId, timeControl);
+            socket.emit('matchmaking_waiting', { position, timeControl });
+        }
+    });
+
+    // Leave matchmaking queue
+    socket.on('leave_matchmaking', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (authInfo) {
+            dbOperations.removeFromQueue(authInfo.userId);
+            socket.emit('matchmaking_left', { success: true });
+        }
+    });
 
     // Create a new room
     socket.on('create_room', ({ timeControl: timeControlType }: { timeControl?: TimeControlType } = {}) => {
         const code = generateRoomCode();
         const timeControl = TIME_CONTROLS[timeControlType || 'rapid'];
+        const authInfo = authenticatedSockets.get(socket.id);
+
         const room: Room = {
             game: new Chess(),
             players: { white: socket.id, spectators: [] },
             code,
             timeControl,
-            clock: initializeClock(timeControl)
+            clock: initializeClock(timeControl),
+            whiteUserId: authInfo?.userId
         };
         rooms.set(code, room);
         socketToRoom.set(socket.id, code);
@@ -433,7 +747,7 @@ io.on('connection', (socket) => {
             activeColor: null
         });
 
-        console.log(`Room ${code} created by ${socket.id} (white) - ${timeControl.type}`);
+        console.log(`Room ${code} created by ${socket.id} (${authInfo?.username || 'anonymous'}) (white) - ${timeControl.type}`);
     });
 
     // Join existing room by code
@@ -455,14 +769,33 @@ io.on('connection', (socket) => {
         socket.join(roomCode);
         socketToRoom.set(socket.id, roomCode);
 
+        const authInfo = authenticatedSockets.get(socket.id);
+
         // Assign color: first empty slot, or spectator
         let assignedColor: 'white' | 'black' | 'spectator';
         if (!room.players.white) {
             room.players.white = socket.id;
+            room.whiteUserId = authInfo?.userId;
             assignedColor = 'white';
         } else if (!room.players.black) {
             room.players.black = socket.id;
+            room.blackUserId = authInfo?.userId;
             assignedColor = 'black';
+
+            // Both players joined - create database game record if both authenticated
+            if (room.whiteUserId || room.blackUserId) {
+                const whiteUser = room.whiteUserId ? dbOperations.getUserById(room.whiteUserId) : null;
+                const blackUser = room.blackUserId ? dbOperations.getUserById(room.blackUserId) : null;
+                const dbGame = dbOperations.createGame(
+                    roomCode,
+                    room.whiteUserId || null,
+                    room.blackUserId || null,
+                    room.timeControl.type,
+                    whiteUser?.rating || null,
+                    blackUser?.rating || null
+                );
+                room.dbGameId = dbGame.id;
+            }
         } else {
             room.players.spectators.push(socket.id);
             assignedColor = 'spectator';
@@ -483,7 +816,7 @@ io.on('connection', (socket) => {
         // Notify others
         socket.to(roomCode).emit('player_joined', { color: assignedColor });
 
-        console.log(`User ${socket.id} joined room ${roomCode} as ${assignedColor}`);
+        console.log(`User ${socket.id} (${authInfo?.username || 'anonymous'}) joined room ${roomCode} as ${assignedColor}`);
     });
 
     // Make a move (with color enforcement)
@@ -583,24 +916,27 @@ io.on('connection', (socket) => {
 
             // Check for game over conditions
             if (room.game.isGameOver()) {
-                stopClock(room);
+                let result: '1-0' | '0-1' | '1/2-1/2';
                 let reason = 'unknown';
-                let winner: 'white' | 'black' | 'draw' = 'draw';
 
                 if (room.game.isCheckmate()) {
                     reason = 'checkmate';
-                    winner = room.game.turn() === 'w' ? 'black' : 'white';
+                    result = room.game.turn() === 'w' ? '0-1' : '1-0';
                 } else if (room.game.isStalemate()) {
                     reason = 'stalemate';
+                    result = '1/2-1/2';
                 } else if (room.game.isThreefoldRepetition()) {
                     reason = 'repetition';
+                    result = '1/2-1/2';
                 } else if (room.game.isInsufficientMaterial()) {
                     reason = 'insufficient';
-                } else if (room.game.isDraw()) {
+                    result = '1/2-1/2';
+                } else {
                     reason = 'fifty_moves';
+                    result = '1/2-1/2';
                 }
 
-                io.to(roomId).emit('game_over', { reason, winner });
+                endGameAndUpdateRatings(room, roomId, result, reason);
             }
         } else {
             // Illegal move - send KROG explanation for why
@@ -748,15 +1084,12 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Stop the clock
-        stopClock(room);
-
         // Clear the draw offer
         room.drawOffer = undefined;
 
-        // End the game as a draw
-        io.to(roomId).emit('game_over', { reason: 'agreement', winner: 'draw' });
+        // End the game as a draw with rating updates
         io.to(roomId).emit('draw_accepted', {});
+        endGameAndUpdateRatings(room, roomId, '1/2-1/2', 'agreement');
         console.log(`Draw accepted in room ${roomId}`);
     });
 
@@ -808,18 +1141,16 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Stop the clock
-        stopClock(room);
-
         // Clear any pending draw offer
         room.drawOffer = undefined;
 
-        // Determine winner
+        // Determine result
+        const result = playerColor === 'white' ? '0-1' : '1-0';
         const winner = playerColor === 'white' ? 'black' : 'white';
 
-        // End the game
-        io.to(roomId).emit('game_over', { reason: 'resignation', winner });
+        // End the game with rating updates
         io.to(roomId).emit('player_resigned', { player: playerColor, winner });
+        endGameAndUpdateRatings(room, roomId, result, 'resignation');
         console.log(`${playerColor} resigned in room ${roomId}, ${winner} wins`);
     });
 
@@ -1309,6 +1640,14 @@ io.on('connection', (socket) => {
 
     // Handle disconnection
     socket.on('disconnect', () => {
+        // Clean up authenticated socket and matchmaking queue
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (authInfo) {
+            dbOperations.removeFromQueue(authInfo.userId);
+            authenticatedSockets.delete(socket.id);
+        }
+        dbOperations.removeFromQueueBySocket(socket.id);
+
         const roomCode = socketToRoom.get(socket.id);
         if (roomCode) {
             const room = rooms.get(roomCode);

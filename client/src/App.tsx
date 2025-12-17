@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES } from './components/ChessBoard';
@@ -6,6 +6,11 @@ import PuzzleMode from './components/PuzzleMode';
 import OpeningExplorer from './components/OpeningExplorer';
 import LessonsMode from './components/LessonsMode';
 import { ChessSounds, resumeAudio } from './utils/sounds';
+import { AuthProvider } from './contexts/AuthContext';
+import { AuthModal } from './components/AuthModal';
+import { UserPanel } from './components/UserPanel';
+import { MatchmakingPanel } from './components/MatchmakingPanel';
+import { getStoredToken } from './api/auth';
 import './index.css';
 
 // Initialize socket outside component to prevent multiple connections
@@ -154,15 +159,50 @@ function App() {
   const soundEnabledRef = useRef(soundEnabled);
   const prevFenRef = useRef<string>(game.fen());
 
+  // Auth state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [matchOpponent, setMatchOpponent] = useState<{ username: string; rating: number } | null>(null);
+  const [ratingChange, setRatingChange] = useState<{ white: number; black: number } | null>(null);
+
   // Keep ref in sync with state
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
+  // Authenticate socket on connect
+  useEffect(() => {
+    const token = getStoredToken();
+    if (token && socket.connected) {
+      socket.emit('authenticate', { token });
+    }
+  }, []);
+
+  // Handle matchmaking callback
+  const handleMatchFound = useCallback((data: { roomCode: string; color: 'white' | 'black'; opponent: { username: string; rating: number }; timeControl: string }) => {
+    setRoomCode(data.roomCode);
+    setPlayerColor(data.color);
+    setMatchOpponent(data.opponent);
+    setGame(new Chess());
+    setGameOverMessage(null);
+    setMoveExplanation(null);
+    setIllegalMoveExplanation(null);
+    setDrawOffer(null);
+    setRematchRequest(null);
+    setRatingChange(null);
+    if (soundEnabledRef.current) {
+      ChessSounds.gameStart();
+    }
+  }, []);
+
   useEffect(() => {
     function onConnect() {
       setIsConnected(true);
       console.log('Connected to server');
+      // Re-authenticate on reconnect
+      const token = getStoredToken();
+      if (token) {
+        socket.emit('authenticate', { token });
+      }
     }
 
     function onDisconnect() {
@@ -255,7 +295,7 @@ function App() {
       if (soundEnabledRef.current) ChessSounds.timeout();
     }
 
-    function onGameOver({ reason, winner }: { reason: string; winner: string }) {
+    function onGameOver({ reason, winner, ratingChanges }: { reason: string; winner: string; ratingChanges?: { white: number; black: number } | null }) {
       const reasonText: Record<string, string> = {
         checkmate: 'Checkmate',
         stalemate: 'Stalemate - Draw',
@@ -267,6 +307,9 @@ function App() {
         resignation: 'Resignation'
       };
       setDrawOffer(null); // Clear any pending draw offer
+      if (ratingChanges) {
+        setRatingChange(ratingChanges);
+      }
       if (winner === 'draw') {
         setGameOverMessage(reasonText[reason] || 'Game Over - Draw');
       } else {
@@ -428,6 +471,8 @@ function App() {
     setGameOverMessage(null);
     setMoveExplanation(null);
     setIllegalMoveExplanation(null);
+    setMatchOpponent(null);
+    setRatingChange(null);
   };
 
   const handleMove = (move: { from: string; to: string; promotion?: string }) => {
@@ -442,6 +487,7 @@ function App() {
     setIllegalMoveExplanation(null);
     setSuggestions([]);
     setDrawOffer(null);
+    setRatingChange(null);
     socket.emit('reset_game', roomCode);
   };
 
@@ -619,6 +665,9 @@ function App() {
   if (!roomCode) {
     return (
       <div className="app-container">
+        <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
         <div style={{ marginBottom: '20px', textAlign: 'center' }}>
           <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
           <div style={{ color: isConnected ? '#81b64c' : 'red', marginTop: '5px' }}>
@@ -634,6 +683,8 @@ function App() {
           maxWidth: '400px',
           margin: '0 auto'
         }}>
+          {/* Matchmaking Section - for logged in users */}
+          <MatchmakingPanel socket={socket} onMatchFound={handleMatchFound} />
           {/* Time Control Selection */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.9rem' }}>
@@ -831,6 +882,9 @@ function App() {
 
   return (
     <div className="app-container">
+      <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
       <div style={{ marginBottom: '20px', textAlign: 'center' }}>
         <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
         <div style={{
@@ -862,6 +916,16 @@ function App() {
           }}>
             {playerColor === 'spectator' ? 'Spectating' : `Playing as ${playerColor}`}
           </div>
+          {matchOpponent && (
+            <div style={{
+              background: 'var(--bg-secondary)',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '0.9rem'
+            }}>
+              vs <span style={{ fontWeight: 600 }}>{matchOpponent.username}</span> ({matchOpponent.rating})
+            </div>
+          )}
         </div>
       </div>
 
@@ -1330,6 +1394,20 @@ function App() {
                   : "Opponent's turn"}
           {game.inCheck() && !game.isGameOver() && !gameOverMessage && <span style={{ color: '#e74c3c', marginLeft: '10px' }}>CHECK!</span>}
         </div>
+        {/* Rating change display */}
+        {ratingChange && playerColor && playerColor !== 'spectator' && (
+          <div style={{
+            marginTop: '10px',
+            fontSize: '1rem'
+          }}>
+            Rating: <span style={{
+              color: ratingChange[playerColor] > 0 ? '#4CAF50' : ratingChange[playerColor] < 0 ? '#f44336' : '#888',
+              fontWeight: 'bold'
+            }}>
+              {ratingChange[playerColor] > 0 ? '+' : ''}{ratingChange[playerColor]}
+            </span>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -1939,4 +2017,13 @@ function App() {
   );
 }
 
-export default App;
+// Wrap App in AuthProvider
+function AppWithAuth() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
+
+export default AppWithAuth;
