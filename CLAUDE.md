@@ -2,48 +2,48 @@
 
 ## QUICK START FOR CLAUDE CODE
 
-**Current State:** Feature-complete multiplayer chess with KROG move explanations, puzzles, opening explorer, lessons, and polished UI/UX.
+**Current State:** Feature-complete multiplayer chess with user accounts, ELO rating, matchmaking, chess variants, Play vs Computer, KROG move explanations, puzzles, opening explorer, lessons, and polished UI/UX.
 
-**What's Implemented:** Room system, clocks, KROG engine, move explanations, puzzles, openings, lessons, PGN export, board themes, sound effects.
+**What's Implemented:** All of Phase 1-3 + Play vs Computer. Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent, KROG engine, move explanations, puzzles, openings, lessons, PGN export, board themes, sound effects.
 
-**What's Missing:** User accounts, ELO rating, matchmaking (Phase 2+).
+**What's Missing:** Clubs, tournaments, leagues (Phase 6).
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
-**Data Files:** `server/data/*.json` - Puzzles, lessons, openings.
-
----
-
-## NEXT TASKS (Phase 2+)
-
-### Task 1: User Accounts
-**Status:** Not Started
-**Spec:** `krog/PHASE2-FEATURES.md`
-
-- [ ] User registration/login
-- [ ] Profile page
-- [ ] Game history storage
-- [ ] PostgreSQL database
-
-### Task 2: ELO Rating System
-**Status:** Not Started
-**Spec:** `krog/PHASE2-FEATURES.md`
-
-- [ ] Rating calculation
-- [ ] Rating display
-- [ ] Leaderboard
-
-### Task 3: Matchmaking Queue
-**Status:** Not Started
-**Spec:** `krog/PHASE2-FEATURES.md`
-
-- [ ] Queue by time control
-- [ ] Rating-based matching
-- [ ] Auto-pairing
+**Data Files:** `server/data/*.json` - Puzzles, lessons, openings. `server/data/krog.db` - SQLite database.
 
 ---
 
 ## COMPLETED FEATURES
+
+### User Accounts & Rating (Phase 2)
+- [x] User registration/login with JWT authentication
+- [x] SQLite database (users, games, rating_history, matchmaking_queue)
+- [x] ELO rating system (K=32, starting rating 1200)
+- [x] Profile panel with stats (rating, games, wins, win rate)
+- [x] Leaderboard (top players by rating)
+- [x] Game history with rating changes
+- [x] Matchmaking queue by time control
+- [x] Rating-based matching (±200 rating range)
+- [x] Auto-pairing with random color assignment
+
+### Chess Variants (Phase 3)
+- [x] Variant selector in lobby (Standard, Chess960, 3-Check, KotH)
+- [x] Chess960 with random starting positions (Scharnagl's method)
+- [x] Three-Check variant (win by giving 3 checks)
+- [x] King of the Hill variant (win by reaching d4/d5/e4/e5)
+- [x] Variant-specific game over detection
+- [x] Check counter display for Three-Check
+- [x] Position ID display for Chess960
+
+### Play vs Computer
+- [x] AI engine with minimax + alpha-beta pruning
+- [x] Three difficulty levels (Beginner, Intermediate, Advanced)
+- [x] Color selection (White, Random, Black)
+- [x] Material and positional evaluation
+- [x] Piece-square tables for all pieces
+- [x] Endgame detection
+- [x] "vs Computer" badge during game
 
 ### Core Multiplayer (Phase 1)
 - [x] Room codes (6-char alphanumeric)
@@ -106,16 +106,31 @@ chess-project/
 │   │   ├── main.tsx
 │   │   ├── App.tsx              # Main app, lobby, game view
 │   │   ├── index.css
+│   │   ├── api/
+│   │   │   └── auth.ts          # API client for auth
+│   │   ├── contexts/
+│   │   │   └── AuthContext.tsx  # Auth state management
 │   │   ├── components/
 │   │   │   ├── ChessBoard.tsx   # Board with drag-drop, learn mode, themes
 │   │   │   ├── PuzzleMode.tsx   # Tactical puzzles
 │   │   │   ├── OpeningExplorer.tsx # Opening tree browser
-│   │   │   └── LessonsMode.tsx  # Interactive lessons with quizzes
+│   │   │   ├── LessonsMode.tsx  # Interactive lessons with quizzes
+│   │   │   ├── AuthModal.tsx    # Login/Register modal
+│   │   │   ├── UserPanel.tsx    # Profile, leaderboard, history
+│   │   │   └── MatchmakingPanel.tsx # Matchmaking queue UI
 │   │   └── utils/
 │   │       └── sounds.ts        # Web Audio API sound effects
 ├── server/                      # Express + Socket.IO + chess.js
 │   ├── src/
 │   │   ├── index.ts             # Server, all socket events
+│   │   ├── db/
+│   │   │   └── index.ts         # SQLite database module
+│   │   ├── auth/
+│   │   │   └── index.ts         # JWT authentication
+│   │   ├── variants/
+│   │   │   └── index.ts         # Chess960, 3-Check, KotH
+│   │   ├── ai/
+│   │   │   └── index.ts         # Computer opponent (minimax)
 │   │   └── krog/                # KROG engine module
 │   │       ├── index.ts         # Exports
 │   │       ├── types.ts         # Type definitions
@@ -132,7 +147,8 @@ chess-project/
 │   └── data/
 │       ├── puzzles.json         # 30+ tactical puzzles
 │       ├── lessons.json         # 45 lessons (L0-L2)
-│       └── openings.json        # 10 major openings
+│       ├── openings.json        # 10 major openings
+│       └── krog.db              # SQLite database (gitignored)
 └── krog/                        # Specifications
     ├── PHASE1-CORE.md
     ├── PHASE2-FEATURES.md
@@ -156,6 +172,9 @@ chess-project/
 | Server | Express | 5.2.1 |
 | Server | Socket.IO | 4.8.1 |
 | Server | chess.js | 1.4.0 |
+| Server | better-sqlite3 | 11.x |
+| Server | jsonwebtoken | 9.x |
+| Server | bcryptjs | 2.x |
 
 ---
 
@@ -300,29 +319,23 @@ Open 2+ browser tabs to http://localhost:5173
 
 | Issue | Impact | Priority |
 |-------|--------|----------|
-| In-memory storage | No game persistence | LOW (MVP) |
 | Wikipedia piece images | External dependency | LOW |
-| No user accounts | Anonymous play only | MEDIUM (Phase 2) |
-| No rating system | No skill matching | MEDIUM (Phase 2) |
+| Chess960 castling | Uses standard rules (chess.js limitation) | LOW |
+| No persistent sessions | Must re-login after refresh | LOW |
 
 ---
 
 ## Future Phases (Not Started)
 
-### Phase 2: Social Features
-- [ ] User accounts
-- [ ] ELO rating system
-- [ ] Matchmaking queue
-- [ ] Game history
-
-### Phase 3: Variants
-- [ ] Chess960
-- [ ] Other variants
-
 ### Phase 6: Community
 - [ ] Clubs
 - [ ] Tournaments
 - [ ] Leagues
+
+### Phase 4: AI Training
+- [ ] HRM (Human Reasoning Model)
+- [ ] Neural governance
+- [ ] Training data collection
 
 ---
 
@@ -336,9 +349,15 @@ Open 2+ browser tabs to http://localhost:5173
 - KROG engine is well-modularized
 - Web Audio API for sounds (no external dependencies)
 - localStorage for user preferences (theme, sound, lesson progress)
+- JWT authentication with bcrypt password hashing
+- SQLite database with prepared statements
+- Modular server architecture (db, auth, variants, ai, krog)
 
 **Current state:**
-- Phase 1 feature-complete
+- Phase 1-3 feature-complete + Play vs Computer
+- User accounts with ELO rating and matchmaking
+- Chess variants (Chess960, 3-Check, King of the Hill)
+- AI opponent with three difficulty levels
 - Bilingual support (EN/NO)
 - Learn mode with hover explanations
 - Comprehensive move explanations
