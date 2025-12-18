@@ -2074,13 +2074,16 @@ io.on('connection', (socket) => {
         const timeControl = TIME_CONTROLS[timeControlType || 'rapid'];
         const variant = variantType || 'standard';
 
-        // Send challenge to the friend
+        const challengeId = `${socket.id}-${Date.now()}`;
+
+        // Send challenge to the friend - include challenger's SOCKET ID
         io.to(friendSocket[0]).emit('challenge_received', {
-            challengeId: `${socket.id}-${Date.now()}`,
+            challengeId,
             from: {
                 id: authInfo.userId,
                 username: authInfo.username,
-                rating: authInfo.rating
+                rating: authInfo.rating,
+                socketId: socket.id  // Include socket ID for direct communication
             },
             timeControl: timeControl.type,
             variant
@@ -2088,7 +2091,7 @@ io.on('connection', (socket) => {
 
         socket.emit('challenge_sent', {
             success: true,
-            challengeId: `${socket.id}-${Date.now()}`,
+            challengeId,
             to: {
                 id: friendId,
                 username: friendSocket[1].username,
@@ -2100,23 +2103,30 @@ io.on('connection', (socket) => {
     });
 
     // Accept a challenge
-    socket.on('accept_challenge', ({ challengeId, challengerId, timeControl: timeControlType, variant: variantType }: { challengeId: string; challengerId: string; timeControl: TimeControlType; variant?: VariantType }) => {
+    socket.on('accept_challenge', ({ challengeId, challengerId, challengerSocketId: providedSocketId, timeControl: timeControlType, variant: variantType }: { challengeId: string; challengerId: string; challengerSocketId?: string; timeControl: TimeControlType; variant?: VariantType }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to accept challenges' });
             return;
         }
 
-        // Find the challenger's socket
-        const challengerEntry = Array.from(authenticatedSockets.entries())
-            .find(([_, info]) => info.userId === challengerId);
+        // Use provided socket ID if available, otherwise fall back to lookup
+        let challengerSocketId = providedSocketId;
+        let challengerInfo = providedSocketId ? authenticatedSockets.get(providedSocketId) : null;
 
-        if (!challengerEntry) {
+        // If socket ID not provided or not found, try to find by user ID
+        if (!challengerInfo) {
+            const challengerEntry = Array.from(authenticatedSockets.entries())
+                .find(([_, info]) => info.userId === challengerId);
+            if (challengerEntry) {
+                [challengerSocketId, challengerInfo] = [challengerEntry[0], challengerEntry[1]];
+            }
+        }
+
+        if (!challengerSocketId || !challengerInfo) {
             socket.emit('challenge_accepted', { success: false, error: 'Challenger is no longer online' });
             return;
         }
-
-        const [challengerSocketId, challengerInfo] = challengerEntry;
 
         // Create a room for the game
         const code = generateRoomCode();
@@ -2166,22 +2176,34 @@ io.on('connection', (socket) => {
         socketToRoom.set(whiteSocketId, code);
         socketToRoom.set(blackSocketId, code);
 
-        // Join both sockets to the room
+        // Get socket references
         const whiteSocket = io.sockets.sockets.get(whiteSocketId);
         const blackSocket = io.sockets.sockets.get(blackSocketId);
 
+        // Join both sockets to the room FIRST
         if (whiteSocket) whiteSocket.join(code);
         if (blackSocket) blackSocket.join(code);
 
-        // Notify the challenger
-        io.to(challengerSocketId).emit('challenge_accepted', {
-            success: true,
-            roomCode: code,
-            color: challengerIsWhite ? 'white' : 'black',
-            opponent: { username: authInfo.username, rating: authInfo.rating },
-            timeControl: timeControl.type,
-            variant
-        });
+        // Notify the challenger directly using their socket
+        const challengerSocket = io.sockets.sockets.get(challengerSocketId);
+        console.log('Challenge accept - challengerSocketId:', challengerSocketId);
+        console.log('Challenge accept - challengerSocket found:', !!challengerSocket);
+        console.log('Challenge accept - all socket IDs:', Array.from(io.sockets.sockets.keys()));
+
+        if (challengerSocket) {
+            console.log('Emitting challenge_accepted to challenger:', challengerSocketId);
+            challengerSocket.emit('challenge_accepted', {
+                success: true,
+                roomCode: code,
+                color: challengerIsWhite ? 'white' : 'black',
+                opponent: { username: authInfo.username, rating: authInfo.rating },
+                timeControl: timeControl.type,
+                variant
+            });
+            challengerSocket.emit('player_assigned', { color: challengerIsWhite ? 'white' : 'black' });
+        } else {
+            console.log('ERROR: Challenger socket not found!');
+        }
 
         // Notify the acceptor
         socket.emit('challenge_accepted', {
@@ -2192,6 +2214,7 @@ io.on('connection', (socket) => {
             timeControl: timeControl.type,
             variant
         });
+        socket.emit('player_assigned', { color: challengerIsWhite ? 'black' : 'white' });
 
         // Send initial game state
         io.to(code).emit('game_state', {

@@ -231,7 +231,7 @@ function App() {
   // Challenge state
   interface Challenge {
     challengeId: string;
-    from: { id: string; username: string; rating: number };
+    from: { id: string; username: string; rating: number; socketId?: string };
     timeControl: TimeControlType;
     variant: VariantType;
   }
@@ -911,6 +911,7 @@ function App() {
     socket.emit('accept_challenge', {
       challengeId: challenge.challengeId,
       challengerId: challenge.from.id,
+      challengerSocketId: challenge.from.socketId,  // Pass the socket ID directly
       timeControl: challenge.timeControl,
       variant: challenge.variant
     });
