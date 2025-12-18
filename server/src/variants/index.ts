@@ -91,16 +91,10 @@ export function generateChess960Position(positionId?: number): { positionId: num
   const blackRank = backRank.join('');
   const whiteRank = blackRank.toUpperCase();
 
-  // Find rook files for castling rights (using file letters)
-  const rookFiles: string[] = [];
-  for (let i = 0; i < 8; i++) {
-    if (backRank[i] === 'r') {
-      rookFiles.push(String.fromCharCode(65 + i)); // A-H for white
-    }
-  }
-
-  // Chess960 uses Shredder-FEN castling notation (file letters instead of KQkq)
-  const castling = `${rookFiles[1]}${rookFiles[0]}${rookFiles[1].toLowerCase()}${rookFiles[0].toLowerCase()}`;
+  // Note: chess.js doesn't support Shredder-FEN (Chess960 castling notation)
+  // Using standard KQkq notation - castling will work but follows standard rules
+  // For full Chess960 castling support, a specialized library would be needed
+  const castling = 'KQkq';
 
   const fen = `${blackRank}/pppppppp/8/8/8/8/PPPPPPPP/${whiteRank} w ${castling} - 0 1`;
 

@@ -298,10 +298,10 @@ export function getBestMove(game: Chess, difficulty: Difficulty = 'intermediate'
 // Get AI's thinking time (in ms) for more realistic feel
 export function getThinkingTime(difficulty: Difficulty): number {
   const baseTime: Record<Difficulty, number> = {
-    beginner: 500,
-    intermediate: 1000,
-    advanced: 2000
+    beginner: 200,
+    intermediate: 400,
+    advanced: 600
   };
   // Add some randomness
-  return baseTime[difficulty] + Math.random() * 500;
+  return baseTime[difficulty] + Math.random() * 200;
 }
