@@ -2186,12 +2186,8 @@ io.on('connection', (socket) => {
 
         // Notify the challenger directly using their socket
         const challengerSocket = io.sockets.sockets.get(challengerSocketId);
-        console.log('Challenge accept - challengerSocketId:', challengerSocketId);
-        console.log('Challenge accept - challengerSocket found:', !!challengerSocket);
-        console.log('Challenge accept - all socket IDs:', Array.from(io.sockets.sockets.keys()));
 
         if (challengerSocket) {
-            console.log('Emitting challenge_accepted to challenger:', challengerSocketId);
             challengerSocket.emit('challenge_accepted', {
                 success: true,
                 roomCode: code,
@@ -2201,8 +2197,6 @@ io.on('connection', (socket) => {
                 variant
             });
             challengerSocket.emit('player_assigned', { color: challengerIsWhite ? 'white' : 'black' });
-        } else {
-            console.log('ERROR: Challenger socket not found!');
         }
 
         // Notify the acceptor
