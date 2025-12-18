@@ -19,6 +19,14 @@ const socket = io('http://localhost:3000');
 type PlayerColor = 'white' | 'black' | 'spectator' | null;
 type TimeControlType = 'bullet' | 'blitz' | 'rapid' | 'unlimited';
 type Language = 'en' | 'no';
+type VariantType = 'standard' | 'chess960' | 'threeCheck' | 'kingOfTheHill';
+
+interface VariantState {
+  variant: VariantType;
+  positionId?: number;
+  checkCount?: { white: number; black: number };
+  hillReached?: boolean;
+}
 
 interface ClockState {
   white: number;
@@ -104,6 +112,13 @@ const TIME_CONTROL_OPTIONS: { type: TimeControlType; label: string; description:
   { type: 'unlimited', label: '∞', description: 'No clock' }
 ];
 
+const VARIANT_OPTIONS: { type: VariantType; label: string; description: string }[] = [
+  { type: 'standard', label: 'Standard', description: 'Classic chess' },
+  { type: 'chess960', label: 'Chess960', description: 'Random start position' },
+  { type: 'threeCheck', label: '3-Check', description: 'Win by giving 3 checks' },
+  { type: 'kingOfTheHill', label: 'KotH', description: 'Win by reaching center' }
+];
+
 // Format milliseconds to MM:SS.t
 function formatTime(ms: number): string {
   if (ms <= 0) return '0:00';
@@ -164,6 +179,11 @@ function App() {
   const [matchOpponent, setMatchOpponent] = useState<{ username: string; rating: number } | null>(null);
   const [ratingChange, setRatingChange] = useState<{ white: number; black: number } | null>(null);
 
+  // Variant state
+  const [selectedVariant, setSelectedVariant] = useState<VariantType>('standard');
+  const [variant, setVariant] = useState<VariantType>('standard');
+  const [variantState, setVariantState] = useState<VariantState>({ variant: 'standard' });
+
   // Keep ref in sync with state
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
@@ -222,6 +242,8 @@ function App() {
         flags: string;
         promotion?: string;
       } | null;
+      variant?: VariantType;
+      variantState?: VariantState;
     }
 
     function onGameState(data: GameStateData) {
@@ -231,6 +253,14 @@ function App() {
         newGame.loadPgn(data.pgn);
       } else {
         newGame.load(data.fen);
+      }
+
+      // Update variant state if provided
+      if (data.variant) {
+        setVariant(data.variant);
+      }
+      if (data.variantState) {
+        setVariantState(data.variantState);
       }
 
       const prevFen = prevFenRef.current;
@@ -270,20 +300,24 @@ function App() {
       setGame(newGame);
     }
 
-    function onRoomCreated({ code, timeControl: tc }: { code: string; timeControl: TimeControl }) {
+    function onRoomCreated({ code, timeControl: tc, variant: v, variantState: vs }: { code: string; timeControl: TimeControl; variant?: VariantType; variantState?: VariantState }) {
       setRoomCode(code);
       setTimeControl(tc);
+      if (v) setVariant(v);
+      if (vs) setVariantState(vs);
       setGameOverMessage(null);
       setError(null);
-      console.log('Room created:', code, tc);
+      console.log('Room created:', code, tc, v);
     }
 
-    function onRoomJoined({ code, timeControl: tc }: { code: string; timeControl: TimeControl }) {
+    function onRoomJoined({ code, timeControl: tc, variant: v, variantState: vs }: { code: string; timeControl: TimeControl; variant?: VariantType; variantState?: VariantState }) {
       setRoomCode(code);
       setTimeControl(tc);
+      if (v) setVariant(v);
+      if (vs) setVariantState(vs);
       setGameOverMessage(null);
       setError(null);
-      console.log('Joined room:', code, tc);
+      console.log('Joined room:', code, tc, v);
     }
 
     function onClockUpdate({ white, black, activeColor }: ClockState) {
@@ -304,7 +338,10 @@ function App() {
         fifty_moves: 'Fifty-move rule - Draw',
         timeout: 'Time out',
         agreement: 'Draw by agreement',
-        resignation: 'Resignation'
+        resignation: 'Resignation',
+        // Variant-specific
+        three_check: 'Three checks delivered',
+        king_of_the_hill: 'King reached the hill'
       };
       setDrawOffer(null); // Clear any pending draw offer
       if (ratingChanges) {
@@ -450,7 +487,7 @@ function App() {
 
   const createRoom = () => {
     setError(null);
-    socket.emit('create_room', { timeControl: selectedTimeControl });
+    socket.emit('create_room', { timeControl: selectedTimeControl, variant: selectedVariant });
   };
 
   const joinRoom = () => {
@@ -473,6 +510,8 @@ function App() {
     setIllegalMoveExplanation(null);
     setMatchOpponent(null);
     setRatingChange(null);
+    setVariant('standard');
+    setVariantState({ variant: 'standard' });
   };
 
   const handleMove = (move: { from: string; to: string; promotion?: string }) => {
@@ -714,6 +753,36 @@ function App() {
             </div>
           </div>
 
+          {/* Variant Selection */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.9rem' }}>
+              Variant
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {VARIANT_OPTIONS.map((option) => (
+                <button
+                  key={option.type}
+                  onClick={() => setSelectedVariant(option.type)}
+                  style={{
+                    flex: '1 1 calc(50% - 4px)',
+                    minWidth: '90px',
+                    padding: '10px 8px',
+                    borderRadius: '6px',
+                    border: selectedVariant === option.type ? '2px solid #9b59b6' : '1px solid #444',
+                    background: selectedVariant === option.type ? 'rgba(155, 89, 182, 0.2)' : 'transparent',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{option.label}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#888', marginTop: '2px' }}>{option.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={createRoom}
             disabled={!isConnected}
@@ -926,7 +995,70 @@ function App() {
               vs <span style={{ fontWeight: 600 }}>{matchOpponent.username}</span> ({matchOpponent.rating})
             </div>
           )}
+          {/* Variant badge */}
+          {variant !== 'standard' && (
+            <div style={{
+              background: '#9b59b6',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: 'white'
+            }}>
+              {VARIANT_OPTIONS.find(v => v.type === variant)?.label || variant}
+            </div>
+          )}
         </div>
+        {/* Variant-specific info */}
+        {variant === 'threeCheck' && variantState.checkCount && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '30px',
+            marginTop: '10px'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.8rem', color: '#888' }}>White Checks</div>
+              <div style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: variantState.checkCount.white >= 3 ? '#81b64c' : 'white'
+              }}>
+                {variantState.checkCount.white}/3
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '0.8rem', color: '#888' }}>Black Checks</div>
+              <div style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: variantState.checkCount.black >= 3 ? '#81b64c' : 'white'
+              }}>
+                {variantState.checkCount.black}/3
+              </div>
+            </div>
+          </div>
+        )}
+        {variant === 'kingOfTheHill' && (
+          <div style={{
+            textAlign: 'center',
+            marginTop: '10px',
+            fontSize: '0.85rem',
+            color: '#888'
+          }}>
+            Win by moving your King to d4, d5, e4, or e5 (without being in check)
+          </div>
+        )}
+        {variant === 'chess960' && variantState.positionId !== undefined && (
+          <div style={{
+            textAlign: 'center',
+            marginTop: '10px',
+            fontSize: '0.85rem',
+            color: '#888'
+          }}>
+            Position #{variantState.positionId}
+          </div>
+        )}
       </div>
 
       <div style={{

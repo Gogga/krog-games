@@ -18,6 +18,17 @@ import {
 } from './krog';
 import { dbOperations, calculateEloChange, User, Game } from './db';
 import * as auth from './auth';
+import {
+    VariantType,
+    VariantState,
+    VariantGameResult,
+    createVariantGame,
+    getVariantResult,
+    updateVariantState,
+    generateChess960Position,
+    HILL_SQUARES,
+    ThreeCheckState
+} from './variants';
 
 const app = express();
 app.use(cors());
@@ -354,6 +365,9 @@ interface Room {
     dbGameId?: string;  // Database game ID for storing results
     whiteUserId?: string;
     blackUserId?: string;
+    // Variant support
+    variant: VariantType;
+    variantState: VariantState;
 }
 
 // Store rooms in memory for MVP
@@ -644,7 +658,7 @@ io.on('connection', (socket) => {
             const whiteSocketId = user1White ? socket.id : match.socket_id;
             const blackSocketId = user1White ? match.socket_id : socket.id;
 
-            // Create the room
+            // Create the room (matchmaking always uses standard variant for now)
             const room: Room = {
                 game: new Chess(),
                 players: {
@@ -656,7 +670,9 @@ io.on('connection', (socket) => {
                 timeControl: tc,
                 clock: initializeClock(tc),
                 whiteUserId: whiteUser?.id,
-                blackUserId: blackUser?.id
+                blackUserId: blackUser?.id,
+                variant: 'standard',
+                variantState: { variant: 'standard' }
             };
 
             // Create database game record
@@ -721,33 +737,45 @@ io.on('connection', (socket) => {
     });
 
     // Create a new room
-    socket.on('create_room', ({ timeControl: timeControlType }: { timeControl?: TimeControlType } = {}) => {
+    socket.on('create_room', ({ timeControl: timeControlType, variant: variantType }: { timeControl?: TimeControlType; variant?: VariantType } = {}) => {
         const code = generateRoomCode();
         const timeControl = TIME_CONTROLS[timeControlType || 'rapid'];
         const authInfo = authenticatedSockets.get(socket.id);
+        const variant = variantType || 'standard';
+
+        // Create variant-specific game
+        const { game, state: variantState } = createVariantGame(variant);
 
         const room: Room = {
-            game: new Chess(),
+            game,
             players: { white: socket.id, spectators: [] },
             code,
             timeControl,
             clock: initializeClock(timeControl),
-            whiteUserId: authInfo?.userId
+            whiteUserId: authInfo?.userId,
+            variant,
+            variantState
         };
         rooms.set(code, room);
         socketToRoom.set(socket.id, code);
 
         socket.join(code);
-        socket.emit('room_created', { code, timeControl });
+        socket.emit('room_created', { code, timeControl, variant, variantState });
         socket.emit('player_assigned', { color: 'white' });
-        socket.emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
+        socket.emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null,
+            variant,
+            variantState
+        });
         socket.emit('clock_update', {
             white: room.clock.white,
             black: room.clock.black,
             activeColor: null
         });
 
-        console.log(`Room ${code} created by ${socket.id} (${authInfo?.username || 'anonymous'}) (white) - ${timeControl.type}`);
+        console.log(`Room ${code} created by ${socket.id} (${authInfo?.username || 'anonymous'}) (white) - ${timeControl.type} - ${variant}`);
     });
 
     // Join existing room by code
@@ -801,9 +829,15 @@ io.on('connection', (socket) => {
             assignedColor = 'spectator';
         }
 
-        socket.emit('room_joined', { code: roomCode, timeControl: room.timeControl });
+        socket.emit('room_joined', { code: roomCode, timeControl: room.timeControl, variant: room.variant, variantState: room.variantState });
         socket.emit('player_assigned', { color: assignedColor });
-        socket.emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
+        socket.emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null,
+            variant: room.variant,
+            variantState: room.variantState
+        });
 
         // Send current clock state
         const times = getCurrentClockTimes(room);
@@ -874,6 +908,9 @@ io.on('connection', (socket) => {
                 switchClock(room, currentTurn);
             }
 
+            // Update variant state (e.g., check count for Three-Check)
+            room.variantState = updateVariantState(room.game, room.variantState, currentTurn);
+
             // Broadcast game state with KROG explanation (send PGN for history + last move for sounds)
             const history = room.game.history({ verbose: true });
             const lastMove = history[history.length - 1];
@@ -887,7 +924,9 @@ io.on('connection', (socket) => {
                     captured: lastMove.captured,
                     flags: lastMove.flags,
                     promotion: lastMove.promotion
-                } : null
+                } : null,
+                variant: room.variant,
+                variantState: room.variantState
             });
 
             // Send move explanation to all clients
@@ -914,29 +953,31 @@ io.on('connection', (socket) => {
                 activeColor: room.clock.activeColor
             });
 
-            // Check for game over conditions
-            if (room.game.isGameOver()) {
-                let result: '1-0' | '0-1' | '1/2-1/2';
-                let reason = 'unknown';
-
-                if (room.game.isCheckmate()) {
-                    reason = 'checkmate';
-                    result = room.game.turn() === 'w' ? '0-1' : '1-0';
-                } else if (room.game.isStalemate()) {
-                    reason = 'stalemate';
-                    result = '1/2-1/2';
-                } else if (room.game.isThreefoldRepetition()) {
-                    reason = 'repetition';
-                    result = '1/2-1/2';
-                } else if (room.game.isInsufficientMaterial()) {
-                    reason = 'insufficient';
-                    result = '1/2-1/2';
+            // Check for variant-specific game over conditions
+            const variantResult = getVariantResult(room.game, room.variantState);
+            if (variantResult.gameOver) {
+                let gameResult: '1-0' | '0-1' | '1/2-1/2';
+                if (variantResult.winner === 'white') {
+                    gameResult = '1-0';
+                } else if (variantResult.winner === 'black') {
+                    gameResult = '0-1';
                 } else {
-                    reason = 'fifty_moves';
-                    result = '1/2-1/2';
+                    gameResult = '1/2-1/2';
                 }
 
-                endGameAndUpdateRatings(room, roomId, result, reason);
+                // Map variant-specific reasons to display strings
+                const reasonMap: Record<string, string> = {
+                    'Checkmate': 'checkmate',
+                    'Stalemate': 'stalemate',
+                    'Threefold repetition': 'repetition',
+                    'Insufficient material': 'insufficient',
+                    'Fifty-move rule': 'fifty_moves',
+                    'Three checks delivered': 'three_check',
+                    'King reached the hill': 'king_of_the_hill'
+                };
+                const reason = reasonMap[variantResult.reason || ''] || variantResult.reason || 'unknown';
+
+                endGameAndUpdateRatings(room, roomId, gameResult, reason);
             }
         } else {
             // Illegal move - send KROG explanation for why
@@ -1018,8 +1059,18 @@ io.on('connection', (socket) => {
         stopClock(room);
         room.clock = initializeClock(room.timeControl);
 
-        room.game.reset();
-        io.to(roomId).emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
+        // Reset game and variant state
+        const { game, state: variantState } = createVariantGame(room.variant, room.variantState.positionId);
+        room.game = game;
+        room.variantState = variantState;
+
+        io.to(roomId).emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null,
+            variant: room.variant,
+            variantState: room.variantState
+        });
         io.to(roomId).emit('clock_update', {
             white: room.clock.white,
             black: room.clock.black,
@@ -1220,8 +1271,11 @@ io.on('connection', (socket) => {
         room.players.white = blackSocketId;
         room.players.black = whiteSocketId;
 
-        // Reset the game
-        room.game.reset();
+        // Reset the game and variant state (for Chess960, generate new position)
+        const newPositionId = room.variant === 'chess960' ? undefined : room.variantState.positionId;
+        const { game, state: variantState } = createVariantGame(room.variant, newPositionId);
+        room.game = game;
+        room.variantState = variantState;
 
         // Reset the clock
         stopClock(room);
@@ -1237,7 +1291,13 @@ io.on('connection', (socket) => {
 
         // Notify all of rematch accepted and new game state
         io.to(roomId).emit('rematch_accepted', {});
-        io.to(roomId).emit('game_state', { pgn: room.game.pgn(), fen: room.game.fen(), lastMove: null });
+        io.to(roomId).emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null,
+            variant: room.variant,
+            variantState: room.variantState
+        });
         io.to(roomId).emit('clock_update', {
             white: room.clock.white,
             black: room.clock.black,
