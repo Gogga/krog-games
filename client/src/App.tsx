@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
-import ChessBoard, { BoardTheme, BOARD_THEMES } from './components/ChessBoard';
+import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
 import PuzzleMode from './components/PuzzleMode';
 import OpeningExplorer from './components/OpeningExplorer';
 import LessonsMode from './components/LessonsMode';
@@ -10,6 +10,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { AuthModal } from './components/AuthModal';
 import { UserPanel } from './components/UserPanel';
 import { MatchmakingPanel } from './components/MatchmakingPanel';
+import { FriendsPanel } from './components/FriendsPanel';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -175,6 +176,14 @@ function App() {
     }
     return BOARD_THEMES[0];
   });
+  const [pieceTheme, setPieceTheme] = useState<PieceTheme>(() => {
+    const saved = localStorage.getItem('krog-piece-theme');
+    if (saved) {
+      const found = PIECE_THEMES.find(t => t.name === saved);
+      if (found) return found;
+    }
+    return PIECE_THEMES[0];
+  });
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('krog-sound-enabled');
     return saved !== 'false'; // Default to true
@@ -197,6 +206,43 @@ function App() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('intermediate');
   const [selectedPlayerColor, setSelectedPlayerColor] = useState<'white' | 'black' | 'random'>('white');
   const [isComputerGame, setIsComputerGame] = useState(false);
+
+  // Spectator state
+  const [spectators, setSpectators] = useState<{ id: string; username: string }[]>([]);
+
+  // PGN import state
+  const [showPGNImport, setShowPGNImport] = useState(false);
+  const [pgnInput, setPgnInput] = useState('');
+  const [pgnError, setPgnError] = useState<string | null>(null);
+
+  // Chat state
+  interface ChatMessage {
+    id: string;
+    username: string;
+    role: 'white' | 'black' | 'spectator';
+    message: string;
+    timestamp: number;
+  }
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [showChat, setShowChat] = useState(true);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Challenge state
+  interface Challenge {
+    challengeId: string;
+    from: { id: string; username: string; rating: number };
+    timeControl: TimeControlType;
+    variant: VariantType;
+  }
+  interface OutgoingChallenge {
+    challengeId: string;
+    to: { id: string; username: string; rating: number };
+    timeControl: TimeControlType;
+    variant: VariantType;
+  }
+  const [incomingChallenges, setIncomingChallenges] = useState<Challenge[]>([]);
+  const [outgoingChallenges, setOutgoingChallenges] = useState<OutgoingChallenge[]>([]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -447,6 +493,63 @@ function App() {
       console.log('Player left:', color);
     }
 
+    function onSpectatorUpdate({ count, spectators: specs }: { count: number; spectators: { id: string; username: string }[] }) {
+      setSpectators(specs);
+      console.log('Spectators:', count, specs);
+    }
+
+    function onChatMessage(msg: { id: string; username: string; role: 'white' | 'black' | 'spectator'; message: string; timestamp: number }) {
+      setChatMessages(prev => [...prev, msg]);
+    }
+
+    // Challenge handlers
+    function onChallengeReceived(data: { challengeId: string; from: { id: string; username: string; rating: number }; timeControl: TimeControlType; variant: VariantType }) {
+      setIncomingChallenges(prev => [...prev, data]);
+      if (soundEnabledRef.current) ChessSounds.notify();
+    }
+
+    function onChallengeSent(data: { success: boolean; challengeId?: string; to?: { id: string; username: string; rating: number }; timeControl?: TimeControlType; variant?: VariantType; error?: string }) {
+      if (data.success && data.challengeId && data.to && data.timeControl) {
+        setOutgoingChallenges(prev => [...prev, {
+          challengeId: data.challengeId!,
+          to: data.to!,
+          timeControl: data.timeControl!,
+          variant: data.variant || 'standard'
+        }]);
+      }
+    }
+
+    function onChallengeAccepted(data: { success: boolean; roomCode?: string; color?: 'white' | 'black'; opponent?: { username: string; rating: number }; timeControl?: string; variant?: VariantType; error?: string }) {
+      if (data.success && data.roomCode) {
+        setIncomingChallenges([]);
+        setOutgoingChallenges([]);
+        setRoomCode(data.roomCode);
+        setPlayerColor(data.color || null);
+        setMatchOpponent(data.opponent || null);
+        setVariant(data.variant || 'standard');
+        setGame(new Chess());
+        setGameOverMessage(null);
+        setMoveExplanation(null);
+        setIllegalMoveExplanation(null);
+        setDrawOffer(null);
+        setRematchRequest(null);
+        setRatingChange(null);
+        if (soundEnabledRef.current) ChessSounds.gameStart();
+      }
+    }
+
+    function onChallengeDeclined(data: { challengeId?: string; by?: string; success?: boolean }) {
+      if (data.challengeId) {
+        setOutgoingChallenges(prev => prev.filter(c => c.challengeId !== data.challengeId));
+      }
+      setIncomingChallenges(prev => prev.filter(c => c.challengeId !== data.challengeId));
+    }
+
+    function onChallengeCancelled(data: { challengeId: string; by?: string; success?: boolean }) {
+      setIncomingChallenges(prev => prev.filter(c => c.challengeId !== data.challengeId));
+      setOutgoingChallenges(prev => prev.filter(c => c.challengeId !== data.challengeId));
+    }
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('game_state', onGameState);
@@ -469,6 +572,13 @@ function App() {
     socket.on('move_explanation', onMoveExplanation);
     socket.on('illegal_move', onIllegalMove);
     socket.on('move_suggestions', onMoveSuggestions);
+    socket.on('spectator_update', onSpectatorUpdate);
+    socket.on('chat_message', onChatMessage);
+    socket.on('challenge_received', onChallengeReceived);
+    socket.on('challenge_sent', onChallengeSent);
+    socket.on('challenge_accepted', onChallengeAccepted);
+    socket.on('challenge_declined', onChallengeDeclined);
+    socket.on('challenge_cancelled', onChallengeCancelled);
 
     if (socket.connected) {
       onConnect();
@@ -497,6 +607,13 @@ function App() {
       socket.off('move_explanation', onMoveExplanation);
       socket.off('illegal_move', onIllegalMove);
       socket.off('move_suggestions', onMoveSuggestions);
+      socket.off('spectator_update', onSpectatorUpdate);
+      socket.off('chat_message', onChatMessage);
+      socket.off('challenge_received', onChallengeReceived);
+      socket.off('challenge_sent', onChallengeSent);
+      socket.off('challenge_accepted', onChallengeAccepted);
+      socket.off('challenge_declined', onChallengeDeclined);
+      socket.off('challenge_cancelled', onChallengeCancelled);
     };
   }, []);
 
@@ -542,10 +659,41 @@ function App() {
     setVariantState({ variant: 'standard' });
     setIsComputerGame(false);
     setShowComputerOptions(false);
+    setSpectators([]);
+    setChatMessages([]);
   };
 
   const handleMove = (move: { from: string; to: string; promotion?: string }) => {
     if (!roomCode) return;
+
+    // Analysis mode - handle moves locally
+    if (roomCode === 'ANALYSIS') {
+      try {
+        const newGame = new Chess(game.fen());
+        // Load PGN to preserve history, then try the move
+        newGame.loadPgn(game.pgn());
+        const result = newGame.move(move);
+        if (result) {
+          setGame(newGame);
+          // Play appropriate sound
+          if (soundEnabledRef.current) {
+            if (newGame.isCheckmate()) {
+              ChessSounds.gameEnd();
+            } else if (newGame.isCheck()) {
+              ChessSounds.check();
+            } else if (result.captured) {
+              ChessSounds.capture();
+            } else {
+              ChessSounds.move();
+            }
+          }
+        }
+      } catch {
+        // Invalid move - ignore silently in analysis mode
+      }
+      return;
+    }
+
     socket.emit('make_move', { roomId: roomCode, move });
   };
 
@@ -557,6 +705,16 @@ function App() {
     setSuggestions([]);
     setDrawOffer(null);
     setRatingChange(null);
+
+    // Analysis mode - reset locally
+    if (roomCode === 'ANALYSIS') {
+      setGame(new Chess());
+      if (soundEnabledRef.current) {
+        ChessSounds.gameStart();
+      }
+      return;
+    }
+
     socket.emit('reset_game', roomCode);
   };
 
@@ -687,6 +845,43 @@ function App() {
     localStorage.setItem('krog-board-theme', theme.name);
   };
 
+  const changePieceTheme = (theme: PieceTheme) => {
+    setPieceTheme(theme);
+    localStorage.setItem('krog-piece-theme', theme.name);
+  };
+
+  const importPGN = () => {
+    const trimmedPgn = pgnInput.trim();
+    if (!trimmedPgn) {
+      setPgnError(language === 'en' ? 'Please enter a PGN' : 'Vennligst skriv inn en PGN');
+      return;
+    }
+
+    try {
+      const newGame = new Chess();
+      newGame.loadPgn(trimmedPgn);
+
+      // Successfully loaded - set up analysis mode
+      setGame(newGame);
+      setShowPGNImport(false);
+      setPgnInput('');
+      setPgnError(null);
+      setPlayerColor('white'); // Allow both sides to be played in analysis
+      setRoomCode('ANALYSIS');
+      setTimeControl(null);
+      setIsComputerGame(false);
+      setGameOverMessage(null);
+      setVariant('standard');
+      setVariantState({ variant: 'standard' });
+
+      if (soundEnabledRef.current) {
+        ChessSounds.gameStart();
+      }
+    } catch {
+      setPgnError(language === 'en' ? 'Invalid PGN format' : 'Ugyldig PGN-format');
+    }
+  };
+
   const toggleSound = async () => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
@@ -696,6 +891,51 @@ function App() {
       ChessSounds.notify(); // Play a sound to confirm it's working
     }
   };
+
+  const sendChatMessage = () => {
+    if (!roomCode || roomCode === 'ANALYSIS' || !chatInput.trim()) return;
+    socket.emit('chat_message', { roomId: roomCode, message: chatInput.trim() });
+    setChatInput('');
+  };
+
+  // Challenge functions
+  const challengeFriend = (friendId: string, friendUsername: string) => {
+    socket.emit('challenge_friend', {
+      friendId,
+      timeControl: selectedTimeControl,
+      variant: selectedVariant
+    });
+  };
+
+  const acceptChallenge = (challenge: Challenge) => {
+    socket.emit('accept_challenge', {
+      challengeId: challenge.challengeId,
+      challengerId: challenge.from.id,
+      timeControl: challenge.timeControl,
+      variant: challenge.variant
+    });
+  };
+
+  const declineChallenge = (challenge: Challenge) => {
+    socket.emit('decline_challenge', {
+      challengeId: challenge.challengeId,
+      challengerId: challenge.from.id
+    });
+    setIncomingChallenges(prev => prev.filter(c => c.challengeId !== challenge.challengeId));
+  };
+
+  const cancelChallenge = (challenge: OutgoingChallenge) => {
+    socket.emit('cancel_challenge', {
+      challengeId: challenge.challengeId,
+      friendId: challenge.to.id
+    });
+    setOutgoingChallenges(prev => prev.filter(c => c.challengeId !== challenge.challengeId));
+  };
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   // Puzzle Mode view
   if (puzzleMode) {
@@ -734,7 +974,10 @@ function App() {
   if (!roomCode) {
     return (
       <div className="app-container">
-        <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
+          <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
+        </div>
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
         <div style={{ marginBottom: '20px', textAlign: 'center' }}>
@@ -754,6 +997,127 @@ function App() {
         }}>
           {/* Matchmaking Section - for logged in users */}
           <MatchmakingPanel socket={socket} onMatchFound={handleMatchFound} />
+
+          {/* Incoming Challenges */}
+          {incomingChallenges.length > 0 && (
+            <div style={{
+              background: 'rgba(52, 152, 219, 0.15)',
+              border: '2px solid #3498db',
+              borderRadius: '8px',
+              padding: '15px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>&#9876;</span>
+                {language === 'en' ? 'Incoming Challenges' : 'Innkommende utfordringer'}
+              </div>
+              {incomingChallenges.map(challenge => (
+                <div
+                  key={challenge.challengeId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px',
+                    background: 'var(--bg-primary)',
+                    borderRadius: '6px',
+                    marginBottom: '8px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{challenge.from.username}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      {challenge.from.rating} rating | {challenge.timeControl} | {challenge.variant}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => acceptChallenge(challenge)}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#2ecc71',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontWeight: 600
+                      }}
+                    >
+                      {language === 'en' ? 'Accept' : 'Godta'}
+                    </button>
+                    <button
+                      onClick={() => declineChallenge(challenge)}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#e74c3c',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontWeight: 600
+                      }}
+                    >
+                      {language === 'en' ? 'Decline' : 'Avvis'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Outgoing Challenges */}
+          {outgoingChallenges.length > 0 && (
+            <div style={{
+              background: 'rgba(155, 89, 182, 0.15)',
+              border: '1px solid #9b59b6',
+              borderRadius: '8px',
+              padding: '15px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '10px', fontSize: '0.9rem', color: '#888' }}>
+                {language === 'en' ? 'Waiting for response...' : 'Venter pa svar...'}
+              </div>
+              {outgoingChallenges.map(challenge => (
+                <div
+                  key={challenge.challengeId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px',
+                    background: 'var(--bg-primary)',
+                    borderRadius: '6px',
+                    marginBottom: '8px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{challenge.to.username}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      {challenge.timeControl} | {challenge.variant}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => cancelChallenge(challenge)}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'transparent',
+                      border: '1px solid #666',
+                      borderRadius: '4px',
+                      color: '#888',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    {language === 'en' ? 'Cancel' : 'Avbryt'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Time Control Selection */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.9rem' }}>
@@ -1008,7 +1372,7 @@ function App() {
               onClick={() => setLessonsMode(true)}
               disabled={!isConnected}
               style={{
-                flex: '1 1 calc(33% - 7px)',
+                flex: '1 1 calc(50% - 5px)',
                 minWidth: '100px',
                 background: '#e67e22',
                 border: 'none',
@@ -1034,7 +1398,7 @@ function App() {
               onClick={() => setPuzzleMode(true)}
               disabled={!isConnected}
               style={{
-                flex: '1 1 calc(33% - 7px)',
+                flex: '1 1 calc(50% - 5px)',
                 minWidth: '100px',
                 background: '#9b59b6',
                 border: 'none',
@@ -1060,7 +1424,7 @@ function App() {
               onClick={() => setOpeningExplorer(true)}
               disabled={!isConnected}
               style={{
-                flex: '1 1 calc(33% - 7px)',
+                flex: '1 1 calc(50% - 5px)',
                 minWidth: '100px',
                 background: '#2ecc71',
                 border: 'none',
@@ -1081,7 +1445,135 @@ function App() {
               <span style={{ fontSize: '1.2rem' }}>{'\u{1F4D6}'}</span>
               Openings
             </button>
+
+            <button
+              onClick={() => setShowPGNImport(true)}
+              style={{
+                flex: '1 1 calc(50% - 5px)',
+                minWidth: '100px',
+                background: '#1abc9c',
+                border: 'none',
+                color: 'white',
+                padding: '15px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: '1rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>📋</span>
+              Import PGN
+            </button>
           </div>
+
+          {/* PGN Import Modal */}
+          {showPGNImport && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.8)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => {
+              setShowPGNImport(false);
+              setPgnError(null);
+            }}
+            >
+              <div
+                style={{
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  maxWidth: '500px',
+                  width: '90%',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '1.3rem' }}>
+                  {language === 'en' ? 'Import PGN' : 'Importer PGN'}
+                </h3>
+                <textarea
+                  value={pgnInput}
+                  onChange={(e) => {
+                    setPgnInput(e.target.value);
+                    setPgnError(null);
+                  }}
+                  placeholder={language === 'en'
+                    ? 'Paste PGN here...\n\nExample:\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6'
+                    : 'Lim inn PGN her...\n\nEksempel:\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6'
+                  }
+                  style={{
+                    width: '100%',
+                    height: '200px',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: pgnError ? '2px solid #e74c3c' : '1px solid #444',
+                    background: 'var(--bg-primary)',
+                    color: 'white',
+                    fontFamily: 'monospace',
+                    fontSize: '0.9rem',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {pgnError && (
+                  <div style={{ color: '#e74c3c', marginTop: '8px', fontSize: '0.9rem' }}>
+                    {pgnError}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                  <button
+                    onClick={importPGN}
+                    style={{
+                      flex: 1,
+                      background: '#1abc9c',
+                      border: 'none',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {language === 'en' ? 'Load Game' : 'Last inn spill'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPGNImport(false);
+                      setPgnError(null);
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: '1px solid #444',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    {language === 'en' ? 'Cancel' : 'Avbryt'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1108,26 +1600,29 @@ function App() {
           flexWrap: 'wrap'
         }}>
           <div style={{
-            background: 'var(--bg-secondary)',
+            background: roomCode === 'ANALYSIS' ? '#1abc9c' : 'var(--bg-secondary)',
             padding: '8px 16px',
             borderRadius: '6px',
             fontSize: '1.1rem',
             fontWeight: 600,
-            letterSpacing: '3px'
+            letterSpacing: roomCode === 'ANALYSIS' ? '1px' : '3px',
+            color: roomCode === 'ANALYSIS' ? 'white' : 'inherit'
           }}>
-            Room: {roomCode}
+            {roomCode === 'ANALYSIS' ? (language === 'en' ? 'Analysis Mode' : 'Analysemodus') : `Room: ${roomCode}`}
           </div>
-          <div style={{
-            background: playerColor === 'white' ? '#f0d9b5' :
-                       playerColor === 'black' ? '#b58863' : '#666',
-            color: playerColor === 'white' ? '#000' : '#fff',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-            fontWeight: 600
-          }}>
-            {playerColor === 'spectator' ? 'Spectating' : `Playing as ${playerColor}`}
-          </div>
+          {roomCode !== 'ANALYSIS' && (
+            <div style={{
+              background: playerColor === 'white' ? '#f0d9b5' :
+                         playerColor === 'black' ? '#b58863' : '#666',
+              color: playerColor === 'white' ? '#000' : '#fff',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '0.9rem',
+              fontWeight: 600
+            }}>
+              {playerColor === 'spectator' ? 'Spectating' : `Playing as ${playerColor}`}
+            </div>
+          )}
           {matchOpponent && (
             <div style={{
               background: 'var(--bg-secondary)',
@@ -1161,6 +1656,23 @@ function App() {
               color: 'white'
             }}>
               {VARIANT_OPTIONS.find(v => v.type === variant)?.label || variant}
+            </div>
+          )}
+          {/* Spectator count */}
+          {spectators.length > 0 && (
+            <div
+              style={{
+                background: '#95a5a6',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                color: 'white',
+                cursor: 'help'
+              }}
+              title={spectators.map(s => s.username).join(', ')}
+            >
+              👁 {spectators.length} watching
             </div>
           )}
         </div>
@@ -1257,6 +1769,7 @@ function App() {
           socket={socket}
           language={language}
           theme={boardTheme}
+          pieceTheme={pieceTheme}
         />
 
         {/* Player's clock (bottom) */}
@@ -1474,8 +1987,8 @@ function App() {
           {learnMode ? 'Learn Mode ON' : 'Learn Mode'}
         </button>
 
-        {/* Draw/Resign buttons - only for players, only during active game */}
-        {playerColor !== 'spectator' && !gameOverMessage && (
+        {/* Draw/Resign buttons - only for players, only during active game, not in analysis mode */}
+        {playerColor !== 'spectator' && !gameOverMessage && roomCode !== 'ANALYSIS' && (
           <>
             <button
               onClick={offerDraw}
@@ -1510,8 +2023,8 @@ function App() {
           </>
         )}
 
-        {/* Rematch button - only for players, only after game over */}
-        {playerColor !== 'spectator' && gameOverMessage && (
+        {/* Rematch button - only for players, only after game over, not in analysis mode */}
+        {playerColor !== 'spectator' && gameOverMessage && roomCode !== 'ANALYSIS' && (
           <button
             onClick={requestRematch}
             disabled={rematchRequest === playerColor}
@@ -1531,7 +2044,8 @@ function App() {
           </button>
         )}
 
-        {playerColor !== 'spectator' && (
+        {/* Reset button - always show in analysis mode or for players */}
+        {(roomCode === 'ANALYSIS' || playerColor !== 'spectator') && (
           <button
             onClick={resetGame}
             style={{
@@ -1544,7 +2058,7 @@ function App() {
               fontFamily: 'inherit'
             }}
           >
-            Reset Board
+            {roomCode === 'ANALYSIS' ? (language === 'en' ? 'New Position' : 'Ny posisjon') : 'Reset Board'}
           </button>
         )}
         <button
@@ -1605,12 +2119,12 @@ function App() {
         </div>
       )}
 
-      {/* Board Theme & Sound Settings */}
+      {/* Board Theme, Piece Theme & Sound Settings */}
       <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-        {/* Theme selector */}
+        {/* Board theme selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ color: '#888', fontSize: '0.85rem' }}>
-            {language === 'en' ? 'Theme:' : 'Tema:'}
+            {language === 'en' ? 'Board:' : 'Brett:'}
           </span>
           <div style={{ display: 'flex', gap: '6px' }}>
             {BOARD_THEMES.map((theme) => (
@@ -1641,6 +2155,41 @@ function App() {
           </div>
         </div>
 
+        {/* Piece theme selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: '#888', fontSize: '0.85rem' }}>
+            {language === 'en' ? 'Pieces:' : 'Brikker:'}
+          </span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {PIECE_THEMES.map((theme) => (
+              <button
+                key={theme.name}
+                onClick={() => changePieceTheme(theme)}
+                title={theme.name}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '4px',
+                  border: pieceTheme.name === theme.name ? '2px solid #81b64c' : '2px solid transparent',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  background: '#333',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  overflow: 'hidden'
+                }}
+              >
+                <img
+                  src={theme.pieces.w.n}
+                  alt={theme.name}
+                  style={{ width: '26px', height: '26px' }}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Sound toggle */}
         <button
           onClick={toggleSound}
@@ -1666,19 +2215,21 @@ function App() {
 
       <div style={{ marginTop: '15px', textAlign: 'center' }}>
         <div style={{
-          color: gameOverMessage ? '#e74c3c' : (isMyTurn ? '#81b64c' : '#888'),
+          color: gameOverMessage ? '#e74c3c' : (roomCode === 'ANALYSIS' ? '#1abc9c' : (isMyTurn ? '#81b64c' : '#888')),
           fontSize: '1.1rem',
-          fontWeight: (gameOverMessage || isMyTurn) ? 600 : 400
+          fontWeight: (gameOverMessage || isMyTurn || roomCode === 'ANALYSIS') ? 600 : 400
         }}>
           {gameOverMessage
             ? gameOverMessage
             : game.isGameOver()
               ? `Game Over - ${game.isCheckmate() ? (game.turn() === 'w' ? 'Black' : 'White') + ' wins!' : 'Draw'}`
-              : isMyTurn
-                ? 'Your turn!'
-                : playerColor === 'spectator'
-                  ? `${game.turn() === 'w' ? 'White' : 'Black'} to move`
-                  : "Opponent's turn"}
+              : roomCode === 'ANALYSIS'
+                ? `${game.turn() === 'w' ? 'White' : 'Black'} to move`
+                : isMyTurn
+                  ? 'Your turn!'
+                  : playerColor === 'spectator'
+                    ? `${game.turn() === 'w' ? 'White' : 'Black'} to move`
+                    : "Opponent's turn"}
           {game.inCheck() && !game.isGameOver() && !gameOverMessage && <span style={{ color: '#e74c3c', marginLeft: '10px' }}>CHECK!</span>}
         </div>
         {/* Rating change display */}
@@ -2300,6 +2851,162 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Chat Panel - only show in multiplayer games, not in analysis mode */}
+      {roomCode && roomCode !== 'ANALYSIS' && (
+        <div style={{
+          marginTop: '20px',
+          background: 'var(--bg-secondary)',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}>
+          {/* Header with toggle */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            background: 'rgba(0,0,0,0.2)',
+            borderBottom: showChat ? '1px solid #333' : 'none'
+          }}>
+            <button
+              onClick={() => setShowChat(!showChat)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: '1rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ transform: showChat ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
+                ▶
+              </span>
+              {language === 'en' ? 'Game Chat' : 'Spillchat'}
+            </button>
+            {chatMessages.length > 0 && !showChat && (
+              <span style={{
+                background: '#81b64c',
+                color: 'white',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                fontSize: '0.8rem',
+                fontWeight: 600
+              }}>
+                {chatMessages.length}
+              </span>
+            )}
+          </div>
+
+          {/* Chat content */}
+          {showChat && (
+            <div style={{ padding: '16px' }}>
+              {/* Messages area */}
+              <div style={{
+                height: '200px',
+                overflowY: 'auto',
+                marginBottom: '12px',
+                padding: '8px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px'
+              }}>
+                {chatMessages.length > 0 ? (
+                  chatMessages.map((msg) => (
+                    <div key={msg.id} style={{
+                      marginBottom: '8px',
+                      padding: '6px 10px',
+                      background: msg.role === 'white' ? 'rgba(240, 217, 181, 0.1)' :
+                                 msg.role === 'black' ? 'rgba(181, 136, 99, 0.1)' :
+                                 'rgba(150, 165, 166, 0.1)',
+                      borderRadius: '6px',
+                      borderLeft: `3px solid ${
+                        msg.role === 'white' ? '#f0d9b5' :
+                        msg.role === 'black' ? '#b58863' :
+                        '#95a5a6'
+                      }`
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '4px'
+                      }}>
+                        <span style={{
+                          fontWeight: 600,
+                          color: msg.role === 'white' ? '#f0d9b5' :
+                                 msg.role === 'black' ? '#b58863' :
+                                 '#95a5a6',
+                          fontSize: '0.85rem'
+                        }}>
+                          {msg.username}
+                        </span>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          color: '#666'
+                        }}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div style={{ color: '#ccc', fontSize: '0.9rem', wordBreak: 'break-word' }}>
+                        {msg.message}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: '#666', textAlign: 'center', padding: '40px 20px' }}>
+                    {language === 'en' ? 'No messages yet. Say hi!' : 'Ingen meldinger ennå. Si hei!'}
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input area */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                  placeholder={language === 'en' ? 'Type a message...' : 'Skriv en melding...'}
+                  maxLength={500}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #444',
+                    background: 'var(--bg-primary)',
+                    color: 'white',
+                    fontFamily: 'inherit',
+                    fontSize: '0.9rem'
+                  }}
+                />
+                <button
+                  onClick={sendChatMessage}
+                  disabled={!chatInput.trim()}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: chatInput.trim() ? '#81b64c' : '#444',
+                    color: 'white',
+                    cursor: chatInput.trim() ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit',
+                    fontSize: '0.9rem',
+                    fontWeight: 600
+                  }}
+                >
+                  {language === 'en' ? 'Send' : 'Send'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

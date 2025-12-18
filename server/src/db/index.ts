@@ -71,6 +71,18 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  -- Friendships table
+  CREATE TABLE IF NOT EXISTS friendships (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    friend_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (friend_id) REFERENCES users(id),
+    UNIQUE(user_id, friend_id)
+  );
+
   -- Create indexes for performance
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
   CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -81,6 +93,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_rating_history_user_id ON rating_history(user_id);
   CREATE INDEX IF NOT EXISTS idx_matchmaking_queue_rating ON matchmaking_queue(rating);
   CREATE INDEX IF NOT EXISTS idx_matchmaking_queue_time_control ON matchmaking_queue(time_control);
+  CREATE INDEX IF NOT EXISTS idx_friendships_user_id ON friendships(user_id);
+  CREATE INDEX IF NOT EXISTS idx_friendships_friend_id ON friendships(friend_id);
+  CREATE INDEX IF NOT EXISTS idx_friendships_status ON friendships(status);
 `);
 
 // Prepared statements
@@ -203,6 +218,63 @@ const statements = {
     WHERE time_control = ? AND joined_at <= (
       SELECT joined_at FROM matchmaking_queue WHERE user_id = ?
     )
+  `),
+
+  // Friendship operations
+  sendFriendRequest: db.prepare(`
+    INSERT INTO friendships (id, user_id, friend_id, status)
+    VALUES (?, ?, ?, 'pending')
+  `),
+
+  getFriendship: db.prepare(`
+    SELECT * FROM friendships
+    WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)
+  `),
+
+  acceptFriendRequest: db.prepare(`
+    UPDATE friendships SET status = 'accepted' WHERE id = ?
+  `),
+
+  declineFriendRequest: db.prepare(`
+    DELETE FROM friendships WHERE id = ?
+  `),
+
+  removeFriend: db.prepare(`
+    DELETE FROM friendships
+    WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?))
+    AND status = 'accepted'
+  `),
+
+  getFriends: db.prepare(`
+    SELECT u.id, u.username, u.rating, u.last_login, f.created_at as friends_since
+    FROM friendships f
+    JOIN users u ON (
+      (f.user_id = ? AND u.id = f.friend_id) OR
+      (f.friend_id = ? AND u.id = f.user_id)
+    )
+    WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
+  `),
+
+  getIncomingRequests: db.prepare(`
+    SELECT f.id as request_id, u.id, u.username, u.rating, f.created_at
+    FROM friendships f
+    JOIN users u ON f.user_id = u.id
+    WHERE f.friend_id = ? AND f.status = 'pending'
+  `),
+
+  getOutgoingRequests: db.prepare(`
+    SELECT f.id as request_id, u.id, u.username, u.rating, f.created_at
+    FROM friendships f
+    JOIN users u ON f.friend_id = u.id
+    WHERE f.user_id = ? AND f.status = 'pending'
+  `),
+
+  searchUsers: db.prepare(`
+    SELECT id, username, rating
+    FROM users
+    WHERE username LIKE ? AND id != ?
+    ORDER BY rating DESC
+    LIMIT 20
   `)
 };
 
@@ -244,6 +316,30 @@ export interface QueueEntry {
   rating: number;
   time_control: string;
   joined_at: string;
+}
+
+export interface Friendship {
+  id: string;
+  user_id: string;
+  friend_id: string;
+  status: 'pending' | 'accepted';
+  created_at: string;
+}
+
+export interface Friend {
+  id: string;
+  username: string;
+  rating: number;
+  last_login: string | null;
+  friends_since: string;
+}
+
+export interface FriendRequest {
+  request_id: string;
+  id: string;
+  username: string;
+  rating: number;
+  created_at: string;
 }
 
 // Database operations
@@ -350,6 +446,91 @@ export const dbOperations = {
   getQueuePosition(userId: string, timeControl: string): number {
     const result = statements.getQueuePosition.get(timeControl, userId) as { position: number };
     return result?.position || 0;
+  },
+
+  // Friendship operations
+  sendFriendRequest(userId: string, friendId: string): { success: boolean; error?: string; requestId?: string } {
+    try {
+      // Check if friendship already exists
+      const existing = statements.getFriendship.get(userId, friendId, userId, friendId) as Friendship | null;
+      if (existing) {
+        if (existing.status === 'accepted') {
+          return { success: false, error: 'Already friends' };
+        }
+        if (existing.user_id === userId) {
+          return { success: false, error: 'Friend request already sent' };
+        }
+        // If they sent us a request, auto-accept it
+        statements.acceptFriendRequest.run(existing.id);
+        return { success: true, requestId: existing.id };
+      }
+      const id = uuidv4();
+      statements.sendFriendRequest.run(id, userId, friendId);
+      return { success: true, requestId: id };
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      return { success: false, error: 'Failed to send friend request' };
+    }
+  },
+
+  acceptFriendRequest(requestId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      // Verify the request is for this user
+      const request = db.prepare('SELECT * FROM friendships WHERE id = ? AND friend_id = ? AND status = ?').get(requestId, userId, 'pending') as Friendship | null;
+      if (!request) {
+        return { success: false, error: 'Friend request not found' };
+      }
+      statements.acceptFriendRequest.run(requestId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+      return { success: false, error: 'Failed to accept friend request' };
+    }
+  },
+
+  declineFriendRequest(requestId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      // Verify the request is for this user (either as sender or receiver)
+      const request = db.prepare('SELECT * FROM friendships WHERE id = ? AND (friend_id = ? OR user_id = ?) AND status = ?').get(requestId, userId, userId, 'pending') as Friendship | null;
+      if (!request) {
+        return { success: false, error: 'Friend request not found' };
+      }
+      statements.declineFriendRequest.run(requestId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+      return { success: false, error: 'Failed to decline friend request' };
+    }
+  },
+
+  removeFriend(userId: string, friendId: string): { success: boolean; error?: string } {
+    try {
+      const result = statements.removeFriend.run(userId, friendId, userId, friendId);
+      if (result.changes === 0) {
+        return { success: false, error: 'Friend not found' };
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error removing friend:', error);
+      return { success: false, error: 'Failed to remove friend' };
+    }
+  },
+
+  getFriends(userId: string): Friend[] {
+    return statements.getFriends.all(userId, userId, userId, userId) as Friend[];
+  },
+
+  getIncomingRequests(userId: string): FriendRequest[] {
+    return statements.getIncomingRequests.all(userId) as FriendRequest[];
+  },
+
+  getOutgoingRequests(userId: string): FriendRequest[] {
+    return statements.getOutgoingRequests.all(userId) as FriendRequest[];
+  },
+
+  searchUsers(query: string, excludeUserId: string): { id: string; username: string; rating: number }[] {
+    const searchQuery = `%${query.toLowerCase()}%`;
+    return statements.searchUsers.all(searchQuery, excludeUserId) as { id: string; username: string; rating: number }[];
   }
 };
 

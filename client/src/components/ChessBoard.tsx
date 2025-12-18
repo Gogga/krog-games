@@ -48,6 +48,140 @@ export const BOARD_THEMES: BoardTheme[] = [
     { name: 'Tournament', light: '#f5f5dc', dark: '#228b22' },
 ];
 
+export interface PieceTheme {
+    name: string;
+    pieces: Record<string, Record<string, string>>;
+}
+
+export const PIECE_THEMES: PieceTheme[] = [
+    {
+        name: 'Classic',
+        pieces: {
+            w: {
+                p: 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
+                r: 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
+                n: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
+                b: 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
+                q: 'https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg',
+                k: 'https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg',
+            },
+            b: {
+                p: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg',
+                r: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg',
+                n: 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg',
+                b: 'https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg',
+                q: 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
+                k: 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg',
+            },
+        },
+    },
+    {
+        name: 'Neo',
+        pieces: {
+            w: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wr.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png',
+            },
+            b: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/br.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png',
+            },
+        },
+    },
+    {
+        name: 'Alpha',
+        pieces: {
+            w: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/wp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/wr.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/wn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/wb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/wq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/wk.png',
+            },
+            b: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/br.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bk.png',
+            },
+        },
+    },
+    {
+        name: 'Wood',
+        pieces: {
+            w: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/wp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/wr.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/wn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/wb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/wq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/wk.png',
+            },
+            b: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/bp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/br.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/bn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/bb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/bq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/wood/150/bk.png',
+            },
+        },
+    },
+    {
+        name: 'Glass',
+        pieces: {
+            w: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/wp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/wr.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/wn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/wb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/wq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/wk.png',
+            },
+            b: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/bp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/br.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/bn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/bb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/bq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/glass/150/bk.png',
+            },
+        },
+    },
+    {
+        name: 'Gothic',
+        pieces: {
+            w: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/wp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/wr.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/wn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/wb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/wq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/wk.png',
+            },
+            b: {
+                p: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/bp.png',
+                r: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/br.png',
+                n: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/bn.png',
+                b: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/bb.png',
+                q: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/bq.png',
+                k: 'https://images.chesscomfiles.com/chess-themes/pieces/gothic/150/bk.png',
+            },
+        },
+    },
+];
+
 interface ChessBoardProps {
     game: Chess;
     onMove: (move: { from: string; to: string; promotion?: string }) => void;
@@ -57,26 +191,8 @@ interface ChessBoardProps {
     socket?: Socket;
     language?: 'en' | 'no';
     theme?: BoardTheme;
+    pieceTheme?: PieceTheme;
 }
-
-const PIECE_IMAGES: Record<string, Record<string, string>> = {
-    w: {
-        p: 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
-        r: 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
-        n: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
-        b: 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
-        q: 'https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg',
-        k: 'https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg',
-    },
-    b: {
-        p: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg',
-        r: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg',
-        n: 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg',
-        b: 'https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg',
-        q: 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
-        k: 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg',
-    },
-};
 
 const PROMOTION_PIECES = ['q', 'r', 'b', 'n'] as const;
 
@@ -94,7 +210,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     roomCode,
     socket,
     language = 'en',
-    theme = BOARD_THEMES[0]
+    theme = BOARD_THEMES[0],
+    pieceTheme = PIECE_THEMES[0]
 }) => {
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
     const [optionSquares, setOptionSquares] = useState<Square[]>([]);
@@ -188,7 +305,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     const getPieceImage = (piece: { type: string; color: string } | null) => {
         if (!piece) return undefined;
-        return PIECE_IMAGES[piece.color][piece.type];
+        return pieceTheme.pieces[piece.color][piece.type];
     };
 
     // Check if a move is a pawn promotion
@@ -493,7 +610,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                     }}
                                 >
                                     <img
-                                        src={PIECE_IMAGES[pendingPromotion.color][piece]}
+                                        src={pieceTheme.pieces[pendingPromotion.color][piece]}
                                         alt={piece}
                                         style={{ width: '55px', height: '55px' }}
                                     />

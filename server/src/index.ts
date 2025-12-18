@@ -519,6 +519,26 @@ function switchClock(room: Room, fromColor: 'white' | 'black') {
     room.clock.lastUpdate = now;
 }
 
+// Helper function to get spectator list with usernames
+function getSpectatorList(room: Room): { id: string; username: string }[] {
+    return room.players.spectators.map(socketId => {
+        const authInfo = authenticatedSockets.get(socketId);
+        return {
+            id: socketId,
+            username: authInfo?.username || 'Anonymous'
+        };
+    });
+}
+
+// Helper function to broadcast spectator update
+function broadcastSpectatorUpdate(roomCode: string, room: Room) {
+    const spectators = getSpectatorList(room);
+    io.to(roomCode).emit('spectator_update', {
+        count: spectators.length,
+        spectators
+    });
+}
+
 // Helper function to make computer move
 function makeComputerMove(room: Room, roomCode: string) {
     if (!room.isComputerGame || !room.computerColor) return;
@@ -1011,6 +1031,9 @@ io.on('connection', (socket) => {
 
         // Notify others
         socket.to(roomCode).emit('player_joined', { color: assignedColor });
+
+        // Send spectator list to new joiner and broadcast update if spectator joined
+        broadcastSpectatorUpdate(roomCode, room);
 
         console.log(`User ${socket.id} (${authInfo?.username || 'anonymous'}) joined room ${roomCode} as ${assignedColor}`);
     });
@@ -1865,6 +1888,372 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Handle chat messages
+    socket.on('chat_message', ({ roomId, message }: { roomId: string; message: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) {
+            socket.emit('error', { message: 'Room not found' });
+            return;
+        }
+
+        // Check if user is in the room
+        const isInRoom = room.players.white === socket.id ||
+                        room.players.black === socket.id ||
+                        room.players.spectators.includes(socket.id);
+
+        if (!isInRoom) {
+            socket.emit('error', { message: 'You are not in this room' });
+            return;
+        }
+
+        // Get username
+        const authInfo = authenticatedSockets.get(socket.id);
+        const username = authInfo?.username || 'Anonymous';
+
+        // Determine user role
+        let role: 'white' | 'black' | 'spectator' = 'spectator';
+        if (room.players.white === socket.id) role = 'white';
+        else if (room.players.black === socket.id) role = 'black';
+
+        // Sanitize message (limit length, trim whitespace)
+        const sanitizedMessage = message.trim().slice(0, 500);
+
+        if (!sanitizedMessage) return;
+
+        // Broadcast to all users in room
+        io.to(roomId).emit('chat_message', {
+            id: `${Date.now()}-${socket.id.slice(-4)}`,
+            username,
+            role,
+            message: sanitizedMessage,
+            timestamp: Date.now()
+        });
+    });
+
+    // ==================== FRIENDS ====================
+
+    // Get friends list
+    socket.on('get_friends', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to view friends' });
+            return;
+        }
+
+        const friends = dbOperations.getFriends(authInfo.userId);
+        const incomingRequests = dbOperations.getIncomingRequests(authInfo.userId);
+        const outgoingRequests = dbOperations.getOutgoingRequests(authInfo.userId);
+
+        // Add online status to friends
+        const friendsWithStatus = friends.map(friend => ({
+            ...friend,
+            online: Array.from(authenticatedSockets.values()).some(s => s.userId === friend.id)
+        }));
+
+        socket.emit('friends_list', {
+            friends: friendsWithStatus,
+            incomingRequests,
+            outgoingRequests
+        });
+    });
+
+    // Search users
+    socket.on('search_users', ({ query }: { query: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to search users' });
+            return;
+        }
+
+        if (!query || query.trim().length < 2) {
+            socket.emit('user_search_results', { users: [] });
+            return;
+        }
+
+        const users = dbOperations.searchUsers(query.trim(), authInfo.userId);
+        socket.emit('user_search_results', { users });
+    });
+
+    // Send friend request
+    socket.on('send_friend_request', ({ friendId }: { friendId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to send friend requests' });
+            return;
+        }
+
+        if (authInfo.userId === friendId) {
+            socket.emit('error', { message: 'Cannot add yourself as a friend' });
+            return;
+        }
+
+        const result = dbOperations.sendFriendRequest(authInfo.userId, friendId);
+        if (result.success) {
+            socket.emit('friend_request_sent', { success: true });
+
+            // Notify the target user if they're online
+            const targetSocket = Array.from(authenticatedSockets.entries())
+                .find(([_, info]) => info.userId === friendId);
+            if (targetSocket) {
+                io.to(targetSocket[0]).emit('friend_request_received', {
+                    from: { id: authInfo.userId, username: authInfo.username, rating: authInfo.rating }
+                });
+            }
+        } else {
+            socket.emit('friend_request_sent', { success: false, error: result.error });
+        }
+    });
+
+    // Accept friend request
+    socket.on('accept_friend_request', ({ requestId }: { requestId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to accept friend requests' });
+            return;
+        }
+
+        const result = dbOperations.acceptFriendRequest(requestId, authInfo.userId);
+        if (result.success) {
+            socket.emit('friend_request_accepted', { success: true, requestId });
+        } else {
+            socket.emit('friend_request_accepted', { success: false, error: result.error });
+        }
+    });
+
+    // Decline friend request
+    socket.on('decline_friend_request', ({ requestId }: { requestId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to decline friend requests' });
+            return;
+        }
+
+        const result = dbOperations.declineFriendRequest(requestId, authInfo.userId);
+        if (result.success) {
+            socket.emit('friend_request_declined', { success: true, requestId });
+        } else {
+            socket.emit('friend_request_declined', { success: false, error: result.error });
+        }
+    });
+
+    // Remove friend
+    socket.on('remove_friend', ({ friendId }: { friendId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to remove friends' });
+            return;
+        }
+
+        const result = dbOperations.removeFriend(authInfo.userId, friendId);
+        if (result.success) {
+            socket.emit('friend_removed', { success: true, friendId });
+        } else {
+            socket.emit('friend_removed', { success: false, error: result.error });
+        }
+    });
+
+    // ==================== DIRECT CHALLENGES ====================
+
+    // Challenge a friend
+    socket.on('challenge_friend', ({ friendId, timeControl: timeControlType, variant: variantType }: { friendId: string; timeControl?: TimeControlType; variant?: VariantType }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to challenge friends' });
+            return;
+        }
+
+        // Find the friend's socket
+        const friendSocket = Array.from(authenticatedSockets.entries())
+            .find(([_, info]) => info.userId === friendId);
+
+        if (!friendSocket) {
+            socket.emit('challenge_sent', { success: false, error: 'Friend is not online' });
+            return;
+        }
+
+        const timeControl = TIME_CONTROLS[timeControlType || 'rapid'];
+        const variant = variantType || 'standard';
+
+        // Send challenge to the friend
+        io.to(friendSocket[0]).emit('challenge_received', {
+            challengeId: `${socket.id}-${Date.now()}`,
+            from: {
+                id: authInfo.userId,
+                username: authInfo.username,
+                rating: authInfo.rating
+            },
+            timeControl: timeControl.type,
+            variant
+        });
+
+        socket.emit('challenge_sent', {
+            success: true,
+            challengeId: `${socket.id}-${Date.now()}`,
+            to: {
+                id: friendId,
+                username: friendSocket[1].username,
+                rating: friendSocket[1].rating
+            },
+            timeControl: timeControl.type,
+            variant
+        });
+    });
+
+    // Accept a challenge
+    socket.on('accept_challenge', ({ challengeId, challengerId, timeControl: timeControlType, variant: variantType }: { challengeId: string; challengerId: string; timeControl: TimeControlType; variant?: VariantType }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to accept challenges' });
+            return;
+        }
+
+        // Find the challenger's socket
+        const challengerEntry = Array.from(authenticatedSockets.entries())
+            .find(([_, info]) => info.userId === challengerId);
+
+        if (!challengerEntry) {
+            socket.emit('challenge_accepted', { success: false, error: 'Challenger is no longer online' });
+            return;
+        }
+
+        const [challengerSocketId, challengerInfo] = challengerEntry;
+
+        // Create a room for the game
+        const code = generateRoomCode();
+        const timeControl = TIME_CONTROLS[timeControlType || 'rapid'];
+        const variant = variantType || 'standard';
+
+        // Randomly assign colors
+        const challengerIsWhite = Math.random() < 0.5;
+        const whiteSocketId = challengerIsWhite ? challengerSocketId : socket.id;
+        const blackSocketId = challengerIsWhite ? socket.id : challengerSocketId;
+        const whiteUserId = challengerIsWhite ? challengerInfo.userId : authInfo.userId;
+        const blackUserId = challengerIsWhite ? authInfo.userId : challengerInfo.userId;
+
+        // Create variant-specific game
+        const { game, state: variantState } = createVariantGame(variant);
+
+        const room: Room = {
+            game,
+            players: {
+                white: whiteSocketId,
+                black: blackSocketId,
+                spectators: []
+            },
+            code,
+            timeControl,
+            clock: initializeClock(timeControl),
+            whiteUserId,
+            blackUserId,
+            variant,
+            variantState
+        };
+
+        // Create database game record if both players are authenticated
+        const whiteUser = dbOperations.getUserById(whiteUserId);
+        const blackUser = dbOperations.getUserById(blackUserId);
+        const dbGame = dbOperations.createGame(
+            code,
+            whiteUserId,
+            blackUserId,
+            timeControl.type,
+            whiteUser?.rating || null,
+            blackUser?.rating || null
+        );
+        room.dbGameId = dbGame.id;
+
+        rooms.set(code, room);
+        socketToRoom.set(whiteSocketId, code);
+        socketToRoom.set(blackSocketId, code);
+
+        // Join both sockets to the room
+        const whiteSocket = io.sockets.sockets.get(whiteSocketId);
+        const blackSocket = io.sockets.sockets.get(blackSocketId);
+
+        if (whiteSocket) whiteSocket.join(code);
+        if (blackSocket) blackSocket.join(code);
+
+        // Notify the challenger
+        io.to(challengerSocketId).emit('challenge_accepted', {
+            success: true,
+            roomCode: code,
+            color: challengerIsWhite ? 'white' : 'black',
+            opponent: { username: authInfo.username, rating: authInfo.rating },
+            timeControl: timeControl.type,
+            variant
+        });
+
+        // Notify the acceptor
+        socket.emit('challenge_accepted', {
+            success: true,
+            roomCode: code,
+            color: challengerIsWhite ? 'black' : 'white',
+            opponent: { username: challengerInfo.username, rating: challengerInfo.rating },
+            timeControl: timeControl.type,
+            variant
+        });
+
+        // Send initial game state
+        io.to(code).emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null,
+            variant,
+            variantState
+        });
+        io.to(code).emit('clock_update', {
+            white: room.clock.white,
+            black: room.clock.black,
+            activeColor: null
+        });
+
+        console.log(`Challenge accepted: ${challengerInfo.username} vs ${authInfo.username} in room ${code}`);
+    });
+
+    // Decline a challenge
+    socket.on('decline_challenge', ({ challengeId, challengerId }: { challengeId: string; challengerId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to decline challenges' });
+            return;
+        }
+
+        // Find the challenger's socket
+        const challengerEntry = Array.from(authenticatedSockets.entries())
+            .find(([_, info]) => info.userId === challengerId);
+
+        if (challengerEntry) {
+            io.to(challengerEntry[0]).emit('challenge_declined', {
+                challengeId,
+                by: authInfo.username
+            });
+        }
+
+        socket.emit('challenge_declined', { success: true, challengeId });
+    });
+
+    // Cancel a sent challenge
+    socket.on('cancel_challenge', ({ challengeId, friendId }: { challengeId: string; friendId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to cancel challenges' });
+            return;
+        }
+
+        // Find the friend's socket and notify them
+        const friendSocket = Array.from(authenticatedSockets.entries())
+            .find(([_, info]) => info.userId === friendId);
+
+        if (friendSocket) {
+            io.to(friendSocket[0]).emit('challenge_cancelled', {
+                challengeId,
+                by: authInfo.username
+            });
+        }
+
+        socket.emit('challenge_cancelled', { success: true, challengeId });
+    });
+
     // Handle disconnection
     socket.on('disconnect', () => {
         // Clean up authenticated socket and matchmaking queue
@@ -1888,6 +2277,8 @@ io.on('connection', (socket) => {
                     io.to(roomCode).emit('player_left', { color: 'black' });
                 } else {
                     room.players.spectators = room.players.spectators.filter(id => id !== socket.id);
+                    // Broadcast spectator update when spectator leaves
+                    broadcastSpectatorUpdate(roomCode, room);
                 }
 
                 // Clean up empty rooms
