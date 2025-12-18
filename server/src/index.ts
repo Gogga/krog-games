@@ -29,6 +29,7 @@ import {
     HILL_SQUARES,
     ThreeCheckState
 } from './variants';
+import { getBestMove, getThinkingTime, Difficulty } from './ai';
 
 const app = express();
 app.use(cors());
@@ -368,6 +369,10 @@ interface Room {
     // Variant support
     variant: VariantType;
     variantState: VariantState;
+    // AI support
+    isComputerGame?: boolean;
+    computerColor?: 'white' | 'black';
+    computerDifficulty?: Difficulty;
 }
 
 // Store rooms in memory for MVP
@@ -512,6 +517,91 @@ function switchClock(room: Room, fromColor: 'white' | 'black') {
     }
 
     room.clock.lastUpdate = now;
+}
+
+// Helper function to make computer move
+function makeComputerMove(room: Room, roomCode: string) {
+    if (!room.isComputerGame || !room.computerColor) return;
+
+    const currentTurn = room.game.turn() === 'w' ? 'white' : 'black';
+    if (currentTurn !== room.computerColor) return;
+
+    // Simulate thinking time
+    const thinkingTime = getThinkingTime(room.computerDifficulty || 'intermediate');
+
+    setTimeout(() => {
+        // Double-check it's still computer's turn (in case of reset)
+        const turnNow = room.game.turn() === 'w' ? 'white' : 'black';
+        if (turnNow !== room.computerColor) return;
+        if (room.game.isGameOver()) return;
+
+        const bestMove = getBestMove(room.game, room.computerDifficulty);
+        if (!bestMove) return;
+
+        // Make the move
+        const result = room.game.move(bestMove);
+        if (!result) return;
+
+        // Handle clock
+        if (room.clock.gameStarted && room.timeControl.type !== 'unlimited') {
+            switchClock(room, room.computerColor!);
+        }
+
+        // Update variant state
+        room.variantState = updateVariantState(room.game, room.variantState, room.computerColor!);
+
+        // Broadcast game state
+        const history = room.game.history({ verbose: true });
+        const lastMove = history[history.length - 1];
+        io.to(roomCode).emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: lastMove ? {
+                san: lastMove.san,
+                from: lastMove.from,
+                to: lastMove.to,
+                captured: lastMove.captured,
+                flags: lastMove.flags,
+                promotion: lastMove.promotion
+            } : null,
+            variant: room.variant,
+            variantState: room.variantState
+        });
+
+        // Send clock update
+        const times = getCurrentClockTimes(room);
+        io.to(roomCode).emit('clock_update', {
+            white: times.white,
+            black: times.black,
+            activeColor: room.clock.activeColor
+        });
+
+        // Check for game over
+        const variantResult = getVariantResult(room.game, room.variantState);
+        if (variantResult.gameOver) {
+            let gameResult: '1-0' | '0-1' | '1/2-1/2';
+            if (variantResult.winner === 'white') {
+                gameResult = '1-0';
+            } else if (variantResult.winner === 'black') {
+                gameResult = '0-1';
+            } else {
+                gameResult = '1/2-1/2';
+            }
+
+            const reasonMap: Record<string, string> = {
+                'Checkmate': 'checkmate',
+                'Stalemate': 'stalemate',
+                'Threefold repetition': 'repetition',
+                'Insufficient material': 'insufficient',
+                'Fifty-move rule': 'fifty_moves',
+                'Three checks delivered': 'three_check',
+                'King reached the hill': 'king_of_the_hill'
+            };
+            const reason = reasonMap[variantResult.reason || ''] || variantResult.reason || 'unknown';
+
+            endGameAndUpdateRatings(room, roomCode, gameResult, reason);
+        }
+    }, thinkingTime);
 }
 
 // Helper function to end game and update ratings
@@ -778,6 +868,78 @@ io.on('connection', (socket) => {
         console.log(`Room ${code} created by ${socket.id} (${authInfo?.username || 'anonymous'}) (white) - ${timeControl.type} - ${variant}`);
     });
 
+    // Create a game against the computer
+    socket.on('create_computer_game', ({
+        timeControl: timeControlType,
+        variant: variantType,
+        playerColor,
+        difficulty
+    }: {
+        timeControl?: TimeControlType;
+        variant?: VariantType;
+        playerColor?: 'white' | 'black';
+        difficulty?: Difficulty;
+    } = {}) => {
+        const code = generateRoomCode();
+        const timeControl = TIME_CONTROLS[timeControlType || 'rapid'];
+        const authInfo = authenticatedSockets.get(socket.id);
+        const variant = variantType || 'standard';
+        const humanColor = playerColor || 'white';
+        const computerColor = humanColor === 'white' ? 'black' : 'white';
+
+        // Create variant-specific game
+        const { game, state: variantState } = createVariantGame(variant);
+
+        const room: Room = {
+            game,
+            players: humanColor === 'white'
+                ? { white: socket.id, black: 'computer', spectators: [] }
+                : { white: 'computer', black: socket.id, spectators: [] },
+            code,
+            timeControl,
+            clock: initializeClock(timeControl),
+            whiteUserId: humanColor === 'white' ? authInfo?.userId : undefined,
+            blackUserId: humanColor === 'black' ? authInfo?.userId : undefined,
+            variant,
+            variantState,
+            isComputerGame: true,
+            computerColor,
+            computerDifficulty: difficulty || 'intermediate'
+        };
+        rooms.set(code, room);
+        socketToRoom.set(socket.id, code);
+
+        socket.join(code);
+        socket.emit('room_created', {
+            code,
+            timeControl,
+            variant,
+            variantState,
+            isComputerGame: true,
+            computerDifficulty: difficulty || 'intermediate'
+        });
+        socket.emit('player_assigned', { color: humanColor });
+        socket.emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null,
+            variant,
+            variantState
+        });
+        socket.emit('clock_update', {
+            white: room.clock.white,
+            black: room.clock.black,
+            activeColor: null
+        });
+
+        console.log(`Computer game ${code} created by ${socket.id} (${authInfo?.username || 'anonymous'}) (${humanColor}) vs Computer (${difficulty || 'intermediate'}) - ${timeControl.type} - ${variant}`);
+
+        // If computer plays white, make the first move
+        if (computerColor === 'white') {
+            makeComputerMove(room, code);
+        }
+    });
+
     // Join existing room by code
     socket.on('join_room', ({ code }: { code: string }) => {
         const roomCode = code.toUpperCase().trim();
@@ -978,6 +1140,11 @@ io.on('connection', (socket) => {
                 const reason = reasonMap[variantResult.reason || ''] || variantResult.reason || 'unknown';
 
                 endGameAndUpdateRatings(room, roomId, gameResult, reason);
+            } else {
+                // Game not over - trigger computer move if applicable
+                if (room.isComputerGame) {
+                    makeComputerMove(room, roomId);
+                }
             }
         } else {
             // Illegal move - send KROG explanation for why

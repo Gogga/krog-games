@@ -119,6 +119,14 @@ const VARIANT_OPTIONS: { type: VariantType; label: string; description: string }
   { type: 'kingOfTheHill', label: 'KotH', description: 'Win by reaching center' }
 ];
 
+type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+
+const DIFFICULTY_OPTIONS: { type: Difficulty; label: string; description: string }[] = [
+  { type: 'beginner', label: 'Beginner', description: 'Easy opponent' },
+  { type: 'intermediate', label: 'Intermediate', description: 'Moderate challenge' },
+  { type: 'advanced', label: 'Advanced', description: 'Strong opponent' }
+];
+
 // Format milliseconds to MM:SS.t
 function formatTime(ms: number): string {
   if (ms <= 0) return '0:00';
@@ -183,6 +191,12 @@ function App() {
   const [selectedVariant, setSelectedVariant] = useState<VariantType>('standard');
   const [variant, setVariant] = useState<VariantType>('standard');
   const [variantState, setVariantState] = useState<VariantState>({ variant: 'standard' });
+
+  // Computer game state
+  const [showComputerOptions, setShowComputerOptions] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('intermediate');
+  const [selectedPlayerColor, setSelectedPlayerColor] = useState<'white' | 'black' | 'random'>('white');
+  const [isComputerGame, setIsComputerGame] = useState(false);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -300,14 +314,15 @@ function App() {
       setGame(newGame);
     }
 
-    function onRoomCreated({ code, timeControl: tc, variant: v, variantState: vs }: { code: string; timeControl: TimeControl; variant?: VariantType; variantState?: VariantState }) {
+    function onRoomCreated({ code, timeControl: tc, variant: v, variantState: vs, isComputerGame: isComputer }: { code: string; timeControl: TimeControl; variant?: VariantType; variantState?: VariantState; isComputerGame?: boolean }) {
       setRoomCode(code);
       setTimeControl(tc);
       if (v) setVariant(v);
       if (vs) setVariantState(vs);
+      setIsComputerGame(!!isComputer);
       setGameOverMessage(null);
       setError(null);
-      console.log('Room created:', code, tc, v);
+      console.log('Room created:', code, tc, v, isComputer ? '(vs Computer)' : '');
     }
 
     function onRoomJoined({ code, timeControl: tc, variant: v, variantState: vs }: { code: string; timeControl: TimeControl; variant?: VariantType; variantState?: VariantState }) {
@@ -490,6 +505,19 @@ function App() {
     socket.emit('create_room', { timeControl: selectedTimeControl, variant: selectedVariant });
   };
 
+  const createComputerGame = () => {
+    setError(null);
+    const playerColor = selectedPlayerColor === 'random'
+      ? (Math.random() < 0.5 ? 'white' : 'black')
+      : selectedPlayerColor;
+    socket.emit('create_computer_game', {
+      timeControl: selectedTimeControl,
+      variant: selectedVariant,
+      playerColor,
+      difficulty: selectedDifficulty
+    });
+  };
+
   const joinRoom = () => {
     if (!joinCodeInput.trim()) {
       setError('Please enter a room code');
@@ -512,6 +540,8 @@ function App() {
     setRatingChange(null);
     setVariant('standard');
     setVariantState({ variant: 'standard' });
+    setIsComputerGame(false);
+    setShowComputerOptions(false);
   };
 
   const handleMove = (move: { from: string; to: string; promotion?: string }) => {
@@ -797,12 +827,125 @@ function App() {
               fontFamily: 'inherit',
               fontSize: '1.1rem',
               fontWeight: 600,
-              marginBottom: '20px',
+              marginBottom: '10px',
               opacity: isConnected ? 1 : 0.5
             }}
           >
             Create New Game
           </button>
+
+          {/* Play vs Computer Section */}
+          <button
+            onClick={() => setShowComputerOptions(!showComputerOptions)}
+            style={{
+              width: '100%',
+              background: showComputerOptions ? '#2980b9' : '#3498db',
+              border: 'none',
+              color: 'white',
+              padding: '15px 20px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              marginBottom: '10px'
+            }}
+          >
+            {showComputerOptions ? '▼' : '▶'} Play vs Computer
+          </button>
+
+          {showComputerOptions && (
+            <div style={{
+              background: 'rgba(52, 152, 219, 0.1)',
+              border: '1px solid #3498db',
+              borderRadius: '8px',
+              padding: '15px',
+              marginBottom: '15px'
+            }}>
+              {/* Difficulty Selection */}
+              <div style={{ marginBottom: '15px' }}>
+                <div style={{ color: '#888', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  Difficulty
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {DIFFICULTY_OPTIONS.map((option) => (
+                    <button
+                      key={option.type}
+                      onClick={() => setSelectedDifficulty(option.type)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 6px',
+                        borderRadius: '6px',
+                        border: selectedDifficulty === option.type ? '2px solid #3498db' : '1px solid #444',
+                        background: selectedDifficulty === option.type ? 'rgba(52, 152, 219, 0.2)' : 'transparent',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        textAlign: 'center',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Selection */}
+              <div style={{ marginBottom: '15px' }}>
+                <div style={{ color: '#888', marginBottom: '8px', fontSize: '0.85rem' }}>
+                  Play as
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[
+                    { value: 'white', label: 'White', emoji: '♔' },
+                    { value: 'random', label: 'Random', emoji: '🎲' },
+                    { value: 'black', label: 'Black', emoji: '♚' }
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setSelectedPlayerColor(option.value as 'white' | 'black' | 'random')}
+                      style={{
+                        flex: 1,
+                        padding: '8px 6px',
+                        borderRadius: '6px',
+                        border: selectedPlayerColor === option.value ? '2px solid #3498db' : '1px solid #444',
+                        background: selectedPlayerColor === option.value ? 'rgba(52, 152, 219, 0.2)' : 'transparent',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        textAlign: 'center',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <div style={{ fontSize: '1.2rem' }}>{option.emoji}</div>
+                      <div>{option.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={createComputerGame}
+                disabled={!isConnected}
+                style={{
+                  width: '100%',
+                  background: '#2980b9',
+                  border: 'none',
+                  color: 'white',
+                  padding: '12px 15px',
+                  borderRadius: '6px',
+                  cursor: isConnected ? 'pointer' : 'not-allowed',
+                  fontFamily: 'inherit',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  opacity: isConnected ? 1 : 0.5
+                }}
+              >
+                Start Game vs Computer
+              </button>
+            </div>
+          )}
 
           <div style={{ textAlign: 'center', color: '#666', margin: '20px 0' }}>
             — or join existing game —
@@ -993,6 +1136,18 @@ function App() {
               fontSize: '0.9rem'
             }}>
               vs <span style={{ fontWeight: 600 }}>{matchOpponent.username}</span> ({matchOpponent.rating})
+            </div>
+          )}
+          {isComputerGame && (
+            <div style={{
+              background: '#3498db',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              color: 'white'
+            }}>
+              vs Computer
             </div>
           )}
           {/* Variant badge */}
