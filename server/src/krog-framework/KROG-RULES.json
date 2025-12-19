@@ -1,0 +1,426 @@
+{
+  "version": "1.0.0",
+  "author": "Georg Philip Krog",
+  "description": "Complete KROG Chess Rules Database",
+  "operators": {
+    "core": ["P", "O", "F", "C", "L", "W", "B", "I", "D"],
+    "pieceLogic": ["PM", "PC", "PA", "NV", "PD", "CR", "EP", "PO"],
+    "boardLogic": ["PV", "MH", "CS", "LMG", "GT", "TC", "PR", "FMC"],
+    "notation": ["PSA", "PLA", "PUCI", "PVN", "GN", "NC"],
+    "temporal": ["G", "F", "X", "U", "R"]
+  },
+  "rules": [
+    {
+      "id": "king_movement",
+      "name": { "en": "King Movement", "no": "Kongens Bevegelse" },
+      "operators": ["PM"],
+      "formula": "PM(king,s1,s2) ≡ |Δfile| ≤ 1 ∧ |Δrank| ≤ 1",
+      "rtype": "R2_intransitive",
+      "fide": {
+        "norwegian": { "section": "§3.9", "text": "Kongen kan flyttes til en hvilken som helst tilstøtende rute som ikke er angrepet av en eller flere av motstanderens brikker" },
+        "english": { "section": "3.9", "text": "The king may move to any adjoining square not attacked by one or more of the opponent's pieces" }
+      },
+      "voice": {
+        "en": ["king to", "move king", "king moves"],
+        "no": ["konge til", "flytt kongen", "kongen går"]
+      }
+    },
+    {
+      "id": "queen_movement",
+      "name": { "en": "Queen Movement", "no": "Dronningens Bevegelse" },
+      "operators": ["PM", "PC"],
+      "formula": "PM(queen,s1,s2) ≡ (diagonal(s1,s2) ∨ straight(s1,s2)) ∧ PC(s1,s2)",
+      "rtype": "R3_path_dependent",
+      "fide": {
+        "norwegian": { "section": "§3.4", "text": "Dronningen kan flyttes til en hvilken som helst rute langs linjen, raden eller diagonalen den står på" },
+        "english": { "section": "3.4", "text": "The queen may move to any square along the file, the rank or a diagonal on which it stands" }
+      },
+      "voice": {
+        "en": ["queen to", "move queen", "queen moves"],
+        "no": ["dronning til", "flytt dronningen", "dronningen går"]
+      }
+    },
+    {
+      "id": "rook_movement",
+      "name": { "en": "Rook Movement", "no": "Tårnets Bevegelse" },
+      "operators": ["PM", "PC"],
+      "formula": "PM(rook,s1,s2) ≡ straight(s1,s2) ∧ PC(s1,s2)",
+      "rtype": "R3_path_dependent",
+      "fide": {
+        "norwegian": { "section": "§3.5", "text": "Tårnet kan flyttes til en hvilken som helst rute langs linjen eller raden den står på" },
+        "english": { "section": "3.5", "text": "The rook may move to any square along the file or the rank on which it stands" }
+      },
+      "voice": {
+        "en": ["rook to", "move rook", "rook moves"],
+        "no": ["tårn til", "flytt tårnet", "tårnet går"]
+      }
+    },
+    {
+      "id": "bishop_movement",
+      "name": { "en": "Bishop Movement", "no": "Løperens Bevegelse" },
+      "operators": ["PM", "PC"],
+      "formula": "PM(bishop,s1,s2) ≡ diagonal(s1,s2) ∧ PC(s1,s2)",
+      "rtype": "R3_path_dependent",
+      "fide": {
+        "norwegian": { "section": "§3.4", "text": "Løperen kan flyttes til en hvilken som helst rute langs en av diagonalene den står på" },
+        "english": { "section": "3.4", "text": "The bishop may move to any square along a diagonal on which it stands" }
+      },
+      "voice": {
+        "en": ["bishop to", "move bishop", "bishop moves"],
+        "no": ["løper til", "flytt løperen", "løperen går"]
+      }
+    },
+    {
+      "id": "knight_movement",
+      "name": { "en": "Knight Movement", "no": "Springerens Bevegelse" },
+      "operators": ["PM"],
+      "formula": "PM(knight,s1,s2) ≡ (|Δfile|=2 ∧ |Δrank|=1) ∨ (|Δfile|=1 ∧ |Δrank|=2)",
+      "rtype": "R11_discrete_jump",
+      "fide": {
+        "norwegian": { "section": "§3.6", "text": "Springeren flyttes til en av de nærmeste rutene i forhold til den ruten den står på, men ikke på samme linje, rad eller diagonal" },
+        "english": { "section": "3.6", "text": "The knight may move to one of the squares nearest to that on which it stands but not on the same rank, file or diagonal" }
+      },
+      "voice": {
+        "en": ["knight to", "move knight", "knight moves"],
+        "no": ["springer til", "flytt springeren", "springeren går"]
+      }
+    },
+    {
+      "id": "pawn_forward",
+      "name": { "en": "Pawn Forward Move", "no": "Bondens Fremover-trekk" },
+      "operators": ["PM"],
+      "formula": "PM(pawn,s1,s2) ≡ forward(color) ∧ empty(s2)",
+      "rtype": "R5_non_capture",
+      "fide": {
+        "norwegian": { "section": "§3.7a", "text": "Bonden kan flyttes fremover til den ubesatte ruten rett foran på samme linje" },
+        "english": { "section": "3.7a", "text": "The pawn may move forward to the unoccupied square immediately in front of it on the same file" }
+      },
+      "voice": {
+        "en": ["pawn to", "pawn moves"],
+        "no": ["bonde til", "bonden går"]
+      }
+    },
+    {
+      "id": "pawn_double",
+      "name": { "en": "Pawn Double Move", "no": "Bondens Dobbelt-trekk" },
+      "operators": ["PM", "PC"],
+      "formula": "PM(pawn,s1,s2) ≡ ¬moved(pawn) ∧ Δrank=2 ∧ PC(s1,s2)",
+      "rtype": "R6_first_move_special",
+      "fide": {
+        "norwegian": { "section": "§3.7a", "text": "På sitt første trekk kan bonden flyttes to ruter fremover" },
+        "english": { "section": "3.7a", "text": "On its first move the pawn may advance two squares" }
+      },
+      "voice": {
+        "en": ["pawn two squares", "double pawn"],
+        "no": ["bonde to ruter", "dobbel bonde"]
+      }
+    },
+    {
+      "id": "pawn_capture",
+      "name": { "en": "Pawn Capture", "no": "Bondens Slag" },
+      "operators": ["PM", "PA"],
+      "formula": "PM(pawn,s1,s2) ≡ diagonal_forward ∧ opponent(s2)",
+      "rtype": "R4_capture_only",
+      "fide": {
+        "norwegian": { "section": "§3.7b", "text": "Bonden kan flyttes til en rute skrått foran den på en tilstøtende linje og ta en motstanders brikke" },
+        "english": { "section": "3.7b", "text": "The pawn may move to a square diagonally in front of it on an adjacent file, capturing an opponent's piece" }
+      },
+      "voice": {
+        "en": ["pawn takes", "pawn captures"],
+        "no": ["bonde slår", "bonden tar"]
+      }
+    },
+    {
+      "id": "pawn_promotion",
+      "name": { "en": "Pawn Promotion", "no": "Bondens Forfremmelse" },
+      "operators": ["PM", "PO", "O"],
+      "formula": "PO(pawn,8th) ≡ O(promote_to ∈ {Q,R,B,N})",
+      "rtype": "R8_mandatory_transformation",
+      "fide": {
+        "norwegian": { "section": "§3.7e", "text": "Når en bonde når raden lengst borte fra sin startposisjon må den byttes ut med en dronning, tårn, løper eller springer av samme farge" },
+        "english": { "section": "3.7e", "text": "When a pawn reaches the rank furthest from its starting position it must be exchanged for a queen, rook, bishop or knight of the same colour" }
+      },
+      "voice": {
+        "en": ["promote to queen", "promote to rook", "promote to bishop", "promote to knight"],
+        "no": ["forfremm til dronning", "forfremm til tårn", "forfremm til løper", "forfremm til springer"]
+      }
+    },
+    {
+      "id": "en_passant",
+      "name": { "en": "En Passant", "no": "En Passant" },
+      "operators": ["EP", "PM"],
+      "formula": "EP(s) ≡ F[≤1](opponent_double_pawn) ∧ adjacent ∧ 5th_rank",
+      "rtype": "R7_temporal_window",
+      "temporal": "X(opponent_double_pawn_move)",
+      "fide": {
+        "norwegian": { "section": "§3.7d", "text": "En bonde som står på 5. rad kan ta en motstanders bonde som nettopp har flyttet to ruter fremover fra sin startposisjon" },
+        "english": { "section": "3.7d", "text": "A pawn occupying a square on the same rank as an opponent's pawn which has just advanced two squares may capture it en passant" }
+      },
+      "voice": {
+        "en": ["en passant", "takes en passant"],
+        "no": ["en passant", "slår en passant"]
+      }
+    },
+    {
+      "id": "castling_kingside",
+      "name": { "en": "Kingside Castling", "no": "Kort Rokade" },
+      "operators": ["CR", "PC", "PA", "CS", "W"],
+      "formula": "CR(kingside) ≡ ¬moved(king) ∧ ¬moved(rook) ∧ ¬CS ∧ PC ∧ path_safe",
+      "rtype": "R9_compound_move",
+      "temporal": "◊(CR(kingside)) U moved(king)",
+      "fide": {
+        "norwegian": { "section": "§3.8.2", "text": "Rokade er et trekk av kongen og et av spillerens egne tårn" },
+        "english": { "section": "3.8.b", "text": "Castling is a move of the king and either rook" }
+      },
+      "voice": {
+        "en": ["castle kingside", "short castle", "O-O"],
+        "no": ["roker kort", "kort rokade", "O-O"]
+      }
+    },
+    {
+      "id": "castling_queenside",
+      "name": { "en": "Queenside Castling", "no": "Lang Rokade" },
+      "operators": ["CR", "PC", "PA", "CS", "W"],
+      "formula": "CR(queenside) ≡ ¬moved(king) ∧ ¬moved(rook) ∧ ¬CS ∧ PC ∧ path_safe",
+      "rtype": "R9_compound_move",
+      "temporal": "◊(CR(queenside)) U moved(king)",
+      "fide": {
+        "norwegian": { "section": "§3.8.2", "text": "Rokade er et trekk av kongen og et av spillerens egne tårn" },
+        "english": { "section": "3.8.b", "text": "Castling is a move of the king and either rook" }
+      },
+      "voice": {
+        "en": ["castle queenside", "long castle", "O-O-O"],
+        "no": ["roker langt", "lang rokade", "O-O-O"]
+      }
+    },
+    {
+      "id": "check_response",
+      "name": { "en": "Check Response", "no": "Sjakk-respons" },
+      "operators": ["O", "CS", "LMG"],
+      "formula": "O(¬CS(self)) when CS(self)",
+      "rtype": "R10_conditional",
+      "fide": {
+        "norwegian": { "section": "§3.9", "text": "En spiller kan ikke gjøre et trekk som setter eller etterlater kongen i sjakk" },
+        "english": { "section": "3.9", "text": "A player may not make a move which places or leaves his king in check" }
+      },
+      "voice": {
+        "en": ["check", "in check"],
+        "no": ["sjakk", "står i sjakk"]
+      }
+    },
+    {
+      "id": "checkmate",
+      "name": { "en": "Checkmate", "no": "Sjakkmatt" },
+      "operators": ["GT", "CS", "LMG"],
+      "formula": "GT(checkmate) ≡ CS(color) ∧ LMG(color) = ∅",
+      "rtype": "R13_terminal_state",
+      "fide": {
+        "norwegian": { "section": "§5.2.1", "text": "Spillet er vunnet av spilleren som har satt motstanderens konge sjakkmatt" },
+        "english": { "section": "5.2.1", "text": "The game is won by the player who has checkmated the opponent's king" }
+      },
+      "voice": {
+        "en": ["checkmate", "mate"],
+        "no": ["sjakkmatt", "matt"]
+      }
+    },
+    {
+      "id": "stalemate",
+      "name": { "en": "Stalemate", "no": "Patt" },
+      "operators": ["GT", "CS", "LMG"],
+      "formula": "GT(stalemate) ≡ ¬CS(color) ∧ LMG(color) = ∅",
+      "rtype": "R13_terminal_state",
+      "fide": {
+        "norwegian": { "section": "§5.2.1", "text": "Spillet er remis hvis spilleren som skal trekke ikke har lovlige trekk og kongen ikke står i sjakk" },
+        "english": { "section": "5.2.1", "text": "The game is drawn when the player to move has no legal move and the king is not in check" }
+      },
+      "voice": {
+        "en": ["stalemate", "drawn by stalemate"],
+        "no": ["patt", "remis ved patt"]
+      }
+    },
+    {
+      "id": "threefold_repetition",
+      "name": { "en": "Threefold Repetition", "no": "Trefoldig Gjentakelse" },
+      "operators": ["C", "PR"],
+      "formula": "C(player, draw) when PR(position, 3)",
+      "rtype": "R14_repetition",
+      "temporal": "F(position_occurs_3x) → draw_available",
+      "fide": {
+        "norwegian": { "section": "§9.2", "text": "Spillet er remis hvis samme stilling oppstår tre ganger" },
+        "english": { "section": "9.2", "text": "The game is drawn when the same position has occurred three times" }
+      },
+      "voice": {
+        "en": ["claim draw", "threefold repetition"],
+        "no": ["krev remis", "trefoldig gjentakelse"]
+      }
+    },
+    {
+      "id": "fivefold_repetition",
+      "name": { "en": "Fivefold Repetition", "no": "Femfoldig Gjentakelse" },
+      "operators": ["GT", "PR"],
+      "formula": "GT(draw) when PR(position, 5)",
+      "rtype": "R14_repetition",
+      "temporal": "F(position_occurs_5x) → automatic_draw",
+      "fide": {
+        "norwegian": { "section": "§9.6.1", "text": "Spillet er remis hvis samme stilling har oppstått fem ganger" },
+        "english": { "section": "9.6.1", "text": "The game is drawn if the same position has occurred five times" }
+      },
+      "voice": {
+        "en": ["fivefold repetition", "automatic draw"],
+        "no": ["femfoldig gjentakelse", "automatisk remis"]
+      }
+    },
+    {
+      "id": "fifty_move",
+      "name": { "en": "Fifty-Move Rule", "no": "Femtitrekksregelen" },
+      "operators": ["C", "FMC"],
+      "formula": "C(player, draw) when FMC() ≥ 50",
+      "rtype": "R15_counter_based",
+      "fide": {
+        "norwegian": { "section": "§9.3", "text": "Spillet er remis hvis ingen bonde er flyttet og ingen brikke er tatt i 50 trekk" },
+        "english": { "section": "9.3", "text": "The game is drawn if no pawn has moved and no capture has been made in 50 moves" }
+      },
+      "voice": {
+        "en": ["fifty move rule", "claim fifty moves"],
+        "no": ["femtitrekksregelen", "krev femti trekk"]
+      }
+    },
+    {
+      "id": "seventy_five_move",
+      "name": { "en": "Seventy-Five Move Rule", "no": "Syttifemtrekksregelen" },
+      "operators": ["GT", "FMC"],
+      "formula": "GT(draw) when FMC() ≥ 75",
+      "rtype": "R15_counter_based",
+      "fide": {
+        "norwegian": { "section": "§9.6.2", "text": "Spillet er remis hvis 75 trekk er gjort uten at en bonde har flyttet eller en brikke er tatt" },
+        "english": { "section": "9.6.2", "text": "The game is drawn if 75 moves have been made without a pawn move or capture" }
+      },
+      "voice": {
+        "en": ["seventy five moves", "automatic draw"],
+        "no": ["syttifem trekk", "automatisk remis"]
+      }
+    },
+    {
+      "id": "insufficient_material",
+      "name": { "en": "Insufficient Material", "no": "Utilstrekkelig Materiell" },
+      "operators": ["GT"],
+      "formula": "GT(draw) when insufficient_mating_material",
+      "rtype": "R13_terminal_state",
+      "fide": {
+        "norwegian": { "section": "§5.2.2", "text": "Spillet er remis hvis det har oppstått en stilling der ingen av spillerne kan sette motstanderens konge matt" },
+        "english": { "section": "5.2.2", "text": "The game is drawn when a position has arisen in which neither player can checkmate the opponent's king" }
+      },
+      "voice": {
+        "en": ["insufficient material", "draw by material"],
+        "no": ["utilstrekkelig materiell", "remis ved materiell"]
+      }
+    },
+    {
+      "id": "time_forfeit",
+      "name": { "en": "Time Forfeit", "no": "Tap på Tid" },
+      "operators": ["D", "TC", "GT"],
+      "formula": "D(player, lose) when TC(player) = 0",
+      "rtype": "R13_terminal_state",
+      "fide": {
+        "norwegian": { "section": "§6.1", "text": "Hvis en spiller ikke klarer å fullføre det foreskrevne antall trekk i den tildelte tiden, taper spilleren partiet" },
+        "english": { "section": "6.1", "text": "If a player does not complete the prescribed number of moves in the allotted time, the game is lost by that player" }
+      },
+      "voice": {
+        "en": ["flag fell", "time out", "lost on time"],
+        "no": ["flagget falt", "tid utløpt", "tapte på tid"]
+      }
+    },
+    {
+      "id": "resignation",
+      "name": { "en": "Resignation", "no": "Oppgivelse" },
+      "operators": ["L", "GT"],
+      "formula": "L(player, resign) → GT(resignation)",
+      "rtype": "R13_terminal_state",
+      "fide": {
+        "norwegian": { "section": "§5.1.2", "text": "Spillet er vunnet av spilleren hvis motstander gir opp" },
+        "english": { "section": "5.1.2", "text": "The game is won by the player whose opponent resigns" }
+      },
+      "voice": {
+        "en": ["resign", "I resign", "give up"],
+        "no": ["gi opp", "jeg gir opp", "resignerer"]
+      }
+    },
+    {
+      "id": "draw_offer",
+      "name": { "en": "Draw Offer", "no": "Remistilbud" },
+      "operators": ["L", "C"],
+      "formula": "L(player, offer_draw) on own_turn",
+      "rtype": "R12_state_dependent",
+      "fide": {
+        "norwegian": { "section": "§9.1", "text": "En spiller som ønsker å tilby remis skal gjøre dette etter å ha gjort et trekk" },
+        "english": { "section": "9.1", "text": "A player wishing to offer a draw shall do so after making a move" }
+      },
+      "voice": {
+        "en": ["offer draw", "I offer a draw"],
+        "no": ["tilby remis", "jeg tilbyr remis"]
+      }
+    }
+  ],
+  "rtypes": {
+    "R1_asymmetric": {
+      "name": "Asymmetric",
+      "description": { "en": "Direction matters - cannot be reversed", "no": "Retning betyr noe - kan ikke reverseres" }
+    },
+    "R2_intransitive": {
+      "name": "Intransitive",
+      "description": { "en": "Single step, no chaining", "no": "Enkelt steg, ingen kjeding" }
+    },
+    "R3_path_dependent": {
+      "name": "Path Dependent",
+      "description": { "en": "Requires clear path between squares", "no": "Krever klar bane mellom ruter" }
+    },
+    "R4_capture_only": {
+      "name": "Capture Only",
+      "description": { "en": "Move only valid when capturing", "no": "Trekk kun gyldig ved slag" }
+    },
+    "R5_non_capture": {
+      "name": "Non-Capture",
+      "description": { "en": "Move only valid when not capturing", "no": "Trekk kun gyldig uten slag" }
+    },
+    "R6_first_move_special": {
+      "name": "First Move Special",
+      "description": { "en": "Different rules on first move", "no": "Andre regler ved første trekk" }
+    },
+    "R7_temporal_window": {
+      "name": "Temporal Window",
+      "description": { "en": "Time-limited action", "no": "Tidsbegrenset handling" }
+    },
+    "R8_mandatory_transformation": {
+      "name": "Mandatory Transformation",
+      "description": { "en": "Required piece change", "no": "Påkrevd brikkeskifte" }
+    },
+    "R9_compound_move": {
+      "name": "Compound Move",
+      "description": { "en": "Multiple pieces move together", "no": "Flere brikker flytter sammen" }
+    },
+    "R10_conditional": {
+      "name": "Conditional",
+      "description": { "en": "Context-dependent rules", "no": "Kontekstavhengige regler" }
+    },
+    "R11_discrete_jump": {
+      "name": "Discrete Jump",
+      "description": { "en": "Non-path-following movement", "no": "Bevegelse uten banetilknytning" }
+    },
+    "R12_state_dependent": {
+      "name": "State Dependent",
+      "description": { "en": "Based on game state", "no": "Basert på spilltilstand" }
+    },
+    "R13_terminal_state": {
+      "name": "Terminal State",
+      "description": { "en": "Game-ending conditions", "no": "Spillavsluttende betingelser" }
+    },
+    "R14_repetition": {
+      "name": "Repetition",
+      "description": { "en": "Position repetition rules", "no": "Stillingsgjentakelsesregler" }
+    },
+    "R15_counter_based": {
+      "name": "Counter Based",
+      "description": { "en": "Move counter rules", "no": "Trekkteller-regler" }
+    }
+  }
+}
