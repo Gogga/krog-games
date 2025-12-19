@@ -2,11 +2,11 @@
 
 ## QUICK START FOR CLAUDE CODE
 
-**Current State:** Feature-complete multiplayer chess with user accounts, ELO rating, matchmaking, chess variants, Play vs Computer, KROG move explanations, puzzles, opening explorer, lessons, and polished UI/UX.
+**Current State:** Feature-complete multiplayer chess with user accounts, ELO rating, matchmaking, chess variants, Play vs Computer, KROG move explanations, puzzles, opening explorer, lessons, friends system, direct challenges, and polished UI/UX.
 
-**What's Implemented:** All of Phase 1-3 + Play vs Computer. Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent, KROG engine, move explanations, puzzles, openings, lessons, PGN export, board themes, sound effects.
+**What's Implemented:** All of Phase 1-3 + Play vs Computer + Social features. Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent, KROG engine, move explanations, puzzles, openings, lessons, PGN export/import, board themes, piece themes, sound effects, friends list, direct challenges, game chat.
 
-**What's Missing:** Clubs, tournaments, leagues (Phase 6).
+**What's Missing:** Clubs, tournaments, leagues (remaining Phase 6 items).
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -82,14 +82,31 @@
 - [x] Lessons UI with 19 lessons across 3 levels
 - [x] Interactive quizzes with progress tracking
 
-### Export
+### Import/Export
 - [x] PGN export (copy to clipboard) with proper headers
 - [x] PGN download with game metadata (event, date, room, time control)
+- [x] PGN import from clipboard
+- [x] Load imported positions for analysis
+
+### Social Features (Phase 6 - Partial)
+- [x] Friends list with online status indicators
+- [x] User search to find and add friends
+- [x] Friend requests with accept/decline
+- [x] Remove friends functionality
+- [x] Direct challenges to online friends
+- [x] Challenge with time control and variant selection
+- [x] Accept/decline/cancel challenges
+- [x] Game chat with real-time messaging
+- [x] Chat visible to players and spectators
+- [x] Spectator list showing current viewers
+- [x] Spectator join/leave notifications
 
 ### UI/UX Polish
 - [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
 - [x] Theme selector with visual previews
 - [x] Theme persistence to localStorage
+- [x] Piece themes (4 styles: Standard, Modern, Classic, Fancy)
+- [x] Piece theme selector with visual previews
 - [x] Sound effects (11 sounds: move, capture, check, castle, promote, gameStart, gameEnd, illegal, drawOffer, notify, timeout)
 - [x] Web Audio API sound generation (no external files)
 - [x] Sound toggle with persistence
@@ -117,7 +134,8 @@ chess-project/
 │   │   │   ├── LessonsMode.tsx  # Interactive lessons with quizzes
 │   │   │   ├── AuthModal.tsx    # Login/Register modal
 │   │   │   ├── UserPanel.tsx    # Profile, leaderboard, history
-│   │   │   └── MatchmakingPanel.tsx # Matchmaking queue UI
+│   │   │   ├── MatchmakingPanel.tsx # Matchmaking queue UI
+│   │   │   └── FriendsPanel.tsx # Friends list, requests, challenges
 │   │   └── utils/
 │   │       └── sounds.ts        # Web Audio API sound effects
 ├── server/                      # Express + Socket.IO + chess.js
@@ -290,6 +308,58 @@ chess-project/
 'lesson_data'          → LessonData (content, quiz, krog formula, etc.)
 ```
 
+### Friends
+```typescript
+// Client → Server
+'get_friends'           → void
+'search_users'          → { query: string }
+'send_friend_request'   → { friendId: string }
+'accept_friend_request' → { friendshipId: string }
+'decline_friend_request'→ { friendshipId: string }
+'remove_friend'         → { friendId: string }
+
+// Server → Client
+'friends_list'          → { friends: Friend[], incoming: FriendRequest[], outgoing: FriendRequest[] }
+'users_search_result'   → { users: User[] }
+'friend_request_sent'   → { success: boolean }
+'friend_request_received' → { from: User }
+'friend_request_accepted' → { friend: Friend }
+'friend_removed'        → { friendId: string }
+```
+
+### Challenges
+```typescript
+// Client → Server
+'challenge_friend'   → { friendId: string, timeControl: string, variant: string }
+'accept_challenge'   → { challengeId: string, challengerId: string, challengerSocketId?: string }
+'decline_challenge'  → { challengeId: string, challengerId: string }
+'cancel_challenge'   → { friendId: string }
+
+// Server → Client
+'challenge_received' → { challengeId: string, from: User, timeControl: string, variant: string }
+'challenge_sent'     → { to: User, timeControl: string, variant: string }
+'challenge_accepted' → { roomCode: string, color: 'white'|'black' }
+'challenge_declined' → { by: User }
+'challenge_cancelled'→ { by: User }
+```
+
+### Game Chat
+```typescript
+// Client → Server
+'chat_message' → { roomId: string, message: string }
+
+// Server → Client
+'game_chat'    → { username: string, message: string, timestamp: number, isSpectator: boolean }
+```
+
+### Spectators
+```typescript
+// Server → Client
+'spectator_joined' → { id: string, username: string }
+'spectator_left'   → { id: string, username: string }
+'spectator_list'   → { spectators: { id: string, username: string }[] }
+```
+
 ---
 
 ## Running the Project
@@ -325,14 +395,17 @@ Open 2+ browser tabs to http://localhost:5173
 
 ---
 
-## Future Phases (Not Started)
+## Future Phases
 
-### Phase 6: Community
+### Phase 6: Community (Remaining)
+- [x] Friends list (DONE)
+- [x] Direct challenges (DONE)
+- [x] Game chat (DONE)
 - [ ] Clubs
 - [ ] Tournaments
 - [ ] Leagues
 
-### Phase 4: AI Training
+### Phase 4: AI Training (Not Started)
 - [ ] HRM (Human Reasoning Model)
 - [ ] Neural governance
 - [ ] Training data collection
@@ -354,14 +427,17 @@ Open 2+ browser tabs to http://localhost:5173
 - Modular server architecture (db, auth, variants, ai, krog)
 
 **Current state:**
-- Phase 1-3 feature-complete + Play vs Computer
+- Phase 1-3 feature-complete + Play vs Computer + Social features
 - User accounts with ELO rating and matchmaking
 - Chess variants (Chess960, 3-Check, King of the Hill)
 - AI opponent with three difficulty levels
 - Bilingual support (EN/NO)
 - Learn mode with hover explanations
 - Comprehensive move explanations
-- Polished UI with themes and sound feedback
+- Polished UI with board/piece themes and sound feedback
+- Friends list with direct challenges
+- Game chat for players and spectators
+- PGN import/export
 
 ---
 
