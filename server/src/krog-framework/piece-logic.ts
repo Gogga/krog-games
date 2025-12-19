@@ -280,13 +280,24 @@ export class PC_Operator {
     const df = Math.sign(to.file - from.file);
     const dr = Math.sign(to.rank - from.rank);
 
+    // If same square or not a straight/diagonal path, return empty
+    if ((df === 0 && dr === 0) ||
+        (df !== 0 && dr !== 0 && Math.abs(to.file - from.file) !== Math.abs(to.rank - from.rank))) {
+      return path;
+    }
+
     let f = from.file + df;
     let r = from.rank + dr;
 
-    while (f !== to.file || r !== to.rank) {
+    // Safety limit to prevent infinite loops
+    let iterations = 0;
+    const maxIterations = 8;
+
+    while ((f !== to.file || r !== to.rank) && iterations < maxIterations) {
       path.push({ file: f, rank: r });
       f += df;
       r += dr;
+      iterations++;
     }
 
     return path;
