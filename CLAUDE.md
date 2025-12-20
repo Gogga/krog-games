@@ -60,12 +60,17 @@
 
 ### KROG Engine (Phase 1)
 - [x] Full `server/src/krog/` module (12 files)
+- [x] KROG Framework with 36 operators (`server/src/krog-framework/`)
 - [x] Piece movement formulas
 - [x] Special move formulas (castling, en passant, promotion)
 - [x] Move explainer with KROG formulas
 - [x] Illegal move explanations
 - [x] FIDE article references
 - [x] English/Norwegian bilingual support
+- [x] R-type classification system (15 rule types)
+- [x] R-type display in move explanations (purple badge)
+- [x] R-type tooltips in Learn Mode
+- [x] REST API endpoints for KROG framework
 
 ### Move Evaluation (Phase 7)
 - [x] Position evaluator
@@ -149,19 +154,30 @@ chess-project/
 │   │   │   └── index.ts         # Chess960, 3-Check, KotH
 │   │   ├── ai/
 │   │   │   └── index.ts         # Computer opponent (minimax)
-│   │   └── krog/                # KROG engine module
-│   │       ├── index.ts         # Exports
-│   │       ├── types.ts         # Type definitions
-│   │       ├── pieces.ts        # Piece movement rules
-│   │       ├── special.ts       # Castling, en passant, promotion
-│   │       ├── explainer.ts     # Move explanation generator
-│   │       ├── evaluator.ts     # Position evaluation
-│   │       ├── analyzer.ts      # Position analysis
-│   │       ├── principles.ts    # Chess principles
-│   │       ├── tactics.ts       # Tactical patterns
-│   │       ├── scorer.ts        # Move scoring
-│   │       ├── ranker.ts        # Move ranking
-│   │       └── openingBook.ts   # Opening book data
+│   │   ├── krog/                # KROG engine module
+│   │   │   ├── index.ts         # Exports
+│   │   │   ├── types.ts         # Type definitions
+│   │   │   ├── pieces.ts        # Piece movement rules
+│   │   │   ├── special.ts       # Castling, en passant, promotion
+│   │   │   ├── explainer.ts     # Move explanation generator
+│   │   │   ├── evaluator.ts     # Position evaluation
+│   │   │   ├── analyzer.ts      # Position analysis
+│   │   │   ├── principles.ts    # Chess principles
+│   │   │   ├── tactics.ts       # Tactical patterns
+│   │   │   ├── scorer.ts        # Move scoring
+│   │   │   ├── ranker.ts        # Move ranking
+│   │   │   └── openingBook.ts   # Opening book data
+│   │   └── krog-framework/      # KROG mathematical framework
+│   │       ├── index.ts         # Main exports
+│   │       ├── types.ts         # Framework types
+│   │       ├── engine.ts        # KROGChessEngine class
+│   │       ├── core-operators.ts    # 9 core operators (P,O,F,C,L,W,B,I,D)
+│   │       ├── piece-logic.ts       # 8 piece logic operators
+│   │       ├── board-logic.ts       # 8 board logic operators
+│   │       ├── notation.ts          # 6 notation operators
+│   │       ├── temporal.ts          # 5 temporal operators
+│   │       ├── rtype-classifier.ts  # R-type classification
+│   │       └── KROG-RULES.json      # 24 formal rules
 │   └── data/
 │       ├── puzzles.json         # 30+ tactical puzzles
 │       ├── lessons.json         # 45 lessons (L0-L2)
@@ -443,21 +459,58 @@ Open 2+ browser tabs to http://localhost:5173
 
 ## KROG Quick Reference
 
-**Modal Operators:**
+**Modal Operators (9 Core):**
 - `P` = Permitted (may do)
 - `O` = Obligated (must do)
 - `F` = Forbidden (must not do)
+- `C` = Claim, `L` = Liberty, `W` = Power, `B` = Immunity, `I` = Disability, `D` = Liability
 
 **T-Types:**
 - `T1` = Player discretion (normal moves)
 - `T2` = Conditional (castling, en passant)
 - `T3` = Mandatory (must escape check)
 
+**R-Types (15 Rule Classifications):**
+| R-Type | Description | Example |
+|--------|-------------|---------|
+| R1 | Asymmetric movement | Pawn direction |
+| R2 | Intransitive | King cannot be captured |
+| R3 | Path-dependent | Sliding pieces (Q/R/B) |
+| R4 | Capture-only | Pawn diagonal capture |
+| R5 | Non-capture | Pawn forward move |
+| R6 | First move special | Pawn double push |
+| R7 | Temporal window | En passant |
+| R8 | Mandatory transformation | Pawn promotion |
+| R9 | Compound move | Castling |
+| R10 | Conditional | Check response |
+| R11 | Discrete jump | Knight movement |
+| R12 | State-dependent | Castling rights |
+| R13 | Terminal state | Checkmate/stalemate |
+| R14 | Repetition | Threefold repetition |
+| R15 | Counter-based | 50-move rule |
+
+**KROG API Endpoints:**
+```
+GET  /api/krog/info     → Framework info (36 operators, 15 R-types)
+POST /api/krog/classify → { piece, flags, san } → R-type classification
+```
+
 **Example - Knight Move:**
 ```
 KROG:   P(Nf3) <-> L_shape(g1, f3) AND NOT blocked(f3)
 T-Type: T1 (player discretion)
+R-Type: R11_discrete_jump
 FIDE:   Article 3.6
 EN:     "Knight may move to f3 - L-shape pattern, square not blocked"
 NO:     "Springer kan flytte til f3 - L-form, ruten er ikke blokkert"
+```
+
+**Example - Pawn Promotion:**
+```
+KROG:   P(d8) <-> reaches_eighth AND piece_chosen
+T-Type: T1 (player discretion)
+R-Type: R8_mandatory_transformation
+FIDE:   Article 3.7.e
+EN:     "Pawn reaches last rank and must be promoted"
+NO:     "Bonde når siste rad og må forfremmes"
 ```
