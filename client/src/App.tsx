@@ -49,6 +49,11 @@ interface MoveExplanation {
     formula: string;
     operator: string;
     tType: string;
+    rType?: string;
+    rTypeDescription?: {
+      en: string;
+      no: string;
+    };
   };
   fide: {
     article: string;
@@ -899,7 +904,7 @@ function App() {
   };
 
   // Challenge functions
-  const challengeFriend = (friendId: string, friendUsername: string) => {
+  const challengeFriend = (friendId: string, _friendUsername: string) => {
     socket.emit('challenge_friend', {
       friendId,
       timeControl: selectedTimeControl,
@@ -2421,7 +2426,7 @@ function App() {
             {/* Legal move explanation */}
             {moveExplanation ? (
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                   <span style={{
                     background: '#81b64c',
                     color: 'white',
@@ -2445,7 +2450,51 @@ function App() {
                   }}>
                     {moveExplanation.krog.tType}
                   </span>
+                  {moveExplanation.krog.rType && (
+                    <span style={{
+                      background: '#9b59b6',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600
+                    }}
+                    title={moveExplanation.krog.rTypeDescription?.[language] || moveExplanation.krog.rType}
+                    >
+                      {moveExplanation.krog.rType.replace('_', ' ').replace(/^R(\d+)/, 'R$1:')}
+                    </span>
+                  )}
                 </div>
+
+                {/* R-Type Classification */}
+                {moveExplanation.krog.rType && moveExplanation.krog.rTypeDescription && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ color: '#888', fontSize: '0.8rem', marginBottom: '4px' }}>
+                      {language === 'en' ? 'Rule Classification' : 'Regelklassifisering'}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      background: 'rgba(155, 89, 182, 0.15)',
+                      border: '1px solid rgba(155, 89, 182, 0.4)',
+                      padding: '8px 12px',
+                      borderRadius: '6px'
+                    }}>
+                      <span style={{
+                        color: '#9b59b6',
+                        fontWeight: 600,
+                        fontFamily: 'monospace',
+                        fontSize: '0.9rem'
+                      }}>
+                        {moveExplanation.krog.rType}
+                      </span>
+                      <span style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                        {moveExplanation.krog.rTypeDescription[language]}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* KROG Formula */}
                 <div style={{ marginBottom: '12px' }}>

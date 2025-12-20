@@ -14,6 +14,11 @@ interface PotentialMoveExplanation {
         operator?: string;
         tType?: string;
         violation?: string;
+        rType?: string;
+        rTypeDescription?: {
+            en: string;
+            no: string;
+        };
     };
     fide: {
         article: string;
@@ -651,10 +656,11 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
+                        gap: '8px',
                         marginBottom: '10px',
                         paddingBottom: '10px',
-                        borderBottom: '1px solid #333'
+                        borderBottom: '1px solid #333',
+                        flexWrap: 'wrap'
                     }}>
                         <span style={{
                             background: '#9b59b6',
@@ -678,7 +684,34 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 {hoverExplanation.krog.tType}
                             </span>
                         )}
+                        {hoverExplanation.krog.rType && (
+                            <span style={{
+                                background: '#8e44ad',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600
+                            }}>
+                                {hoverExplanation.krog.rType.replace('_', ' ').replace(/^R(\d+)/, 'R$1:')}
+                            </span>
+                        )}
                     </div>
+
+                    {/* R-Type Description */}
+                    {hoverExplanation.krog.rType && hoverExplanation.krog.rTypeDescription && (
+                        <div style={{
+                            background: 'rgba(142, 68, 173, 0.15)',
+                            border: '1px solid rgba(142, 68, 173, 0.4)',
+                            padding: '6px 10px',
+                            borderRadius: '5px',
+                            marginBottom: '10px',
+                            fontSize: '0.8rem',
+                            color: '#bb8fce'
+                        }}>
+                            {hoverExplanation.krog.rTypeDescription[language]}
+                        </div>
+                    )}
 
                     {/* KROG Formula */}
                     <div style={{
