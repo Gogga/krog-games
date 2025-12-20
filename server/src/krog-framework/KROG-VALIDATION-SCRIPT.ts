@@ -27,7 +27,9 @@ import {
   PA_Operator,
   CR_Operator,
   EP_Operator,
-  PO_Operator
+  PO_Operator,
+  NV_Operator,
+  PD_Operator
 } from './piece-logic';
 import {
   BoardLogicOperators,
@@ -238,7 +240,9 @@ class KROGImplementationVerifier {
       { name: 'PA', class: PA_Operator },
       { name: 'CR', class: CR_Operator },
       { name: 'EP', class: EP_Operator },
-      { name: 'PO', class: PO_Operator }
+      { name: 'PO', class: PO_Operator },
+      { name: 'NV', class: NV_Operator },
+      { name: 'PD', class: PD_Operator }
     ];
 
     let implementedCount = 0;
@@ -256,10 +260,9 @@ class KROGImplementationVerifier {
       }
     });
 
-    // Note: NV and PD may be in notation operators
-    this.report.coverage.pieceLogic = (implementedCount / 6) * 100;
+    this.report.coverage.pieceLogic = (implementedCount / 8) * 100;
     this.report.summary.implementedOperators += implementedCount;
-    console.log(`   ${implementedCount}/6 piece logic operators verified\n`);
+    console.log(`   ${implementedCount}/8 piece logic operators verified\n`);
   }
 
   // ============================================================================

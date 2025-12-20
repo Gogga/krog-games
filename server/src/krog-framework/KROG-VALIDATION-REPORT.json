@@ -1,6 +1,6 @@
 {
   "complete": true,
-  "timestamp": "2025-12-20T22:00:46.832Z",
+  "timestamp": "2025-12-20T22:17:55.740Z",
   "errors": [],
   "warnings": [],
   "coverage": {
@@ -18,7 +18,7 @@
   },
   "summary": {
     "totalOperators": 36,
-    "implementedOperators": 34,
+    "implementedOperators": 36,
     "totalRules": 21,
     "implementedRules": 23
   }

@@ -43,7 +43,9 @@ import {
   PA_Operator,
   CR_Operator,
   EP_Operator,
-  PO_Operator
+  PO_Operator,
+  NV_Operator,
+  PD_Operator
 } from './piece-logic';
 
 import {
@@ -82,6 +84,8 @@ export class KROGChessEngine {
   private CR: CR_Operator;
   private EP: EP_Operator;
   private PO: PO_Operator;
+  private NV: NV_Operator;
+  private PD: PD_Operator;
 
   // Board logic operators
   private CS: CS_Operator;
@@ -115,6 +119,8 @@ export class KROGChessEngine {
     this.CR = new CR_Operator();
     this.EP = new EP_Operator();
     this.PO = new PO_Operator();
+    this.NV = new NV_Operator();
+    this.PD = new PD_Operator();
 
     // Initialize board logic operators
     this.CS = new CS_Operator();
@@ -738,7 +744,9 @@ export class KROGChessEngine {
         PA: this.PA,
         CR: this.CR,
         EP: this.EP,
-        PO: this.PO
+        PO: this.PO,
+        NV: this.NV,
+        PD: this.PD
       },
       boardLogic: {
         CS: this.CS,

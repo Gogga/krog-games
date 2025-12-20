@@ -231,6 +231,39 @@ export interface FMCResult {
   formula: string;
 }
 
+export interface NVResult {
+  valid: boolean;
+  format: 'san' | 'uci' | 'lan' | 'voice' | 'unknown';
+  formula: string;
+  parsed: {
+    piece?: PieceType;
+    from?: Square;
+    to?: Square;
+    capture?: boolean;
+    promotion?: PieceType;
+    castling?: 'kingside' | 'queenside';
+    check?: boolean;
+    checkmate?: boolean;
+  } | null;
+  fideRule: FIDERule;
+  explanation: { en: string; no: string };
+}
+
+export interface PDResult {
+  developed: boolean;
+  developmentScore: number;
+  formula: string;
+  details: {
+    pieceType: PieceType;
+    color: Color;
+    currentSquare: Square;
+    startingRank: number;
+    movesMade: number;
+  };
+  fideRule: FIDERule;
+  explanation: { en: string; no: string };
+}
+
 // ============================================================================
 // NOTATION RESULTS
 // ============================================================================

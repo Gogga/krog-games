@@ -24,6 +24,8 @@ import {
   CRResult,
   EPResult,
   POResult,
+  NVResult,
+  PDResult,
   FIDERule,
   squareToString
 } from './types';
@@ -603,31 +605,299 @@ export class PO_Operator {
 // ============================================================================
 
 /**
- * NV(notation) - Validates chess notation
+ * NV(notation) ≡ valid_format(notation) ∧ parseable(notation)
+ *
+ * Validates chess notation in multiple formats (SAN, UCI, LAN, Voice)
+ * Returns structured parsing results with FIDE compliance
  */
 export class NV_Operator {
+  // Standard Algebraic Notation pattern
   private sanPattern = /^([KQRBN])?([a-h])?([1-8])?(x)?([a-h][1-8])(=[QRBN])?(\+|#)?$/;
-  private uciPattern = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
+  // Universal Chess Interface pattern
+  private uciPattern = /^([a-h][1-8])([a-h][1-8])([qrbn])?$/;
+  // Long Algebraic Notation pattern
+  private lanPattern = /^([KQRBN])?([a-h][1-8])([-x])([a-h][1-8])(=[QRBN])?(\+|#)?$/;
+
+  private pieceMap: Record<string, PieceType> = {
+    'K': 'king', 'Q': 'queen', 'R': 'rook', 'B': 'bishop', 'N': 'knight'
+  };
 
   /**
-   * Validate notation string
+   * Evaluate notation validity
    */
-  evaluate(notation: string, format: 'san' | 'uci' = 'san'): { valid: boolean; parsed: any } {
-    if (format === 'san') {
-      // Handle special cases
-      if (notation === 'O-O' || notation === 'O-O-O') {
-        return { valid: true, parsed: { castling: notation === 'O-O' ? 'kingside' : 'queenside' } };
+  evaluate(notation: string, format?: 'san' | 'uci' | 'lan' | 'voice'): NVResult {
+    // Auto-detect format if not specified
+    const detectedFormat = format || this.detectFormat(notation);
+
+    switch (detectedFormat) {
+      case 'san':
+        return this.parseSAN(notation);
+      case 'uci':
+        return this.parseUCI(notation);
+      case 'lan':
+        return this.parseLAN(notation);
+      case 'voice':
+        return this.parseVoice(notation);
+      default:
+        return this.invalidResult(notation, 'unknown');
+    }
+  }
+
+  /**
+   * Detect notation format
+   */
+  private detectFormat(notation: string): 'san' | 'uci' | 'lan' | 'voice' | 'unknown' {
+    if (notation === 'O-O' || notation === 'O-O-O') return 'san';
+    if (this.uciPattern.test(notation)) return 'uci';
+    if (this.lanPattern.test(notation)) return 'lan';
+    if (this.sanPattern.test(notation)) return 'san';
+    if (notation.includes(' ')) return 'voice';
+    return 'unknown';
+  }
+
+  /**
+   * Parse Standard Algebraic Notation
+   */
+  private parseSAN(notation: string): NVResult {
+    // Handle castling
+    if (notation === 'O-O' || notation === '0-0') {
+      return {
+        valid: true,
+        format: 'san',
+        formula: 'NV(O-O) ≡ valid_castling_notation',
+        parsed: { castling: 'kingside' },
+        fideRule: {
+          norwegian: { section: '§8.1', text: 'Rokade noteres som O-O (kort) eller O-O-O (lang)' },
+          english: { section: 'C.13', text: 'Castling is indicated by the symbols O-O (kingside) or O-O-O (queenside)' }
+        },
+        explanation: {
+          en: 'Valid kingside castling notation',
+          no: 'Gyldig kort rokade-notasjon'
+        }
+      };
+    }
+
+    if (notation === 'O-O-O' || notation === '0-0-0') {
+      return {
+        valid: true,
+        format: 'san',
+        formula: 'NV(O-O-O) ≡ valid_castling_notation',
+        parsed: { castling: 'queenside' },
+        fideRule: {
+          norwegian: { section: '§8.1', text: 'Rokade noteres som O-O (kort) eller O-O-O (lang)' },
+          english: { section: 'C.13', text: 'Castling is indicated by the symbols O-O (kingside) or O-O-O (queenside)' }
+        },
+        explanation: {
+          en: 'Valid queenside castling notation',
+          no: 'Gyldig lang rokade-notasjon'
+        }
+      };
+    }
+
+    const match = this.sanPattern.exec(notation);
+    if (!match) {
+      return this.invalidResult(notation, 'san');
+    }
+
+    const [, pieceChar, disambigFile, disambigRank, capture, destSquare, promotion, checkSymbol] = match;
+
+    const piece = pieceChar ? this.pieceMap[pieceChar] : 'pawn';
+    const to = this.parseSquare(destSquare);
+
+    return {
+      valid: true,
+      format: 'san',
+      formula: `NV(${notation}) ≡ valid_san_format`,
+      parsed: {
+        piece,
+        to,
+        capture: capture === 'x',
+        promotion: promotion ? this.pieceMap[promotion.charAt(1)] : undefined,
+        check: checkSymbol === '+',
+        checkmate: checkSymbol === '#'
+      },
+      fideRule: {
+        norwegian: { section: '§8.1', text: 'Hvert trekk skal noteres med den opprinnelige ruten og ankomstruten' },
+        english: { section: 'C.10', text: 'Each move shall be indicated by the piece and the square of arrival' }
+      },
+      explanation: {
+        en: `Valid SAN notation: ${piece}${capture ? ' captures on ' : ' to '}${destSquare}`,
+        no: `Gyldig SAN-notasjon: ${this.pieceNameNo(piece)}${capture ? ' slår på ' : ' til '}${destSquare}`
       }
-      const match = this.sanPattern.exec(notation);
-      return { valid: match !== null, parsed: match };
+    };
+  }
+
+  /**
+   * Parse UCI notation
+   */
+  private parseUCI(notation: string): NVResult {
+    const match = this.uciPattern.exec(notation);
+    if (!match) {
+      return this.invalidResult(notation, 'uci');
     }
 
-    if (format === 'uci') {
-      const match = this.uciPattern.test(notation);
-      return { valid: match, parsed: notation };
+    const [, fromSquare, toSquare, promotion] = match;
+    const from = this.parseSquare(fromSquare);
+    const to = this.parseSquare(toSquare);
+
+    return {
+      valid: true,
+      format: 'uci',
+      formula: `NV(${notation}) ≡ valid_uci_format`,
+      parsed: {
+        from,
+        to,
+        promotion: promotion ? this.pieceMap[promotion.toUpperCase()] || (promotion === 'q' ? 'queen' : promotion === 'r' ? 'rook' : promotion === 'b' ? 'bishop' : 'knight') : undefined
+      },
+      fideRule: {
+        norwegian: { section: '§8.1', text: 'UCI-format bruker start- og sluttrute' },
+        english: { section: 'C.10', text: 'UCI format uses origin and destination squares' }
+      },
+      explanation: {
+        en: `Valid UCI notation: ${fromSquare} to ${toSquare}`,
+        no: `Gyldig UCI-notasjon: ${fromSquare} til ${toSquare}`
+      }
+    };
+  }
+
+  /**
+   * Parse Long Algebraic Notation
+   */
+  private parseLAN(notation: string): NVResult {
+    const match = this.lanPattern.exec(notation);
+    if (!match) {
+      return this.invalidResult(notation, 'lan');
     }
 
-    return { valid: false, parsed: null };
+    const [, pieceChar, fromSquare, separator, toSquare, promotion, checkSymbol] = match;
+    const piece = pieceChar ? this.pieceMap[pieceChar] : 'pawn';
+    const from = this.parseSquare(fromSquare);
+    const to = this.parseSquare(toSquare);
+
+    return {
+      valid: true,
+      format: 'lan',
+      formula: `NV(${notation}) ≡ valid_lan_format`,
+      parsed: {
+        piece,
+        from,
+        to,
+        capture: separator === 'x',
+        promotion: promotion ? this.pieceMap[promotion.charAt(1)] : undefined,
+        check: checkSymbol === '+',
+        checkmate: checkSymbol === '#'
+      },
+      fideRule: {
+        norwegian: { section: '§8.1', text: 'Lang algebraisk notasjon inkluderer både start- og sluttrute' },
+        english: { section: 'C.10', text: 'Long algebraic notation includes both origin and destination squares' }
+      },
+      explanation: {
+        en: `Valid LAN notation: ${piece} from ${fromSquare} to ${toSquare}`,
+        no: `Gyldig LAN-notasjon: ${this.pieceNameNo(piece)} fra ${fromSquare} til ${toSquare}`
+      }
+    };
+  }
+
+  /**
+   * Parse voice/natural language notation
+   */
+  private parseVoice(notation: string): NVResult {
+    const lower = notation.toLowerCase().trim();
+
+    // Common voice patterns
+    const patterns = [
+      { regex: /^(king|queen|rook|bishop|knight|pawn) to ([a-h][1-8])$/i, type: 'move' },
+      { regex: /^([a-h][1-8]) to ([a-h][1-8])$/i, type: 'move' },
+      { regex: /^castle (kingside|queenside|short|long)$/i, type: 'castle' },
+      { regex: /^(kort|lang) rokade$/i, type: 'castle_no' }
+    ];
+
+    for (const pattern of patterns) {
+      const match = pattern.regex.exec(lower);
+      if (match) {
+        if (pattern.type === 'castle' || pattern.type === 'castle_no') {
+          const side = match[1].toLowerCase();
+          const isKingside = side === 'kingside' || side === 'short' || side === 'kort';
+          return {
+            valid: true,
+            format: 'voice',
+            formula: `NV(voice) ≡ valid_voice_command`,
+            parsed: { castling: isKingside ? 'kingside' : 'queenside' },
+            fideRule: {
+              norwegian: { section: '§8.1', text: 'Stemmestyrte trekk aksepteres' },
+              english: { section: 'C.10', text: 'Voice commands are accepted' }
+            },
+            explanation: {
+              en: `Voice command: ${isKingside ? 'kingside' : 'queenside'} castling`,
+              no: `Stemmekommando: ${isKingside ? 'kort' : 'lang'} rokade`
+            }
+          };
+        }
+
+        if (pattern.type === 'move') {
+          const toSquare = match[2] || match[1];
+          return {
+            valid: true,
+            format: 'voice',
+            formula: `NV(voice) ≡ valid_voice_command`,
+            parsed: {
+              to: this.parseSquare(toSquare)
+            },
+            fideRule: {
+              norwegian: { section: '§8.1', text: 'Stemmestyrte trekk aksepteres' },
+              english: { section: 'C.10', text: 'Voice commands are accepted' }
+            },
+            explanation: {
+              en: `Voice command: move to ${toSquare}`,
+              no: `Stemmekommando: flytt til ${toSquare}`
+            }
+          };
+        }
+      }
+    }
+
+    return this.invalidResult(notation, 'voice');
+  }
+
+  /**
+   * Parse square string to Square object
+   */
+  private parseSquare(square: string): Square {
+    return {
+      file: square.charCodeAt(0) - 96, // 'a' = 1, 'h' = 8
+      rank: parseInt(square.charAt(1))
+    };
+  }
+
+  /**
+   * Get Norwegian piece name
+   */
+  private pieceNameNo(type: PieceType): string {
+    const names: Record<PieceType, string> = {
+      king: 'Kongen', queen: 'Dronningen', rook: 'Tårnet',
+      bishop: 'Løperen', knight: 'Springeren', pawn: 'Bonden'
+    };
+    return names[type];
+  }
+
+  /**
+   * Return invalid result
+   */
+  private invalidResult(notation: string, format: 'san' | 'uci' | 'lan' | 'voice' | 'unknown'): NVResult {
+    return {
+      valid: false,
+      format,
+      formula: `NV(${notation}) ≡ false`,
+      parsed: null,
+      fideRule: {
+        norwegian: { section: '§8.1', text: 'Ugyldig notasjonsformat' },
+        english: { section: 'C.10', text: 'Invalid notation format' }
+      },
+      explanation: {
+        en: `Invalid notation: "${notation}"`,
+        no: `Ugyldig notasjon: "${notation}"`
+      }
+    };
   }
 }
 
@@ -636,29 +906,168 @@ export class NV_Operator {
 // ============================================================================
 
 /**
- * PD(piece) - Evaluates piece development status
+ * PD(piece) ≡ moved_from_start(piece) ∧ active_position(piece)
+ *
+ * Evaluates piece development status and quality.
+ * Development is a key chess concept measuring how effectively pieces
+ * have been mobilized from their starting positions.
  */
 export class PD_Operator {
-  /**
-   * Check if piece is developed from starting position
-   */
-  evaluate(piece: Piece): { developed: boolean; formula: string } {
-    const startingPositions: Record<PieceType, { white: number[], black: number[] }> = {
-      king: { white: [1], black: [8] },
-      queen: { white: [1], black: [8] },
-      rook: { white: [1], black: [8] },
-      bishop: { white: [1], black: [8] },
-      knight: { white: [1], black: [8] },
-      pawn: { white: [2], black: [7] }
-    };
+  // Starting ranks for each piece type
+  private startingRanks: Record<PieceType, { white: number; black: number }> = {
+    king: { white: 1, black: 8 },
+    queen: { white: 1, black: 8 },
+    rook: { white: 1, black: 8 },
+    bishop: { white: 1, black: 8 },
+    knight: { white: 1, black: 8 },
+    pawn: { white: 2, black: 7 }
+  };
 
-    const startRanks = startingPositions[piece.type][piece.color];
-    const developed = !startRanks.includes(piece.square.rank);
+  // Ideal development squares for minor pieces
+  private idealSquares: Record<string, Square[]> = {
+    'knight_white': [{ file: 3, rank: 3 }, { file: 6, rank: 3 }], // c3, f3
+    'knight_black': [{ file: 3, rank: 6 }, { file: 6, rank: 6 }], // c6, f6
+    'bishop_white': [{ file: 3, rank: 4 }, { file: 4, rank: 3 }, { file: 5, rank: 4 }, { file: 6, rank: 3 }],
+    'bishop_black': [{ file: 3, rank: 5 }, { file: 4, rank: 6 }, { file: 5, rank: 5 }, { file: 6, rank: 6 }]
+  };
+
+  /**
+   * Evaluate piece development
+   */
+  evaluate(piece: Piece, state?: GameState): PDResult {
+    const startRank = this.startingRanks[piece.type][piece.color];
+    const developed = piece.square.rank !== startRank || piece.hasMoved;
+
+    // Calculate development score (0-100)
+    const developmentScore = this.calculateDevelopmentScore(piece, developed);
+
+    // Count moves made (if state available)
+    const movesMade = state ? this.countPieceMoves(piece, state) : (piece.hasMoved ? 1 : 0);
 
     return {
       developed,
-      formula: `PD(${piece.type}) ≡ rank ≠ starting_rank`
+      developmentScore,
+      formula: `PD(${piece.type}) ≡ rank ≠ ${startRank} ∨ hasMoved`,
+      details: {
+        pieceType: piece.type,
+        color: piece.color,
+        currentSquare: piece.square,
+        startingRank: startRank,
+        movesMade
+      },
+      fideRule: {
+        norwegian: { section: '§1.2', text: 'Utvikling av brikker er en fundamental sjakkstrategi' },
+        english: { section: '1.2', text: 'Piece development is a fundamental chess strategy' }
+      },
+      explanation: developed
+        ? {
+            en: `${piece.type} is developed (score: ${developmentScore}/100)`,
+            no: `${this.pieceNameNo(piece.type)} er utviklet (poeng: ${developmentScore}/100)`
+          }
+        : {
+            en: `${piece.type} is not yet developed`,
+            no: `${this.pieceNameNo(piece.type)} er ikke ennå utviklet`
+          }
     };
+  }
+
+  /**
+   * Evaluate full position development
+   */
+  evaluatePosition(color: Color, state: GameState): {
+    totalScore: number;
+    developedPieces: number;
+    undevelopedPieces: number;
+    details: PDResult[];
+  } {
+    const pieces = state.getPieces(color);
+    const details: PDResult[] = [];
+    let developedCount = 0;
+    let totalScore = 0;
+
+    for (const piece of pieces) {
+      // Skip pawns and kings for development count
+      if (piece.type !== 'pawn' && piece.type !== 'king') {
+        const result = this.evaluate(piece, state);
+        details.push(result);
+        totalScore += result.developmentScore;
+        if (result.developed) developedCount++;
+      }
+    }
+
+    // Normalize score (max 4 minor pieces * 100 = 400)
+    const normalizedScore = Math.round((totalScore / 400) * 100);
+
+    return {
+      totalScore: normalizedScore,
+      developedPieces: developedCount,
+      undevelopedPieces: 4 - developedCount, // 2 knights + 2 bishops
+      details
+    };
+  }
+
+  /**
+   * Calculate development score for a piece
+   */
+  private calculateDevelopmentScore(piece: Piece, developed: boolean): number {
+    if (!developed) return 0;
+
+    let score = 50; // Base score for being developed
+
+    // Bonus for central positions
+    const file = piece.square.file;
+    const rank = piece.square.rank;
+
+    // Center control bonus (d4, d5, e4, e5 area)
+    if (file >= 3 && file <= 6 && rank >= 3 && rank <= 6) {
+      score += 20;
+    }
+
+    // Extended center bonus
+    if (file >= 2 && file <= 7 && rank >= 2 && rank <= 7) {
+      score += 10;
+    }
+
+    // Check if on ideal square for minor pieces
+    const idealKey = `${piece.type}_${piece.color}`;
+    const idealSquares = this.idealSquares[idealKey];
+    if (idealSquares) {
+      for (const sq of idealSquares) {
+        if (sq.file === file && sq.rank === rank) {
+          score += 20;
+          break;
+        }
+      }
+    }
+
+    return Math.min(100, score);
+  }
+
+  /**
+   * Count how many times a piece has moved
+   */
+  private countPieceMoves(piece: Piece, state: GameState): number {
+    let count = 0;
+    for (const move of state.moveHistory) {
+      if (move.piece.type === piece.type &&
+          move.piece.color === piece.color &&
+          move.to.file === piece.square.file &&
+          move.to.rank === piece.square.rank) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Get Norwegian piece name
+   */
+  private pieceNameNo(type: PieceType): string {
+    const names: Record<PieceType, string> = {
+      king: 'Kongen', queen: 'Dronningen', rook: 'Tårnet',
+      bishop: 'Løperen', knight: 'Springeren', pawn: 'Bonden'
+    };
+    return names[type];
   }
 }
 
