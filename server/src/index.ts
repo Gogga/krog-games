@@ -14,7 +14,10 @@ import {
     evaluatePosition,
     loadOpeningBook,
     ScoringContext,
-    MoveSuggestion
+    MoveSuggestion,
+    // KROG Framework Engine
+    createKROGEngine,
+    KROGValidation
 } from './krog';
 import { dbOperations, calculateEloChange, User, Game } from './db';
 import * as auth from './auth';
@@ -34,6 +37,77 @@ import { getBestMove, getThinkingTime, Difficulty } from './ai';
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ==================== KROG HELPER FUNCTIONS ====================
+
+// Helper to classify R-types from chess.js moves
+function classifyMoveRType(move: { piece: string; flags: string; san: string }): string {
+    // Castling
+    if (move.flags.includes('k') || move.flags.includes('q')) {
+        return 'R9_compound_move';
+    }
+
+    // Pawn moves
+    if (move.piece === 'p') {
+        // En passant
+        if (move.flags.includes('e')) {
+            return 'R7_temporal_window';
+        }
+        // Promotion
+        if (move.san.includes('=')) {
+            return 'R8_mandatory_transformation';
+        }
+        // Double pawn push
+        if (move.flags.includes('b')) {
+            return 'R6_first_move_special';
+        }
+        // Capture
+        if (move.flags.includes('c') || move.flags.includes('x')) {
+            return 'R4_capture_only';
+        }
+        // Forward move
+        return 'R5_non_capture';
+    }
+
+    // Knight
+    if (move.piece === 'n') {
+        return 'R11_discrete_jump';
+    }
+
+    // King
+    if (move.piece === 'k') {
+        return 'R2_intransitive';
+    }
+
+    // Sliding pieces (Queen, Rook, Bishop)
+    if (['q', 'r', 'b'].includes(move.piece)) {
+        return 'R3_path_dependent';
+    }
+
+    return 'R10_conditional';
+}
+
+// Get R-type description from KROG framework
+function getRTypeDescription(rtype: string): { en: string; no: string } {
+    const descriptions: Record<string, { en: string; no: string }> = {
+        'R1_asymmetric': { en: 'Asymmetric movement', no: 'Asymmetrisk bevegelse' },
+        'R2_intransitive': { en: 'Intransitive movement (King cannot be captured)', no: 'Intransitiv bevegelse (Kongen kan ikke tas)' },
+        'R3_path_dependent': { en: 'Path-dependent (cannot jump over pieces)', no: 'Baneavhengig (kan ikke hoppe over brikker)' },
+        'R4_capture_only': { en: 'Capture-only movement', no: 'Kun slag-bevegelse' },
+        'R5_non_capture': { en: 'Non-capture movement', no: 'Ikke-slag bevegelse' },
+        'R6_first_move_special': { en: 'First move special rule', no: 'Spesiell førstetrekk-regel' },
+        'R7_temporal_window': { en: 'Temporal window (en passant)', no: 'Tidsvindu (en passant)' },
+        'R8_mandatory_transformation': { en: 'Mandatory transformation (promotion)', no: 'Obligatorisk transformasjon (bondeforvandling)' },
+        'R9_compound_move': { en: 'Compound move (castling)', no: 'Sammensatt trekk (rokade)' },
+        'R10_conditional': { en: 'Conditional movement', no: 'Betinget bevegelse' },
+        'R11_discrete_jump': { en: 'Discrete jump (knight)', no: 'Diskret hopp (springer)' },
+        'R12_state_dependent': { en: 'State-dependent', no: 'Tilstandsavhengig' },
+        'R13_terminal_state': { en: 'Terminal state (checkmate/stalemate)', no: 'Terminaltilstand (sjakkmatt/patt)' },
+        'R14_repetition': { en: 'Repetition-based', no: 'Repetisjonsbasert' },
+        'R15_counter_based': { en: 'Counter-based (50-move rule)', no: 'Tellerbasert (50-trekksregelen)' }
+    };
+    return descriptions[rtype] || { en: rtype, no: rtype };
+}
 
 // ==================== AUTH REST ENDPOINTS ====================
 
@@ -112,6 +186,48 @@ app.get('/api/games/:userId', (req, res) => {
     const offset = parseInt(req.query.offset as string) || 0;
     const games = dbOperations.getUserGames(req.params.userId, limit, offset);
     res.json({ success: true, games });
+});
+
+// ==================== KROG API ENDPOINTS ====================
+
+// Get KROG framework info
+app.get('/api/krog/info', (req, res) => {
+    // Import is at module level, krogEngine created later, so we use a placeholder here
+    res.json({
+        success: true,
+        version: '1.0.0',
+        operators: {
+            core: ['P', 'O', 'F', 'C', 'L', 'W', 'B', 'I', 'D'],
+            pieceLogic: ['PM', 'PC', 'PA', 'NV', 'PD', 'CR', 'EP', 'PO'],
+            boardLogic: ['PV', 'MH', 'CS', 'LMG', 'GT', 'TC', 'PR', 'FMC'],
+            notation: ['PSA', 'PLA', 'PUCI', 'PVN', 'GN', 'NC'],
+            temporal: ['G', 'F', 'X', 'U', 'R']
+        },
+        totalOperators: 36,
+        rtypes: [
+            'R1_asymmetric', 'R2_intransitive', 'R3_path_dependent',
+            'R4_capture_only', 'R5_non_capture', 'R6_first_move_special',
+            'R7_temporal_window', 'R8_mandatory_transformation', 'R9_compound_move',
+            'R10_conditional', 'R11_discrete_jump', 'R12_state_dependent',
+            'R13_terminal_state', 'R14_repetition', 'R15_counter_based'
+        ]
+    });
+});
+
+// Get R-type classification for a move
+app.post('/api/krog/classify', (req, res) => {
+    const { piece, flags, san } = req.body;
+    if (!piece || !flags || !san) {
+        res.status(400).json({ success: false, message: 'Missing required fields: piece, flags, san' });
+        return;
+    }
+    const rType = classifyMoveRType({ piece, flags, san });
+    const rTypeDescription = getRTypeDescription(rType);
+    res.json({
+        success: true,
+        rType,
+        description: rTypeDescription
+    });
 });
 
 // Load opening book at startup
@@ -311,6 +427,10 @@ const io = new Server(httpServer, {
         methods: ["GET", "POST"]
     }
 });
+
+// Initialize KROG Chess Engine for enhanced move validation
+const krogEngine = createKROGEngine();
+console.log('KROG Chess Engine initialized with 36 operators (9 core, 8 piece logic, 8 board logic, 6 notation, 5 temporal)');
 
 // Types for room management
 interface RoomPlayers {
@@ -1116,6 +1236,10 @@ io.on('connection', (socket) => {
 
             // Send move explanation to all clients
             const legalExplanation = krogExplanation as MoveExplanation;
+            // Classify R-type using KROG framework
+            const rType = classifyMoveRType(result);
+            const rTypeDescription = getRTypeDescription(rType);
+
             io.to(roomId).emit('move_explanation', {
                 move: result.san,
                 from: result.from,
@@ -1123,7 +1247,9 @@ io.on('connection', (socket) => {
                 krog: {
                     formula: legalExplanation.krog.formula,
                     operator: legalExplanation.krog.operator,
-                    tType: legalExplanation.krog.tType
+                    tType: legalExplanation.krog.tType,
+                    rType: rType,
+                    rTypeDescription: rTypeDescription
                 },
                 fide: legalExplanation.fide,
                 explanation: legalExplanation.explanation,
@@ -1202,6 +1328,17 @@ io.on('connection', (socket) => {
 
         // Check if it's a legal move explanation
         if ('isLegal' in explanation && explanation.isLegal) {
+            // Get move details from the game for R-type classification
+            const moves = room.game.moves({ verbose: true });
+            const moveInfo = moves.find(m => m.from === from && m.to === to);
+            let rType = 'R10_conditional';
+            let rTypeDescription = getRTypeDescription(rType);
+
+            if (moveInfo) {
+                rType = classifyMoveRType(moveInfo);
+                rTypeDescription = getRTypeDescription(rType);
+            }
+
             socket.emit('potential_move_explanation', {
                 from,
                 to,
@@ -1210,7 +1347,9 @@ io.on('connection', (socket) => {
                 krog: {
                     formula: explanation.krog.formula,
                     operator: explanation.krog.operator,
-                    tType: explanation.krog.tType
+                    tType: explanation.krog.tType,
+                    rType: rType,
+                    rTypeDescription: rTypeDescription
                 },
                 fide: explanation.fide,
                 explanation: explanation.explanation,
