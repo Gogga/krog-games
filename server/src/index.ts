@@ -1090,16 +1090,57 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Leave any previous room
+        const authInfo = authenticatedSockets.get(socket.id);
+
+        // Check if this socket is already a player in this room
+        const existingColor = getPlayerColor(room, socket.id);
+        if (existingColor !== 'spectator') {
+            // Already a player in this room, just re-send the current state
+            socket.join(roomCode);
+            socketToRoom.set(socket.id, roomCode);
+            socket.emit('room_joined', {
+                roomCode,
+                color: existingColor,
+                timeControl: room.timeControl,
+                variant: room.variant,
+                variantState: room.variantState
+            });
+            socket.emit('player_assigned', { color: existingColor });
+            socket.emit('game_state', {
+                pgn: room.game.pgn(),
+                fen: room.game.fen(),
+                variant: room.variant,
+                variantState: room.variantState
+            });
+            const times = getCurrentClockTimes(room);
+            socket.emit('clock_update', {
+                white: times.white,
+                black: times.black,
+                activeColor: room.clock.activeColor
+            });
+            console.log(`User ${socket.id} (${authInfo?.username || 'anonymous'}) rejoined room ${roomCode} as ${existingColor}`);
+            return;
+        }
+
+        // Leave any previous room (if different from this one)
         const previousRoom = socketToRoom.get(socket.id);
-        if (previousRoom) {
+        if (previousRoom && previousRoom !== roomCode) {
             socket.leave(previousRoom);
+            // Clean up player slot in previous room
+            const prevRoom = rooms.get(previousRoom);
+            if (prevRoom) {
+                if (prevRoom.players.white === socket.id) {
+                    prevRoom.players.white = undefined;
+                    io.to(previousRoom).emit('player_left', { color: 'white' });
+                } else if (prevRoom.players.black === socket.id) {
+                    prevRoom.players.black = undefined;
+                    io.to(previousRoom).emit('player_left', { color: 'black' });
+                }
+            }
         }
 
         socket.join(roomCode);
         socketToRoom.set(socket.id, roomCode);
-
-        const authInfo = authenticatedSockets.get(socket.id);
 
         // Assign color: first empty slot, or spectator
         let assignedColor: 'white' | 'black' | 'spectator';
