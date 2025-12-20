@@ -58,19 +58,26 @@
 - [x] Resign with confirmation
 - [x] Rematch with color swap
 
-### KROG Engine (Phase 1)
+### KROG Engine (Phase 1) - COMPLETE
 - [x] Full `server/src/krog/` module (12 files)
 - [x] KROG Framework with 36 operators (`server/src/krog-framework/`)
+  - 9 core operators (P, O, F, C, L, W, B, I, D)
+  - 8 piece logic operators (PM, PC, PA, NV, PD, CR, EP, PO)
+  - 8 board logic operators (PV, MH, CS, LMG, GT, TC, PR, FMC)
+  - 6 notation operators (PSA, PLA, PUCI, PVN, GN, NC)
+  - 5 temporal operators (G, F, X, U, R)
 - [x] Piece movement formulas
 - [x] Special move formulas (castling, en passant, promotion)
 - [x] Move explainer with KROG formulas
 - [x] Illegal move explanations
-- [x] FIDE article references
-- [x] English/Norwegian bilingual support
+- [x] FIDE article references (23 complete mappings)
+- [x] English/Norwegian bilingual support (all operators)
 - [x] R-type classification system (15 rule types)
 - [x] R-type display in move explanations (purple badge)
 - [x] R-type tooltips in Learn Mode
 - [x] REST API endpoints for KROG framework
+- [x] Complete test suite (93 tests passing)
+- [x] Validation script (100% coverage verified)
 
 ### Move Evaluation (Phase 7)
 - [x] Position evaluator
@@ -167,17 +174,20 @@ chess-project/
 │   │   │   ├── scorer.ts        # Move scoring
 │   │   │   ├── ranker.ts        # Move ranking
 │   │   │   └── openingBook.ts   # Opening book data
-│   │   └── krog-framework/      # KROG mathematical framework
+│   │   └── krog-framework/      # KROG mathematical framework (COMPLETE)
 │   │       ├── index.ts         # Main exports
-│   │       ├── types.ts         # Framework types
-│   │       ├── engine.ts        # KROGChessEngine class
+│   │       ├── types.ts         # Framework types (NVResult, PDResult, etc.)
+│   │       ├── engine.ts        # KROGChessEngine class (36 operators)
 │   │       ├── core-operators.ts    # 9 core operators (P,O,F,C,L,W,B,I,D)
-│   │       ├── piece-logic.ts       # 8 piece logic operators
+│   │       ├── piece-logic.ts       # 8 piece logic operators (PM,PC,PA,NV,PD,CR,EP,PO)
 │   │       ├── board-logic.ts       # 8 board logic operators
 │   │       ├── notation.ts          # 6 notation operators
 │   │       ├── temporal.ts          # 5 temporal operators
-│   │       ├── rtype-classifier.ts  # R-type classification
-│   │       └── KROG-RULES.json      # 24 formal rules
+│   │       ├── rtype-classifier.ts  # 15 R-type classifications
+│   │       ├── KROG-RULES.json      # 23 formal rules with FIDE mappings
+│   │       ├── KROG-TESTS.ts        # 93 tests (100% passing)
+│   │       ├── KROG-VALIDATION-SCRIPT.ts  # Automated verification
+│   │       └── KROG-VALIDATION-REPORT.json # Coverage report
 │   └── data/
 │       ├── puzzles.json         # 30+ tactical puzzles
 │       ├── lessons.json         # 45 lessons (L0-L2)
@@ -459,11 +469,48 @@ Open 2+ browser tabs to http://localhost:5173
 
 ## KROG Quick Reference
 
+**Implementation Status: COMPLETE (36/36 operators, 93 tests, 100% coverage)**
+
 **Modal Operators (9 Core):**
 - `P` = Permitted (may do)
 - `O` = Obligated (must do)
 - `F` = Forbidden (must not do)
 - `C` = Claim, `L` = Liberty, `W` = Power, `B` = Immunity, `I` = Disability, `D` = Liability
+
+**Piece Logic Operators (8):**
+- `PM` = Piece Movement Permission
+- `PC` = Path Clearance
+- `PA` = Piece Attack
+- `NV` = Notation Validity (SAN/UCI/LAN/Voice)
+- `PD` = Piece Development
+- `CR` = Castling Rights
+- `EP` = En Passant Validity
+- `PO` = Promotion Obligation
+
+**Board Logic Operators (8):**
+- `PV` = Position Validity
+- `MH` = Move History
+- `CS` = Check State
+- `LMG` = Legal Move Generation
+- `GT` = Game Termination
+- `TC` = Time Control
+- `PR` = Position Repetition
+- `FMC` = Fifty Move Counter
+
+**Notation Operators (6):**
+- `PSA` = Parse Standard Algebraic
+- `PLA` = Parse Long Algebraic
+- `PUCI` = Parse UCI Format
+- `PVN` = Parse Voice Natural
+- `GN` = Generate Notation
+- `NC` = Notation Conversion
+
+**Temporal Operators (5):**
+- `G` = Globally (Always)
+- `F` = Finally (Eventually)
+- `X` = Next
+- `U` = Until
+- `R` = Release
 
 **T-Types:**
 - `T1` = Player discretion (normal moves)
