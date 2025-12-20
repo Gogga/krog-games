@@ -38,7 +38,9 @@ import {
   PA_Operator,
   CR_Operator,
   EP_Operator,
-  PO_Operator
+  PO_Operator,
+  NV_Operator,
+  PD_Operator
 } from './piece-logic';
 import {
   PV_Operator,
@@ -806,6 +808,140 @@ export function runAllTests(): { passed: number; failed: number; results: TestSu
       const pawn: Piece = { type: 'pawn', color: 'white', square: { file: 5, rank: 7 }, hasMoved: true };
       const result = PO.evaluate(pawn, { file: 5, rank: 8 });
       runner.expect(result.required).toBe(true);
+    });
+
+    // NV - Notation Validity Tests
+    const NV = new NV_Operator();
+
+    runner.test('NV - Notation Validity exists', () => {
+      runner.expect(NV).toBeDefined();
+      runner.expect(typeof NV.evaluate).toBe('function');
+    });
+
+    runner.test('NV - Parses SAN notation Nf3', () => {
+      const result = NV.evaluate('Nf3');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.format).toBe('san');
+      runner.expect(result.parsed?.piece).toBe('knight');
+    });
+
+    runner.test('NV - Parses SAN castling O-O', () => {
+      const result = NV.evaluate('O-O');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.parsed?.castling).toBe('kingside');
+    });
+
+    runner.test('NV - Parses SAN castling O-O-O', () => {
+      const result = NV.evaluate('O-O-O');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.parsed?.castling).toBe('queenside');
+    });
+
+    runner.test('NV - Parses UCI notation e2e4', () => {
+      const result = NV.evaluate('e2e4');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.format).toBe('uci');
+      runner.expect(result.parsed?.from?.file).toBe(5);
+      runner.expect(result.parsed?.to?.file).toBe(5);
+    });
+
+    runner.test('NV - Parses UCI promotion e7e8q', () => {
+      const result = NV.evaluate('e7e8q');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.parsed?.promotion).toBe('queen');
+    });
+
+    runner.test('NV - Parses SAN capture exd5', () => {
+      const result = NV.evaluate('exd5');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.parsed?.capture).toBe(true);
+    });
+
+    runner.test('NV - Parses SAN check Qh5+', () => {
+      const result = NV.evaluate('Qh5+');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.parsed?.check).toBe(true);
+    });
+
+    runner.test('NV - Parses SAN checkmate Qf7#', () => {
+      const result = NV.evaluate('Qf7#');
+      runner.expect(result.valid).toBe(true);
+      runner.expect(result.parsed?.checkmate).toBe(true);
+    });
+
+    runner.test('NV - Rejects invalid notation', () => {
+      const result = NV.evaluate('xyz123');
+      runner.expect(result.valid).toBe(false);
+    });
+
+    runner.test('NV - Has bilingual explanation', () => {
+      const result = NV.evaluate('Nf3');
+      runner.expect(result.explanation.en).toBeDefined();
+      runner.expect(result.explanation.no).toBeDefined();
+    });
+
+    runner.test('NV - Has FIDE rule reference', () => {
+      const result = NV.evaluate('e4');
+      runner.expect(result.fideRule.norwegian.section).toBeDefined();
+      runner.expect(result.fideRule.english.section).toBeDefined();
+    });
+
+    // PD - Piece Development Tests
+    const PD = new PD_Operator();
+
+    runner.test('PD - Piece Development exists', () => {
+      runner.expect(PD).toBeDefined();
+      runner.expect(typeof PD.evaluate).toBe('function');
+    });
+
+    runner.test('PD - Knight on starting square is undeveloped', () => {
+      const knight: Piece = { type: 'knight', color: 'white', square: { file: 2, rank: 1 }, hasMoved: false };
+      const result = PD.evaluate(knight);
+      runner.expect(result.developed).toBe(false);
+      runner.expect(result.developmentScore).toBe(0);
+    });
+
+    runner.test('PD - Knight on f3 is developed', () => {
+      const knight: Piece = { type: 'knight', color: 'white', square: { file: 6, rank: 3 }, hasMoved: true };
+      const result = PD.evaluate(knight);
+      runner.expect(result.developed).toBe(true);
+      runner.expect(result.developmentScore).toBeGreaterThan(0);
+    });
+
+    runner.test('PD - Central knight scores higher', () => {
+      const centralKnight: Piece = { type: 'knight', color: 'white', square: { file: 4, rank: 4 }, hasMoved: true };
+      const edgeKnight: Piece = { type: 'knight', color: 'white', square: { file: 1, rank: 3 }, hasMoved: true };
+      const centralResult = PD.evaluate(centralKnight);
+      const edgeResult = PD.evaluate(edgeKnight);
+      runner.expect(centralResult.developmentScore).toBeGreaterThan(edgeResult.developmentScore);
+    });
+
+    runner.test('PD - Bishop on starting square is undeveloped', () => {
+      const bishop: Piece = { type: 'bishop', color: 'white', square: { file: 3, rank: 1 }, hasMoved: false };
+      const result = PD.evaluate(bishop);
+      runner.expect(result.developed).toBe(false);
+    });
+
+    runner.test('PD - Has bilingual explanation', () => {
+      const knight: Piece = { type: 'knight', color: 'white', square: { file: 6, rank: 3 }, hasMoved: true };
+      const result = PD.evaluate(knight);
+      runner.expect(result.explanation.en).toBeDefined();
+      runner.expect(result.explanation.no).toBeDefined();
+    });
+
+    runner.test('PD - Has FIDE rule reference', () => {
+      const knight: Piece = { type: 'knight', color: 'white', square: { file: 6, rank: 3 }, hasMoved: true };
+      const result = PD.evaluate(knight);
+      runner.expect(result.fideRule.norwegian.section).toBeDefined();
+      runner.expect(result.fideRule.english.section).toBeDefined();
+    });
+
+    runner.test('PD - Returns piece details', () => {
+      const knight: Piece = { type: 'knight', color: 'white', square: { file: 6, rank: 3 }, hasMoved: true };
+      const result = PD.evaluate(knight);
+      runner.expect(result.details.pieceType).toBe('knight');
+      runner.expect(result.details.color).toBe('white');
+      runner.expect(result.details.startingRank).toBe(1);
     });
   });
 
