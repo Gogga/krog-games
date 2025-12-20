@@ -60,6 +60,7 @@ export interface Board {
   setPiece(square: Square, piece: Piece | null): void;
   isEmpty(square: Square): boolean;
   isOccupiedBy(square: Square, color: Color): boolean;
+  clear(): void;
 }
 
 export interface GameState {
