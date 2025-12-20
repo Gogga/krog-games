@@ -1,0 +1,25 @@
+{
+  "complete": true,
+  "timestamp": "2025-12-20T22:00:46.832Z",
+  "errors": [],
+  "warnings": [],
+  "coverage": {
+    "coreOperators": 100,
+    "pieceLogic": 100,
+    "boardLogic": 100,
+    "notation": 100,
+    "temporal": 100,
+    "rtypes": 100,
+    "rules": 100
+  },
+  "performance": {
+    "moveValidation": 0,
+    "legalMoveGeneration": 0
+  },
+  "summary": {
+    "totalOperators": 36,
+    "implementedOperators": 34,
+    "totalRules": 21,
+    "implementedRules": 23
+  }
+}
