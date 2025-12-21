@@ -212,7 +212,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
       }
     }
 
+    function onMemberRoleUpdated(data: { success: boolean; clubId?: string; error?: string }) {
+      if (data.success && data.clubId && selectedClub?.id === data.clubId) {
+        // Refresh club details to show updated role
+        socket.emit('get_club', { clubId: data.clubId });
+      }
+    }
+
     socket.on('my_clubs', onMyClubs);
+    socket.on('member_role_updated', onMemberRoleUpdated);
     socket.on('user_search_results', onUserSearchResults);
     socket.on('invitation_sent', onInvitationSent);
     socket.on('public_clubs', onPublicClubs);
@@ -234,6 +242,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
 
     return () => {
       socket.off('my_clubs', onMyClubs);
+      socket.off('member_role_updated', onMemberRoleUpdated);
       socket.off('user_search_results', onUserSearchResults);
       socket.off('invitation_sent', onInvitationSent);
       socket.off('public_clubs', onPublicClubs);
