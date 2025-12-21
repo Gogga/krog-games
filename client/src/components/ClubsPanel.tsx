@@ -200,6 +200,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
       }
     }
 
+    function onYourRoleChanged(data: { clubId: string; newRole: string }) {
+      // My role in a club was changed - refresh if viewing that club
+      if (selectedClub?.id === data.clubId) {
+        socket.emit('get_club', { clubId: data.clubId });
+      }
+      // Also refresh my clubs list to update the role shown there
+      fetchMyClubs();
+    }
+
     function onUserSearchResults(data: { users: { id: string; username: string; rating: number }[] }) {
       setInviteSearchResults(data.users);
     }
@@ -238,6 +247,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
     socket.on('member_joined', onMemberJoined);
     socket.on('member_left', onMemberLeft);
     socket.on('role_changed', onRoleChanged);
+    socket.on('your_role_changed', onYourRoleChanged);
     socket.on('club_invitation_received', fetchInvitations);
 
     return () => {
@@ -260,6 +270,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
       socket.off('member_joined', onMemberJoined);
       socket.off('member_left', onMemberLeft);
       socket.off('role_changed', onRoleChanged);
+      socket.off('your_role_changed', onYourRoleChanged);
       socket.off('club_invitation_received');
     };
   }, [socket, fetchMyClubs, fetchPublicClubs, fetchInvitations, selectedClub]);

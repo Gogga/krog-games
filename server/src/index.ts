@@ -2409,6 +2409,15 @@ io.on('connection', (socket) => {
                 userId: targetUserId,
                 newRole
             });
+            // Also notify the affected user directly if they're online
+            const targetSocket = Array.from(authenticatedSockets.entries())
+                .find(([_, info]) => info.userId === targetUserId);
+            if (targetSocket) {
+                io.to(targetSocket[0]).emit('your_role_changed', {
+                    clubId,
+                    newRole
+                });
+            }
         } else {
             socket.emit('member_role_updated', { success: false, error: result.error });
         }
