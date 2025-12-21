@@ -2232,6 +2232,355 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ==================== CLUBS ====================
+
+    // Create a new club
+    socket.on('create_club', ({ name, description, logoEmoji, isPublic }: { name: string; description?: string; logoEmoji?: string; isPublic?: boolean }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to create clubs' });
+            return;
+        }
+
+        if (!name || name.trim().length < 3) {
+            socket.emit('club_created', { success: false, error: 'Club name must be at least 3 characters' });
+            return;
+        }
+
+        const result = dbOperations.createClub(name.trim(), description || null, authInfo.userId, logoEmoji, isPublic);
+        if (result.success && result.club) {
+            socket.emit('club_created', { success: true, club: result.club });
+        } else {
+            socket.emit('club_created', { success: false, error: result.error });
+        }
+    });
+
+    // Get user's clubs
+    socket.on('get_my_clubs', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to view clubs' });
+            return;
+        }
+
+        const clubs = dbOperations.getUserClubs(authInfo.userId);
+        socket.emit('my_clubs', { clubs });
+    });
+
+    // Get public clubs
+    socket.on('get_public_clubs', ({ limit, offset }: { limit?: number; offset?: number }) => {
+        const clubs = dbOperations.getPublicClubs(limit || 20, offset || 0);
+        socket.emit('public_clubs', { clubs });
+    });
+
+    // Search clubs
+    socket.on('search_clubs', ({ query }: { query: string }) => {
+        if (!query || query.trim().length < 2) {
+            socket.emit('club_search_results', { clubs: [] });
+            return;
+        }
+
+        const clubs = dbOperations.searchClubs(query.trim());
+        socket.emit('club_search_results', { clubs });
+    });
+
+    // Get club details
+    socket.on('get_club', ({ clubId }: { clubId: string }) => {
+        const club = dbOperations.getClubById(clubId);
+        if (!club) {
+            socket.emit('error', { message: 'Club not found' });
+            return;
+        }
+
+        const members = dbOperations.getClubMembers(clubId);
+        const authInfo = authenticatedSockets.get(socket.id);
+        const myMembership = authInfo ? dbOperations.getClubMember(clubId, authInfo.userId) : null;
+
+        socket.emit('club_details', {
+            club,
+            members,
+            myRole: myMembership?.role || null
+        });
+    });
+
+    // Update club
+    socket.on('update_club', ({ clubId, name, description, logoEmoji, isPublic }: { clubId: string; name?: string; description?: string; logoEmoji?: string; isPublic?: boolean }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to update clubs' });
+            return;
+        }
+
+        const result = dbOperations.updateClub(clubId, authInfo.userId, { name, description, logoEmoji, isPublic });
+        if (result.success) {
+            const club = dbOperations.getClubById(clubId);
+            socket.emit('club_updated', { success: true, club });
+            // Notify all members in the club room
+            io.to(`club:${clubId}`).emit('club_info_updated', { club });
+        } else {
+            socket.emit('club_updated', { success: false, error: result.error });
+        }
+    });
+
+    // Delete club
+    socket.on('delete_club', ({ clubId }: { clubId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to delete clubs' });
+            return;
+        }
+
+        const result = dbOperations.deleteClub(clubId, authInfo.userId);
+        if (result.success) {
+            socket.emit('club_deleted', { success: true, clubId });
+            // Notify all members
+            io.to(`club:${clubId}`).emit('club_disbanded', { clubId });
+        } else {
+            socket.emit('club_deleted', { success: false, error: result.error });
+        }
+    });
+
+    // Join a public club
+    socket.on('join_club', ({ clubId }: { clubId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to join clubs' });
+            return;
+        }
+
+        const result = dbOperations.joinClub(clubId, authInfo.userId);
+        if (result.success) {
+            socket.emit('club_joined', { success: true, clubId });
+            // Join the club socket room for real-time updates
+            socket.join(`club:${clubId}`);
+            // Notify other members
+            io.to(`club:${clubId}`).emit('member_joined', {
+                clubId,
+                member: { userId: authInfo.userId, username: authInfo.username, rating: authInfo.rating }
+            });
+        } else {
+            socket.emit('club_joined', { success: false, error: result.error });
+        }
+    });
+
+    // Leave a club
+    socket.on('leave_club', ({ clubId }: { clubId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to leave clubs' });
+            return;
+        }
+
+        const result = dbOperations.leaveClub(clubId, authInfo.userId);
+        if (result.success) {
+            socket.emit('club_left', { success: true, clubId });
+            // Leave the club socket room
+            socket.leave(`club:${clubId}`);
+            // Notify other members
+            io.to(`club:${clubId}`).emit('member_left', {
+                clubId,
+                userId: authInfo.userId,
+                username: authInfo.username
+            });
+        } else {
+            socket.emit('club_left', { success: false, error: result.error });
+        }
+    });
+
+    // Update member role
+    socket.on('update_member_role', ({ clubId, targetUserId, newRole }: { clubId: string; targetUserId: string; newRole: 'admin' | 'member' }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to update roles' });
+            return;
+        }
+
+        const result = dbOperations.updateMemberRole(clubId, authInfo.userId, targetUserId, newRole);
+        if (result.success) {
+            socket.emit('member_role_updated', { success: true, clubId, targetUserId, newRole });
+            io.to(`club:${clubId}`).emit('role_changed', {
+                clubId,
+                userId: targetUserId,
+                newRole
+            });
+        } else {
+            socket.emit('member_role_updated', { success: false, error: result.error });
+        }
+    });
+
+    // Kick member
+    socket.on('kick_member', ({ clubId, targetUserId }: { clubId: string; targetUserId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to kick members' });
+            return;
+        }
+
+        const result = dbOperations.kickMember(clubId, authInfo.userId, targetUserId);
+        if (result.success) {
+            socket.emit('member_kicked', { success: true, clubId, targetUserId });
+            io.to(`club:${clubId}`).emit('member_removed', {
+                clubId,
+                userId: targetUserId
+            });
+        } else {
+            socket.emit('member_kicked', { success: false, error: result.error });
+        }
+    });
+
+    // Send club invitation
+    socket.on('invite_to_club', ({ clubId, inviteeId }: { clubId: string; inviteeId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to send invitations' });
+            return;
+        }
+
+        const result = dbOperations.sendClubInvitation(clubId, authInfo.userId, inviteeId);
+        if (result.success) {
+            socket.emit('invitation_sent', { success: true, invitation: result.invitation });
+            // Notify the invitee if online
+            const inviteeSocket = Array.from(authenticatedSockets.entries())
+                .find(([_, info]) => info.userId === inviteeId);
+            if (inviteeSocket) {
+                const club = dbOperations.getClubById(clubId);
+                io.to(inviteeSocket[0]).emit('club_invitation_received', {
+                    invitation: result.invitation,
+                    clubName: club?.name,
+                    inviterUsername: authInfo.username
+                });
+            }
+        } else {
+            socket.emit('invitation_sent', { success: false, error: result.error });
+        }
+    });
+
+    // Get pending club invitations
+    socket.on('get_club_invitations', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to view invitations' });
+            return;
+        }
+
+        const invitations = dbOperations.getPendingClubInvitations(authInfo.userId);
+        socket.emit('club_invitations', { invitations });
+    });
+
+    // Accept club invitation
+    socket.on('accept_club_invitation', ({ invitationId }: { invitationId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to accept invitations' });
+            return;
+        }
+
+        const result = dbOperations.acceptClubInvitation(invitationId, authInfo.userId);
+        if (result.success) {
+            socket.emit('invitation_accepted', { success: true, invitationId });
+        } else {
+            socket.emit('invitation_accepted', { success: false, error: result.error });
+        }
+    });
+
+    // Decline club invitation
+    socket.on('decline_club_invitation', ({ invitationId }: { invitationId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to decline invitations' });
+            return;
+        }
+
+        const result = dbOperations.declineClubInvitation(invitationId, authInfo.userId);
+        if (result.success) {
+            socket.emit('invitation_declined', { success: true, invitationId });
+        } else {
+            socket.emit('invitation_declined', { success: false, error: result.error });
+        }
+    });
+
+    // Join club chat room (for real-time messages)
+    socket.on('join_club_chat', ({ clubId }: { clubId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to join club chat' });
+            return;
+        }
+
+        const member = dbOperations.getClubMember(clubId, authInfo.userId);
+        if (!member) {
+            socket.emit('error', { message: 'Not a member of this club' });
+            return;
+        }
+
+        socket.join(`club:${clubId}`);
+        const messages = dbOperations.getClubMessages(clubId, 50, 0);
+        socket.emit('club_chat_joined', { clubId, messages: messages.reverse() });
+    });
+
+    // Leave club chat room
+    socket.on('leave_club_chat', ({ clubId }: { clubId: string }) => {
+        socket.leave(`club:${clubId}`);
+        socket.emit('club_chat_left', { clubId });
+    });
+
+    // Send message to club chat
+    socket.on('send_club_message', ({ clubId, message }: { clubId: string; message: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to send messages' });
+            return;
+        }
+
+        if (!message || message.trim().length === 0) {
+            return;
+        }
+
+        const sanitizedMessage = message.trim().slice(0, 500);
+        const result = dbOperations.addClubMessage(clubId, authInfo.userId, sanitizedMessage);
+
+        if (result.success && result.message) {
+            // Broadcast to all club members
+            io.to(`club:${clubId}`).emit('club_message', result.message);
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to send message' });
+        }
+    });
+
+    // Get more club messages (pagination)
+    socket.on('get_club_messages', ({ clubId, limit, offset }: { clubId: string; limit?: number; offset?: number }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to view messages' });
+            return;
+        }
+
+        const member = dbOperations.getClubMember(clubId, authInfo.userId);
+        if (!member) {
+            socket.emit('error', { message: 'Not a member of this club' });
+            return;
+        }
+
+        const messages = dbOperations.getClubMessages(clubId, limit || 50, offset || 0);
+        socket.emit('club_messages', { clubId, messages: messages.reverse(), offset: offset || 0 });
+    });
+
+    // Delete club message (admin/owner only)
+    socket.on('delete_club_message', ({ clubId, messageId }: { clubId: string; messageId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to delete messages' });
+            return;
+        }
+
+        const result = dbOperations.deleteClubMessage(messageId, authInfo.userId, clubId);
+        if (result.success) {
+            io.to(`club:${clubId}`).emit('club_message_deleted', { clubId, messageId });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to delete message' });
+        }
+    });
+
     // ==================== DIRECT CHALLENGES ====================
 
     // Challenge a friend

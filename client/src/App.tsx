@@ -11,6 +11,7 @@ import { AuthModal } from './components/AuthModal';
 import { UserPanel } from './components/UserPanel';
 import { MatchmakingPanel } from './components/MatchmakingPanel';
 import { FriendsPanel } from './components/FriendsPanel';
+import { ClubsPanel } from './components/ClubsPanel';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -982,7 +983,10 @@ function App() {
       <div className="app-container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
-          <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <ClubsPanel socket={socket} language={language} />
+            <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
+          </div>
         </div>
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
