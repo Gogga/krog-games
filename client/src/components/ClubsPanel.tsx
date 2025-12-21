@@ -93,6 +93,11 @@ export function ClubsPanel({ socket, language }: ClubsPanelProps) {
     socket.emit('get_club_invitations');
   }, [socket]);
 
+  // Fetch invitations on mount to show badge count even when panel is closed
+  useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
+
   useEffect(() => {
     if (isOpen) {
       fetchMyClubs();
