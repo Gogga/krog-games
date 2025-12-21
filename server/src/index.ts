@@ -2296,9 +2296,15 @@ io.on('connection', (socket) => {
         const authInfo = authenticatedSockets.get(socket.id);
         const myMembership = authInfo ? dbOperations.getClubMember(clubId, authInfo.userId) : null;
 
+        // Add online status to members
+        const membersWithStatus = members.map(member => ({
+            ...member,
+            online: Array.from(authenticatedSockets.values()).some(s => s.userId === member.user_id)
+        }));
+
         socket.emit('club_details', {
             club,
-            members,
+            members: membersWithStatus,
             myRole: myMembership?.role || null
         });
     });

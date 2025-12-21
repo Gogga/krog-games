@@ -984,7 +984,7 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
           <div style={{ display: 'flex', gap: '10px' }}>
-            <ClubsPanel socket={socket} language={language} />
+            <ClubsPanel socket={socket} language={language} onChallengeMember={challengeFriend} />
             <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
           </div>
         </div>

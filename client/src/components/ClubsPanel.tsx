@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Socket } from 'socket.io-client';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Club {
   id: string;
@@ -22,6 +23,7 @@ interface ClubMember {
   joined_at: string;
   username?: string;
   rating?: number;
+  online?: boolean;
 }
 
 interface ClubMessage {
@@ -47,9 +49,11 @@ interface ClubInvitation {
 interface ClubsPanelProps {
   socket: Socket;
   language: 'en' | 'no';
+  onChallengeMember?: (memberId: string, memberUsername: string) => void;
 }
 
-export function ClubsPanel({ socket, language }: ClubsPanelProps) {
+export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelProps) {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [myClubs, setMyClubs] = useState<Club[]>([]);
   const [publicClubs, setPublicClubs] = useState<Club[]>([]);
@@ -523,18 +527,43 @@ export function ClubsPanel({ socket, language }: ClubsPanelProps) {
                           width: '8px',
                           height: '8px',
                           borderRadius: '50%',
-                          background: member.role === 'owner' ? '#f1c40f' : member.role === 'admin' ? '#9b59b6' : '#666'
+                          background: member.online ? '#2ecc71' : '#666'
                         }} />
                         <div>
-                          <div style={{ fontWeight: 600 }}>{member.username}</div>
+                          <div style={{ fontWeight: 600 }}>
+                            {member.username}
+                            {member.role === 'owner' && <span style={{ marginLeft: '6px', color: '#f1c40f' }}>👑</span>}
+                            {member.role === 'admin' && <span style={{ marginLeft: '6px', color: '#9b59b6' }}>⭐</span>}
+                          </div>
                           <div style={{ fontSize: '0.75rem', color: '#888' }}>
-                            {member.role === 'owner' ? (language === 'en' ? 'Owner' : 'Eier') :
-                             member.role === 'admin' ? (language === 'en' ? 'Admin' : 'Admin') :
-                             (language === 'en' ? 'Member' : 'Medlem')}
+                            {member.online ? (language === 'en' ? 'Online' : 'Tilkoblet') : (language === 'en' ? 'Offline' : 'Frakoblet')}
                             {member.rating ? ` • ${member.rating}` : ''}
                           </div>
                         </div>
                       </div>
+                      {/* Challenge button for online members (not yourself) */}
+                      {onChallengeMember && member.online && user?.id && member.user_id !== user.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (member.username) {
+                              onChallengeMember(member.user_id, member.username);
+                            }
+                          }}
+                          style={{
+                            padding: '6px 10px',
+                            background: '#81b64c',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontFamily: 'inherit'
+                          }}
+                        >
+                          {language === 'en' ? 'Challenge' : 'Utfordre'}
+                        </button>
+                      )}
                     </div>
                   ))}
 
