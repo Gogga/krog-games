@@ -133,6 +133,66 @@ db.exec(`
     UNIQUE(club_id, invitee_id)
   );
 
+  -- Tournaments table
+  CREATE TABLE IF NOT EXISTS tournaments (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    creator_id TEXT NOT NULL,
+    club_id TEXT,
+    type TEXT NOT NULL DEFAULT 'swiss',
+    status TEXT NOT NULL DEFAULT 'upcoming',
+    time_control TEXT NOT NULL DEFAULT '5+0',
+    max_participants INTEGER DEFAULT 32,
+    current_round INTEGER DEFAULT 0,
+    total_rounds INTEGER DEFAULT 0,
+    start_time TEXT,
+    end_time TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (creator_id) REFERENCES users(id),
+    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE
+  );
+
+  -- Tournament participants table
+  CREATE TABLE IF NOT EXISTS tournament_participants (
+    id TEXT PRIMARY KEY,
+    tournament_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    score REAL DEFAULT 0,
+    buchholz REAL DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    draws INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    performance_rating INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'active',
+    joined_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(tournament_id, user_id)
+  );
+
+  -- Tournament games table
+  CREATE TABLE IF NOT EXISTS tournament_games (
+    id TEXT PRIMARY KEY,
+    tournament_id TEXT NOT NULL,
+    round INTEGER NOT NULL,
+    board INTEGER DEFAULT 1,
+    white_id TEXT NOT NULL,
+    black_id TEXT NOT NULL,
+    room_code TEXT,
+    result TEXT,
+    white_score REAL,
+    black_score REAL,
+    pgn TEXT,
+    status TEXT DEFAULT 'pending',
+    scheduled_at TEXT,
+    started_at TEXT,
+    ended_at TEXT,
+    FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+    FOREIGN KEY (white_id) REFERENCES users(id),
+    FOREIGN KEY (black_id) REFERENCES users(id)
+  );
+
   -- Create indexes for performance
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
   CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -153,6 +213,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_club_messages_club_id ON club_messages(club_id);
   CREATE INDEX IF NOT EXISTS idx_club_invitations_club_id ON club_invitations(club_id);
   CREATE INDEX IF NOT EXISTS idx_club_invitations_invitee_id ON club_invitations(invitee_id);
+  CREATE INDEX IF NOT EXISTS idx_tournaments_creator_id ON tournaments(creator_id);
+  CREATE INDEX IF NOT EXISTS idx_tournaments_club_id ON tournaments(club_id);
+  CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status);
+  CREATE INDEX IF NOT EXISTS idx_tournament_participants_tournament_id ON tournament_participants(tournament_id);
+  CREATE INDEX IF NOT EXISTS idx_tournament_participants_user_id ON tournament_participants(user_id);
+  CREATE INDEX IF NOT EXISTS idx_tournament_games_tournament_id ON tournament_games(tournament_id);
+  CREATE INDEX IF NOT EXISTS idx_tournament_games_round ON tournament_games(round);
 `);
 
 // Prepared statements
@@ -468,6 +535,173 @@ const statements = {
 
   deleteClubInvitation: db.prepare(`
     DELETE FROM club_invitations WHERE id = ?
+  `),
+
+  // Tournament operations
+  createTournament: db.prepare(`
+    INSERT INTO tournaments (id, name, description, creator_id, club_id, type, time_control, max_participants, start_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+
+  getTournamentById: db.prepare(`
+    SELECT t.*, u.username as creator_username, c.name as club_name
+    FROM tournaments t
+    JOIN users u ON t.creator_id = u.id
+    LEFT JOIN clubs c ON t.club_id = c.id
+    WHERE t.id = ?
+  `),
+
+  updateTournament: db.prepare(`
+    UPDATE tournaments SET name = ?, description = ?, type = ?, time_control = ?, max_participants = ?, start_time = ?
+    WHERE id = ?
+  `),
+
+  updateTournamentStatus: db.prepare(`
+    UPDATE tournaments SET status = ?, current_round = ?, total_rounds = ?, end_time = ?
+    WHERE id = ?
+  `),
+
+  deleteTournament: db.prepare(`
+    DELETE FROM tournaments WHERE id = ?
+  `),
+
+  getUpcomingTournaments: db.prepare(`
+    SELECT t.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
+    FROM tournaments t
+    JOIN users u ON t.creator_id = u.id
+    LEFT JOIN clubs c ON t.club_id = c.id
+    WHERE t.status = 'upcoming'
+    ORDER BY t.start_time ASC
+    LIMIT ? OFFSET ?
+  `),
+
+  getActiveTournaments: db.prepare(`
+    SELECT t.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
+    FROM tournaments t
+    JOIN users u ON t.creator_id = u.id
+    LEFT JOIN clubs c ON t.club_id = c.id
+    WHERE t.status = 'active'
+    ORDER BY t.start_time DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getCompletedTournaments: db.prepare(`
+    SELECT t.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
+    FROM tournaments t
+    JOIN users u ON t.creator_id = u.id
+    LEFT JOIN clubs c ON t.club_id = c.id
+    WHERE t.status = 'completed'
+    ORDER BY t.end_time DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getClubTournaments: db.prepare(`
+    SELECT t.*, u.username as creator_username,
+           (SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = t.id) as participant_count
+    FROM tournaments t
+    JOIN users u ON t.creator_id = u.id
+    WHERE t.club_id = ?
+    ORDER BY t.created_at DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getUserTournaments: db.prepare(`
+    SELECT t.*, u.username as creator_username, c.name as club_name, tp.score, tp.status as participant_status
+    FROM tournament_participants tp
+    JOIN tournaments t ON tp.tournament_id = t.id
+    JOIN users u ON t.creator_id = u.id
+    LEFT JOIN clubs c ON t.club_id = c.id
+    WHERE tp.user_id = ?
+    ORDER BY t.created_at DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  // Tournament participant operations
+  addTournamentParticipant: db.prepare(`
+    INSERT INTO tournament_participants (id, tournament_id, user_id)
+    VALUES (?, ?, ?)
+  `),
+
+  removeTournamentParticipant: db.prepare(`
+    DELETE FROM tournament_participants WHERE tournament_id = ? AND user_id = ?
+  `),
+
+  getTournamentParticipant: db.prepare(`
+    SELECT tp.*, u.username, u.rating
+    FROM tournament_participants tp
+    JOIN users u ON tp.user_id = u.id
+    WHERE tp.tournament_id = ? AND tp.user_id = ?
+  `),
+
+  getTournamentParticipants: db.prepare(`
+    SELECT tp.*, u.username, u.rating
+    FROM tournament_participants tp
+    JOIN users u ON tp.user_id = u.id
+    WHERE tp.tournament_id = ?
+    ORDER BY tp.score DESC, tp.buchholz DESC, u.rating DESC
+  `),
+
+  updateParticipantScore: db.prepare(`
+    UPDATE tournament_participants
+    SET score = ?, buchholz = ?, wins = ?, draws = ?, losses = ?, performance_rating = ?
+    WHERE tournament_id = ? AND user_id = ?
+  `),
+
+  updateParticipantStatus: db.prepare(`
+    UPDATE tournament_participants SET status = ? WHERE tournament_id = ? AND user_id = ?
+  `),
+
+  // Tournament game operations
+  createTournamentGame: db.prepare(`
+    INSERT INTO tournament_games (id, tournament_id, round, board, white_id, black_id, room_code, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+  `),
+
+  getTournamentGame: db.prepare(`
+    SELECT tg.*, w.username as white_username, b.username as black_username
+    FROM tournament_games tg
+    JOIN users w ON tg.white_id = w.id
+    JOIN users b ON tg.black_id = b.id
+    WHERE tg.id = ?
+  `),
+
+  getTournamentGameByRoom: db.prepare(`
+    SELECT tg.*, w.username as white_username, b.username as black_username
+    FROM tournament_games tg
+    JOIN users w ON tg.white_id = w.id
+    JOIN users b ON tg.black_id = b.id
+    WHERE tg.room_code = ?
+  `),
+
+  getTournamentRoundGames: db.prepare(`
+    SELECT tg.*, w.username as white_username, b.username as black_username, w.rating as white_rating, b.rating as black_rating
+    FROM tournament_games tg
+    JOIN users w ON tg.white_id = w.id
+    JOIN users b ON tg.black_id = b.id
+    WHERE tg.tournament_id = ? AND tg.round = ?
+    ORDER BY tg.board ASC
+  `),
+
+  getUserTournamentGames: db.prepare(`
+    SELECT tg.*, w.username as white_username, b.username as black_username
+    FROM tournament_games tg
+    JOIN users w ON tg.white_id = w.id
+    JOIN users b ON tg.black_id = b.id
+    WHERE tg.tournament_id = ? AND (tg.white_id = ? OR tg.black_id = ?)
+    ORDER BY tg.round ASC
+  `),
+
+  updateTournamentGameStatus: db.prepare(`
+    UPDATE tournament_games SET status = ?, started_at = datetime('now') WHERE id = ?
+  `),
+
+  updateTournamentGameResult: db.prepare(`
+    UPDATE tournament_games
+    SET result = ?, white_score = ?, black_score = ?, pgn = ?, status = 'completed', ended_at = datetime('now')
+    WHERE id = ?
   `)
 };
 
@@ -574,6 +808,64 @@ export interface ClubInvitation {
   created_at: string;
   club_name?: string;
   inviter_username?: string;
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  description: string | null;
+  creator_id: string;
+  club_id: string | null;
+  type: 'swiss' | 'round_robin' | 'knockout' | 'arena';
+  status: 'upcoming' | 'active' | 'completed' | 'cancelled';
+  time_control: string;
+  max_participants: number;
+  current_round: number;
+  total_rounds: number;
+  start_time: string | null;
+  end_time: string | null;
+  created_at: string;
+  creator_username?: string;
+  club_name?: string;
+  participant_count?: number;
+}
+
+export interface TournamentParticipant {
+  id: string;
+  tournament_id: string;
+  user_id: string;
+  score: number;
+  buchholz: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  performance_rating: number;
+  status: 'active' | 'withdrawn' | 'disqualified';
+  joined_at: string;
+  username?: string;
+  rating?: number;
+}
+
+export interface TournamentGame {
+  id: string;
+  tournament_id: string;
+  round: number;
+  board: number;
+  white_id: string;
+  black_id: string;
+  room_code: string | null;
+  result: string | null;
+  white_score: number | null;
+  black_score: number | null;
+  pgn: string | null;
+  status: 'pending' | 'active' | 'completed' | 'forfeit';
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  white_username?: string;
+  black_username?: string;
+  white_rating?: number;
+  black_rating?: number;
 }
 
 // Database operations
@@ -1057,6 +1349,405 @@ export const dbOperations = {
     } catch (error) {
       console.error('Error declining invitation:', error);
       return { success: false, error: 'Failed to decline invitation' };
+    }
+  },
+
+  // Tournament operations
+  createTournament(
+    name: string,
+    description: string | null,
+    creatorId: string,
+    clubId: string | null,
+    type: 'swiss' | 'round_robin' | 'knockout' | 'arena',
+    timeControl: string,
+    maxParticipants: number,
+    startTime: string | null
+  ): { success: boolean; tournament?: Tournament; error?: string } {
+    try {
+      const id = uuidv4();
+      statements.createTournament.run(id, name, description, creatorId, clubId, type, timeControl, maxParticipants, startTime);
+      // Creator automatically joins
+      const participantId = uuidv4();
+      statements.addTournamentParticipant.run(participantId, id, creatorId);
+      const tournament = statements.getTournamentById.get(id) as Tournament;
+      return { success: true, tournament };
+    } catch (error) {
+      console.error('Error creating tournament:', error);
+      return { success: false, error: 'Failed to create tournament' };
+    }
+  },
+
+  getTournamentById(id: string): Tournament | null {
+    return statements.getTournamentById.get(id) as Tournament | null;
+  },
+
+  updateTournament(
+    tournamentId: string,
+    userId: string,
+    updates: { name?: string; description?: string; type?: string; timeControl?: string; maxParticipants?: number; startTime?: string }
+  ): { success: boolean; error?: string } {
+    try {
+      const tournament = statements.getTournamentById.get(tournamentId) as Tournament | null;
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+      if (tournament.creator_id !== userId) {
+        return { success: false, error: 'Only the creator can update the tournament' };
+      }
+      if (tournament.status !== 'upcoming') {
+        return { success: false, error: 'Cannot update an active or completed tournament' };
+      }
+      statements.updateTournament.run(
+        updates.name ?? tournament.name,
+        updates.description ?? tournament.description,
+        updates.type ?? tournament.type,
+        updates.timeControl ?? tournament.time_control,
+        updates.maxParticipants ?? tournament.max_participants,
+        updates.startTime ?? tournament.start_time,
+        tournamentId
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating tournament:', error);
+      return { success: false, error: 'Failed to update tournament' };
+    }
+  },
+
+  deleteTournament(tournamentId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      const tournament = statements.getTournamentById.get(tournamentId) as Tournament | null;
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+      if (tournament.creator_id !== userId) {
+        return { success: false, error: 'Only the creator can delete the tournament' };
+      }
+      if (tournament.status === 'active') {
+        return { success: false, error: 'Cannot delete an active tournament' };
+      }
+      statements.deleteTournament.run(tournamentId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting tournament:', error);
+      return { success: false, error: 'Failed to delete tournament' };
+    }
+  },
+
+  getUpcomingTournaments(limit: number = 20, offset: number = 0): Tournament[] {
+    return statements.getUpcomingTournaments.all(limit, offset) as Tournament[];
+  },
+
+  getActiveTournaments(limit: number = 20, offset: number = 0): Tournament[] {
+    return statements.getActiveTournaments.all(limit, offset) as Tournament[];
+  },
+
+  getCompletedTournaments(limit: number = 20, offset: number = 0): Tournament[] {
+    return statements.getCompletedTournaments.all(limit, offset) as Tournament[];
+  },
+
+  getClubTournaments(clubId: string, limit: number = 20, offset: number = 0): Tournament[] {
+    return statements.getClubTournaments.all(clubId, limit, offset) as Tournament[];
+  },
+
+  getUserTournaments(userId: string, limit: number = 20, offset: number = 0): Tournament[] {
+    return statements.getUserTournaments.all(userId, limit, offset) as Tournament[];
+  },
+
+  // Tournament participant operations
+  joinTournament(tournamentId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      const tournament = statements.getTournamentById.get(tournamentId) as Tournament | null;
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+      if (tournament.status !== 'upcoming') {
+        return { success: false, error: 'Tournament is not open for registration' };
+      }
+      const existing = statements.getTournamentParticipant.get(tournamentId, userId) as TournamentParticipant | null;
+      if (existing) {
+        return { success: false, error: 'Already registered for this tournament' };
+      }
+      const participants = statements.getTournamentParticipants.all(tournamentId) as TournamentParticipant[];
+      if (participants.length >= tournament.max_participants) {
+        return { success: false, error: 'Tournament is full' };
+      }
+      const id = uuidv4();
+      statements.addTournamentParticipant.run(id, tournamentId, userId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error joining tournament:', error);
+      return { success: false, error: 'Failed to join tournament' };
+    }
+  },
+
+  leaveTournament(tournamentId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      const tournament = statements.getTournamentById.get(tournamentId) as Tournament | null;
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+      if (tournament.creator_id === userId) {
+        return { success: false, error: 'Creator cannot leave, delete the tournament instead' };
+      }
+      const participant = statements.getTournamentParticipant.get(tournamentId, userId) as TournamentParticipant | null;
+      if (!participant) {
+        return { success: false, error: 'Not registered for this tournament' };
+      }
+      if (tournament.status === 'active') {
+        // Mark as withdrawn instead of deleting
+        statements.updateParticipantStatus.run('withdrawn', tournamentId, userId);
+      } else {
+        statements.removeTournamentParticipant.run(tournamentId, userId);
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error leaving tournament:', error);
+      return { success: false, error: 'Failed to leave tournament' };
+    }
+  },
+
+  getTournamentParticipant(tournamentId: string, userId: string): TournamentParticipant | null {
+    return statements.getTournamentParticipant.get(tournamentId, userId) as TournamentParticipant | null;
+  },
+
+  getTournamentParticipants(tournamentId: string): TournamentParticipant[] {
+    return statements.getTournamentParticipants.all(tournamentId) as TournamentParticipant[];
+  },
+
+  updateParticipantScore(
+    tournamentId: string,
+    userId: string,
+    score: number,
+    buchholz: number,
+    wins: number,
+    draws: number,
+    losses: number,
+    performanceRating: number
+  ): void {
+    statements.updateParticipantScore.run(score, buchholz, wins, draws, losses, performanceRating, tournamentId, userId);
+  },
+
+  // Tournament game operations
+  createTournamentGame(
+    tournamentId: string,
+    round: number,
+    board: number,
+    whiteId: string,
+    blackId: string,
+    roomCode: string
+  ): TournamentGame | null {
+    try {
+      const id = uuidv4();
+      statements.createTournamentGame.run(id, tournamentId, round, board, whiteId, blackId, roomCode);
+      return statements.getTournamentGame.get(id) as TournamentGame;
+    } catch (error) {
+      console.error('Error creating tournament game:', error);
+      return null;
+    }
+  },
+
+  getTournamentGame(gameId: string): TournamentGame | null {
+    return statements.getTournamentGame.get(gameId) as TournamentGame | null;
+  },
+
+  getTournamentGameByRoom(roomCode: string): TournamentGame | null {
+    return statements.getTournamentGameByRoom.get(roomCode) as TournamentGame | null;
+  },
+
+  getTournamentRoundGames(tournamentId: string, round: number): TournamentGame[] {
+    return statements.getTournamentRoundGames.all(tournamentId, round) as TournamentGame[];
+  },
+
+  getUserTournamentGames(tournamentId: string, userId: string): TournamentGame[] {
+    return statements.getUserTournamentGames.all(tournamentId, userId, userId) as TournamentGame[];
+  },
+
+  updateTournamentGameStatus(gameId: string, status: 'active' | 'completed' | 'forfeit'): void {
+    statements.updateTournamentGameStatus.run(status, gameId);
+  },
+
+  updateTournamentGameResult(
+    gameId: string,
+    result: string,
+    whiteScore: number,
+    blackScore: number,
+    pgn: string
+  ): void {
+    statements.updateTournamentGameResult.run(result, whiteScore, blackScore, pgn, gameId);
+  },
+
+  // Start a tournament and generate pairings
+  startTournament(tournamentId: string, userId: string): { success: boolean; error?: string; pairings?: TournamentGame[] } {
+    try {
+      const tournament = statements.getTournamentById.get(tournamentId) as Tournament | null;
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+      if (tournament.creator_id !== userId) {
+        return { success: false, error: 'Only the creator can start the tournament' };
+      }
+      if (tournament.status !== 'upcoming') {
+        return { success: false, error: 'Tournament is not in upcoming status' };
+      }
+      const participants = statements.getTournamentParticipants.all(tournamentId) as TournamentParticipant[];
+      if (participants.length < 2) {
+        return { success: false, error: 'Need at least 2 participants to start' };
+      }
+
+      // Calculate total rounds based on type
+      let totalRounds = 0;
+      if (tournament.type === 'swiss') {
+        totalRounds = Math.ceil(Math.log2(participants.length));
+      } else if (tournament.type === 'round_robin') {
+        totalRounds = participants.length - 1;
+      } else if (tournament.type === 'knockout') {
+        totalRounds = Math.ceil(Math.log2(participants.length));
+      } else {
+        totalRounds = 1; // Arena is time-based, not round-based
+      }
+
+      // Update tournament status
+      statements.updateTournamentStatus.run('active', 1, totalRounds, null, tournamentId);
+
+      // Generate first round pairings
+      const pairings = this.generatePairings(tournamentId, 1, participants);
+
+      return { success: true, pairings };
+    } catch (error) {
+      console.error('Error starting tournament:', error);
+      return { success: false, error: 'Failed to start tournament' };
+    }
+  },
+
+  // Generate pairings for a round
+  generatePairings(tournamentId: string, round: number, participants: TournamentParticipant[]): TournamentGame[] {
+    const games: TournamentGame[] = [];
+    const activePlayers = participants.filter(p => p.status === 'active');
+
+    // Shuffle for first round, sort by score for subsequent rounds
+    if (round === 1) {
+      for (let i = activePlayers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activePlayers[i], activePlayers[j]] = [activePlayers[j], activePlayers[i]];
+      }
+    } else {
+      activePlayers.sort((a, b) => b.score - a.score || b.buchholz - a.buchholz);
+    }
+
+    // Create pairings
+    let board = 1;
+    for (let i = 0; i < activePlayers.length - 1; i += 2) {
+      const roomCode = `T${tournamentId.substring(0, 6).toUpperCase()}R${round}B${board}`;
+      const game = this.createTournamentGame(
+        tournamentId,
+        round,
+        board,
+        activePlayers[i].user_id,
+        activePlayers[i + 1].user_id,
+        roomCode
+      );
+      if (game) {
+        games.push(game);
+      }
+      board++;
+    }
+
+    // Handle bye for odd number of players
+    if (activePlayers.length % 2 === 1) {
+      const byePlayer = activePlayers[activePlayers.length - 1];
+      // Give bye (1 point)
+      const participant = statements.getTournamentParticipant.get(tournamentId, byePlayer.user_id) as TournamentParticipant;
+      statements.updateParticipantScore.run(
+        participant.score + 1,
+        participant.buchholz,
+        participant.wins + 1,
+        participant.draws,
+        participant.losses,
+        participant.performance_rating,
+        tournamentId,
+        byePlayer.user_id
+      );
+    }
+
+    return games;
+  },
+
+  // Advance tournament to next round
+  advanceRound(tournamentId: string): { success: boolean; error?: string; pairings?: TournamentGame[] } {
+    try {
+      const tournament = statements.getTournamentById.get(tournamentId) as Tournament | null;
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+      if (tournament.status !== 'active') {
+        return { success: false, error: 'Tournament is not active' };
+      }
+
+      // Check if all games in current round are completed
+      const currentGames = this.getTournamentRoundGames(tournamentId, tournament.current_round);
+      const incompleteGames = currentGames.filter(g => g.status !== 'completed' && g.status !== 'forfeit');
+      if (incompleteGames.length > 0) {
+        return { success: false, error: 'Not all games in current round are completed' };
+      }
+
+      // Calculate Buchholz scores
+      this.calculateBuchholz(tournamentId);
+
+      // Check if tournament is complete
+      if (tournament.current_round >= tournament.total_rounds) {
+        statements.updateTournamentStatus.run('completed', tournament.current_round, tournament.total_rounds, new Date().toISOString(), tournamentId);
+        return { success: true };
+      }
+
+      // Advance to next round
+      const nextRound = tournament.current_round + 1;
+      statements.updateTournamentStatus.run('active', nextRound, tournament.total_rounds, null, tournamentId);
+
+      // Generate next round pairings
+      const participants = this.getTournamentParticipants(tournamentId);
+      const pairings = this.generatePairings(tournamentId, nextRound, participants);
+
+      return { success: true, pairings };
+    } catch (error) {
+      console.error('Error advancing round:', error);
+      return { success: false, error: 'Failed to advance round' };
+    }
+  },
+
+  // Calculate Buchholz tiebreak scores
+  calculateBuchholz(tournamentId: string): void {
+    const participants = this.getTournamentParticipants(tournamentId);
+    const games = db.prepare('SELECT * FROM tournament_games WHERE tournament_id = ? AND status = ?').all(tournamentId, 'completed') as TournamentGame[];
+
+    const opponentScores: Map<string, number[]> = new Map();
+
+    for (const p of participants) {
+      opponentScores.set(p.user_id, []);
+    }
+
+    for (const game of games) {
+      const whiteParticipant = participants.find(p => p.user_id === game.white_id);
+      const blackParticipant = participants.find(p => p.user_id === game.black_id);
+
+      if (whiteParticipant && blackParticipant) {
+        opponentScores.get(game.white_id)?.push(blackParticipant.score);
+        opponentScores.get(game.black_id)?.push(whiteParticipant.score);
+      }
+    }
+
+    for (const p of participants) {
+      const scores = opponentScores.get(p.user_id) || [];
+      const buchholz = scores.reduce((a, b) => a + b, 0);
+      statements.updateParticipantScore.run(
+        p.score,
+        buchholz,
+        p.wins,
+        p.draws,
+        p.losses,
+        p.performance_rating,
+        tournamentId,
+        p.user_id
+      );
     }
   }
 };

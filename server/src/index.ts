@@ -493,6 +493,28 @@ interface Room {
     isComputerGame?: boolean;
     computerColor?: 'white' | 'black';
     computerDifficulty?: Difficulty;
+    // Tournament support
+    tournamentGameId?: string;
+}
+
+// Helper to parse time control strings like "5+0", "3+2" etc.
+function parseTimeControlString(tcString: string): TimeControl {
+    const match = tcString.match(/^(\d+)\+(\d+)$/);
+    if (match) {
+        const minutes = parseInt(match[1], 10);
+        const increment = parseInt(match[2], 10);
+        let type: TimeControlType = 'rapid';
+        if (minutes <= 2) type = 'bullet';
+        else if (minutes <= 5) type = 'blitz';
+        else type = 'rapid';
+        return {
+            type,
+            initialTime: minutes * 60000,
+            increment: increment * 1000
+        };
+    }
+    // Default to rapid if parsing fails
+    return TIME_CONTROLS.rapid;
 }
 
 // Store rooms in memory for MVP
@@ -802,6 +824,67 @@ function endGameAndUpdateRatings(
     // Store game in database
     if (room.dbGameId) {
         dbOperations.endGame(room.dbGameId, room.game.pgn(), result, whiteChange, blackChange);
+    }
+
+    // Handle tournament game result
+    if (room.tournamentGameId && room.whiteUserId && room.blackUserId) {
+        let whiteScore: number;
+        let blackScore: number;
+
+        if (result === '1-0') {
+            whiteScore = 1;
+            blackScore = 0;
+        } else if (result === '0-1') {
+            whiteScore = 0;
+            blackScore = 1;
+        } else {
+            whiteScore = 0.5;
+            blackScore = 0.5;
+        }
+
+        // Update tournament game
+        dbOperations.updateTournamentGameResult(room.tournamentGameId, result, whiteScore, blackScore, room.game.pgn());
+
+        // Update participant scores
+        const tournamentGame = dbOperations.getTournamentGame(room.tournamentGameId);
+        if (tournamentGame) {
+            const whiteParticipant = dbOperations.getTournamentParticipant(tournamentGame.tournament_id, room.whiteUserId);
+            const blackParticipant = dbOperations.getTournamentParticipant(tournamentGame.tournament_id, room.blackUserId);
+
+            if (whiteParticipant) {
+                dbOperations.updateParticipantScore(
+                    tournamentGame.tournament_id,
+                    room.whiteUserId,
+                    whiteParticipant.score + whiteScore,
+                    whiteParticipant.buchholz,
+                    whiteParticipant.wins + (whiteScore === 1 ? 1 : 0),
+                    whiteParticipant.draws + (whiteScore === 0.5 ? 1 : 0),
+                    whiteParticipant.losses + (whiteScore === 0 ? 1 : 0),
+                    whiteParticipant.performance_rating
+                );
+            }
+            if (blackParticipant) {
+                dbOperations.updateParticipantScore(
+                    tournamentGame.tournament_id,
+                    room.blackUserId,
+                    blackParticipant.score + blackScore,
+                    blackParticipant.buchholz,
+                    blackParticipant.wins + (blackScore === 1 ? 1 : 0),
+                    blackParticipant.draws + (blackScore === 0.5 ? 1 : 0),
+                    blackParticipant.losses + (blackScore === 0 ? 1 : 0),
+                    blackParticipant.performance_rating
+                );
+            }
+
+            // Notify tournament participants of game result
+            io.emit('tournament_game_completed', {
+                tournamentId: tournamentGame.tournament_id,
+                gameId: room.tournamentGameId,
+                result,
+                whiteScore,
+                blackScore
+            });
+        }
     }
 
     // Notify clients
@@ -2813,6 +2896,271 @@ io.on('connection', (socket) => {
         }
 
         socket.emit('challenge_cancelled', { success: true, challengeId });
+    });
+
+    // ============ Tournament Events ============
+
+    // Create a tournament
+    socket.on('create_tournament', ({ name, description, clubId, type, timeControl, maxParticipants, startTime }: {
+        name: string;
+        description?: string;
+        clubId?: string;
+        type: 'swiss' | 'round_robin' | 'knockout' | 'arena';
+        timeControl: string;
+        maxParticipants: number;
+        startTime?: string;
+    }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to create tournaments' });
+            return;
+        }
+
+        // If club tournament, verify user is admin/owner
+        if (clubId) {
+            const member = dbOperations.getClubMember(clubId, authInfo.userId);
+            if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
+                socket.emit('error', { message: 'Must be club admin or owner to create club tournaments' });
+                return;
+            }
+        }
+
+        const result = dbOperations.createTournament(
+            name,
+            description || null,
+            authInfo.userId,
+            clubId || null,
+            type,
+            timeControl,
+            maxParticipants,
+            startTime || null
+        );
+
+        if (result.success && result.tournament) {
+            socket.emit('tournament_created', { success: true, tournament: result.tournament });
+            // Broadcast to all users so they can see the new tournament
+            io.emit('tournaments_updated');
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to create tournament' });
+        }
+    });
+
+    // Get upcoming tournaments
+    socket.on('get_upcoming_tournaments', () => {
+        const tournaments = dbOperations.getUpcomingTournaments();
+        socket.emit('upcoming_tournaments', { tournaments });
+    });
+
+    // Get active tournaments
+    socket.on('get_active_tournaments', () => {
+        const tournaments = dbOperations.getActiveTournaments();
+        socket.emit('active_tournaments', { tournaments });
+    });
+
+    // Get completed tournaments
+    socket.on('get_completed_tournaments', () => {
+        const tournaments = dbOperations.getCompletedTournaments();
+        socket.emit('completed_tournaments', { tournaments });
+    });
+
+    // Get club tournaments
+    socket.on('get_club_tournaments', ({ clubId }: { clubId: string }) => {
+        const tournaments = dbOperations.getClubTournaments(clubId);
+        socket.emit('club_tournaments', { clubId, tournaments });
+    });
+
+    // Get user's tournaments
+    socket.on('get_my_tournaments', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('my_tournaments', { tournaments: [] });
+            return;
+        }
+        const tournaments = dbOperations.getUserTournaments(authInfo.userId);
+        socket.emit('my_tournaments', { tournaments });
+    });
+
+    // Get tournament details
+    socket.on('get_tournament', ({ tournamentId }: { tournamentId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        const tournament = dbOperations.getTournamentById(tournamentId);
+        if (!tournament) {
+            socket.emit('error', { message: 'Tournament not found' });
+            return;
+        }
+        const participants = dbOperations.getTournamentParticipants(tournamentId);
+        const currentRoundGames = tournament.current_round > 0
+            ? dbOperations.getTournamentRoundGames(tournamentId, tournament.current_round)
+            : [];
+        const myGames = authInfo
+            ? dbOperations.getUserTournamentGames(tournamentId, authInfo.userId)
+            : [];
+
+        const participant = authInfo ? dbOperations.getTournamentParticipant(tournamentId, authInfo.userId) : null;
+        const isRegistered = participant != null;  // Use != to catch both null and undefined
+
+        socket.emit('tournament_details', {
+            tournament,
+            participants,
+            currentRoundGames,
+            myGames,
+            isRegistered
+        });
+    });
+
+    // Join a tournament
+    socket.on('join_tournament', ({ tournamentId }: { tournamentId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to join tournaments' });
+            return;
+        }
+
+        const result = dbOperations.joinTournament(tournamentId, authInfo.userId);
+        if (result.success) {
+            socket.emit('tournament_joined', { success: true, tournamentId });
+            // Notify all users viewing this tournament
+            io.emit('tournament_participant_update', { tournamentId });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to join tournament' });
+        }
+    });
+
+    // Leave a tournament
+    socket.on('leave_tournament', ({ tournamentId }: { tournamentId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to leave tournaments' });
+            return;
+        }
+
+        const result = dbOperations.leaveTournament(tournamentId, authInfo.userId);
+        if (result.success) {
+            socket.emit('tournament_left', { success: true, tournamentId });
+            io.emit('tournament_participant_update', { tournamentId });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to leave tournament' });
+        }
+    });
+
+    // Start a tournament (creator only)
+    socket.on('start_tournament', ({ tournamentId }: { tournamentId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to start tournaments' });
+            return;
+        }
+
+        const result = dbOperations.startTournament(tournamentId, authInfo.userId);
+        if (result.success) {
+            socket.emit('tournament_started', { success: true, tournamentId, pairings: result.pairings });
+            // Notify all participants
+            io.emit('tournament_round_started', {
+                tournamentId,
+                round: 1,
+                pairings: result.pairings
+            });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to start tournament' });
+        }
+    });
+
+    // Delete a tournament (creator only, if not active)
+    socket.on('delete_tournament', ({ tournamentId }: { tournamentId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to delete tournaments' });
+            return;
+        }
+
+        const result = dbOperations.deleteTournament(tournamentId, authInfo.userId);
+        if (result.success) {
+            socket.emit('tournament_deleted', { success: true, tournamentId });
+            io.emit('tournaments_updated');
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to delete tournament' });
+        }
+    });
+
+    // Join a tournament game room
+    socket.on('join_tournament_game', ({ roomCode }: { roomCode: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to play tournament games' });
+            return;
+        }
+
+        const tournamentGame = dbOperations.getTournamentGameByRoom(roomCode);
+        if (!tournamentGame) {
+            socket.emit('error', { message: 'Tournament game not found' });
+            return;
+        }
+
+        // Check if user is a participant
+        if (tournamentGame.white_id !== authInfo.userId && tournamentGame.black_id !== authInfo.userId) {
+            socket.emit('error', { message: 'You are not a participant in this game' });
+            return;
+        }
+
+        // Create room if it doesn't exist
+        let room = rooms.get(roomCode);
+        if (!room) {
+            const tournament = dbOperations.getTournamentById(tournamentGame.tournament_id);
+            const timeControl = parseTimeControlString(tournament?.time_control || '5+0');
+
+            const newRoom: Room = {
+                game: new Chess(),
+                players: {
+                    white: undefined,
+                    black: undefined,
+                    spectators: []
+                },
+                code: roomCode,
+                timeControl,
+                clock: {
+                    white: timeControl.initialTime,
+                    black: timeControl.initialTime,
+                    lastUpdate: Date.now(),
+                    activeColor: null,
+                    gameStarted: false
+                },
+                variant: 'standard',
+                variantState: { variant: 'standard' },
+                whiteUserId: tournamentGame.white_id,
+                blackUserId: tournamentGame.black_id,
+                tournamentGameId: tournamentGame.id
+            };
+            rooms.set(roomCode, newRoom);
+            room = newRoom;
+        }
+
+        // Assign player
+        const color = tournamentGame.white_id === authInfo.userId ? 'white' : 'black';
+        if (color === 'white') {
+            room.players.white = socket.id;
+        } else {
+            room.players.black = socket.id;
+        }
+
+        socket.join(roomCode);
+        socketToRoom.set(socket.id, roomCode);
+
+        socket.emit('player_assigned', { color });
+        socket.emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null
+        });
+        socket.emit('clock_update', {
+            white: room.clock.white,
+            black: room.clock.black,
+            activeColor: room.clock.activeColor
+        });
+
+        // Update game status if both players have joined
+        if (room.players.white && room.players.black && tournamentGame.status === 'pending') {
+            dbOperations.updateTournamentGameStatus(tournamentGame.id, 'active');
+        }
     });
 
     // Handle disconnection

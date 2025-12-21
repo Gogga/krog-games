@@ -12,6 +12,7 @@ import { UserPanel } from './components/UserPanel';
 import { MatchmakingPanel } from './components/MatchmakingPanel';
 import { FriendsPanel } from './components/FriendsPanel';
 import { ClubsPanel } from './components/ClubsPanel';
+import { TournamentPanel } from './components/TournamentPanel';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -984,6 +985,10 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
           <div style={{ display: 'flex', gap: '10px' }}>
+            <TournamentPanel socket={socket} language={language} onJoinTournamentGame={(roomCode) => {
+              socket.emit('join_tournament_game', { roomCode });
+              setRoomCode(roomCode);
+            }} />
             <ClubsPanel socket={socket} language={language} onChallengeMember={challengeFriend} />
             <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
           </div>
