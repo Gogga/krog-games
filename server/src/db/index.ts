@@ -220,6 +220,84 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tournament_participants_user_id ON tournament_participants(user_id);
   CREATE INDEX IF NOT EXISTS idx_tournament_games_tournament_id ON tournament_games(tournament_id);
   CREATE INDEX IF NOT EXISTS idx_tournament_games_round ON tournament_games(round);
+
+  -- Leagues table
+  CREATE TABLE IF NOT EXISTS leagues (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    creator_id TEXT NOT NULL,
+    club_id TEXT,
+    type TEXT NOT NULL DEFAULT 'individual',
+    format TEXT NOT NULL DEFAULT 'round_robin',
+    status TEXT NOT NULL DEFAULT 'registration',
+    time_control TEXT NOT NULL DEFAULT '10+0',
+    season TEXT,
+    division INTEGER DEFAULT 1,
+    max_divisions INTEGER DEFAULT 1,
+    promotion_count INTEGER DEFAULT 2,
+    relegation_count INTEGER DEFAULT 2,
+    points_for_win INTEGER DEFAULT 3,
+    points_for_draw INTEGER DEFAULT 1,
+    points_for_loss INTEGER DEFAULT 0,
+    current_round INTEGER DEFAULT 0,
+    total_rounds INTEGER DEFAULT 0,
+    start_date TEXT,
+    end_date TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (creator_id) REFERENCES users(id),
+    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE
+  );
+
+  -- League participants table
+  CREATE TABLE IF NOT EXISTS league_participants (
+    id TEXT PRIMARY KEY,
+    league_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    division INTEGER DEFAULT 1,
+    points INTEGER DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    draws INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    games_played INTEGER DEFAULT 0,
+    goals_for INTEGER DEFAULT 0,
+    goals_against INTEGER DEFAULT 0,
+    form TEXT DEFAULT '',
+    status TEXT DEFAULT 'active',
+    joined_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(league_id, user_id)
+  );
+
+  -- League matches table
+  CREATE TABLE IF NOT EXISTS league_matches (
+    id TEXT PRIMARY KEY,
+    league_id TEXT NOT NULL,
+    round INTEGER NOT NULL,
+    home_id TEXT NOT NULL,
+    away_id TEXT NOT NULL,
+    room_code TEXT,
+    result TEXT,
+    home_score REAL,
+    away_score REAL,
+    pgn TEXT,
+    status TEXT DEFAULT 'scheduled',
+    scheduled_at TEXT,
+    played_at TEXT,
+    FOREIGN KEY (league_id) REFERENCES leagues(id) ON DELETE CASCADE,
+    FOREIGN KEY (home_id) REFERENCES users(id),
+    FOREIGN KEY (away_id) REFERENCES users(id)
+  );
+
+  -- League indexes
+  CREATE INDEX IF NOT EXISTS idx_leagues_creator_id ON leagues(creator_id);
+  CREATE INDEX IF NOT EXISTS idx_leagues_club_id ON leagues(club_id);
+  CREATE INDEX IF NOT EXISTS idx_leagues_status ON leagues(status);
+  CREATE INDEX IF NOT EXISTS idx_league_participants_league_id ON league_participants(league_id);
+  CREATE INDEX IF NOT EXISTS idx_league_participants_user_id ON league_participants(user_id);
+  CREATE INDEX IF NOT EXISTS idx_league_matches_league_id ON league_matches(league_id);
+  CREATE INDEX IF NOT EXISTS idx_league_matches_round ON league_matches(round);
 `);
 
 // Prepared statements
@@ -702,6 +780,195 @@ const statements = {
     UPDATE tournament_games
     SET result = ?, white_score = ?, black_score = ?, pgn = ?, status = 'completed', ended_at = datetime('now')
     WHERE id = ?
+  `),
+
+  // League operations
+  createLeague: db.prepare(`
+    INSERT INTO leagues (id, name, description, creator_id, club_id, type, format, time_control, season, max_divisions, points_for_win, points_for_draw, points_for_loss, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `),
+
+  getLeagueById: db.prepare(`
+    SELECT l.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM league_participants WHERE league_id = l.id) as participant_count
+    FROM leagues l
+    JOIN users u ON l.creator_id = u.id
+    LEFT JOIN clubs c ON l.club_id = c.id
+    WHERE l.id = ?
+  `),
+
+  updateLeague: db.prepare(`
+    UPDATE leagues SET name = ?, description = ?, type = ?, format = ?, time_control = ?, season = ?, max_divisions = ?, points_for_win = ?, points_for_draw = ?, points_for_loss = ?, start_date = ?, end_date = ?
+    WHERE id = ?
+  `),
+
+  updateLeagueStatus: db.prepare(`
+    UPDATE leagues SET status = ?, current_round = ?, total_rounds = ?
+    WHERE id = ?
+  `),
+
+  deleteLeague: db.prepare(`
+    DELETE FROM leagues WHERE id = ?
+  `),
+
+  getOpenLeagues: db.prepare(`
+    SELECT l.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM league_participants WHERE league_id = l.id) as participant_count
+    FROM leagues l
+    JOIN users u ON l.creator_id = u.id
+    LEFT JOIN clubs c ON l.club_id = c.id
+    WHERE l.status = 'registration'
+    ORDER BY l.created_at DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getActiveLeagues: db.prepare(`
+    SELECT l.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM league_participants WHERE league_id = l.id) as participant_count
+    FROM leagues l
+    JOIN users u ON l.creator_id = u.id
+    LEFT JOIN clubs c ON l.club_id = c.id
+    WHERE l.status = 'active'
+    ORDER BY l.start_date DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getCompletedLeagues: db.prepare(`
+    SELECT l.*, u.username as creator_username, c.name as club_name,
+           (SELECT COUNT(*) FROM league_participants WHERE league_id = l.id) as participant_count
+    FROM leagues l
+    JOIN users u ON l.creator_id = u.id
+    LEFT JOIN clubs c ON l.club_id = c.id
+    WHERE l.status = 'completed'
+    ORDER BY l.end_date DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getUserLeagues: db.prepare(`
+    SELECT l.*, u.username as creator_username, c.name as club_name, lp.points, lp.status as participant_status, lp.division
+    FROM league_participants lp
+    JOIN leagues l ON lp.league_id = l.id
+    JOIN users u ON l.creator_id = u.id
+    LEFT JOIN clubs c ON l.club_id = c.id
+    WHERE lp.user_id = ?
+    ORDER BY l.created_at DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  getClubLeagues: db.prepare(`
+    SELECT l.*, u.username as creator_username,
+           (SELECT COUNT(*) FROM league_participants WHERE league_id = l.id) as participant_count
+    FROM leagues l
+    JOIN users u ON l.creator_id = u.id
+    WHERE l.club_id = ?
+    ORDER BY l.created_at DESC
+    LIMIT ? OFFSET ?
+  `),
+
+  // League participant operations
+  addLeagueParticipant: db.prepare(`
+    INSERT INTO league_participants (id, league_id, user_id, division)
+    VALUES (?, ?, ?, ?)
+  `),
+
+  removeLeagueParticipant: db.prepare(`
+    DELETE FROM league_participants WHERE league_id = ? AND user_id = ?
+  `),
+
+  getLeagueParticipant: db.prepare(`
+    SELECT lp.*, u.username, u.rating
+    FROM league_participants lp
+    JOIN users u ON lp.user_id = u.id
+    WHERE lp.league_id = ? AND lp.user_id = ?
+  `),
+
+  getLeagueParticipants: db.prepare(`
+    SELECT lp.*, u.username, u.rating
+    FROM league_participants lp
+    JOIN users u ON lp.user_id = u.id
+    WHERE lp.league_id = ?
+    ORDER BY lp.division ASC, lp.points DESC, (lp.goals_for - lp.goals_against) DESC, lp.wins DESC
+  `),
+
+  getLeagueStandings: db.prepare(`
+    SELECT lp.*, u.username, u.rating
+    FROM league_participants lp
+    JOIN users u ON lp.user_id = u.id
+    WHERE lp.league_id = ? AND lp.division = ?
+    ORDER BY lp.points DESC, (lp.goals_for - lp.goals_against) DESC, lp.wins DESC
+  `),
+
+  updateLeagueParticipantStats: db.prepare(`
+    UPDATE league_participants
+    SET points = ?, wins = ?, draws = ?, losses = ?, games_played = ?, goals_for = ?, goals_against = ?, form = ?
+    WHERE league_id = ? AND user_id = ?
+  `),
+
+  updateLeagueParticipantStatus: db.prepare(`
+    UPDATE league_participants SET status = ? WHERE league_id = ? AND user_id = ?
+  `),
+
+  updateLeagueParticipantDivision: db.prepare(`
+    UPDATE league_participants SET division = ? WHERE league_id = ? AND user_id = ?
+  `),
+
+  // League match operations
+  createLeagueMatch: db.prepare(`
+    INSERT INTO league_matches (id, league_id, round, home_id, away_id, room_code, scheduled_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `),
+
+  getLeagueMatch: db.prepare(`
+    SELECT lm.*, h.username as home_username, a.username as away_username, h.rating as home_rating, a.rating as away_rating
+    FROM league_matches lm
+    JOIN users h ON lm.home_id = h.id
+    JOIN users a ON lm.away_id = a.id
+    WHERE lm.id = ?
+  `),
+
+  getLeagueMatchByRoom: db.prepare(`
+    SELECT lm.*, h.username as home_username, a.username as away_username
+    FROM league_matches lm
+    JOIN users h ON lm.home_id = h.id
+    JOIN users a ON lm.away_id = a.id
+    WHERE lm.room_code = ?
+  `),
+
+  getLeagueRoundMatches: db.prepare(`
+    SELECT lm.*, h.username as home_username, a.username as away_username, h.rating as home_rating, a.rating as away_rating
+    FROM league_matches lm
+    JOIN users h ON lm.home_id = h.id
+    JOIN users a ON lm.away_id = a.id
+    WHERE lm.league_id = ? AND lm.round = ?
+    ORDER BY lm.scheduled_at ASC
+  `),
+
+  getLeagueMatches: db.prepare(`
+    SELECT lm.*, h.username as home_username, a.username as away_username, h.rating as home_rating, a.rating as away_rating
+    FROM league_matches lm
+    JOIN users h ON lm.home_id = h.id
+    JOIN users a ON lm.away_id = a.id
+    WHERE lm.league_id = ?
+    ORDER BY lm.round ASC, lm.scheduled_at ASC
+  `),
+
+  getUserLeagueMatches: db.prepare(`
+    SELECT lm.*, h.username as home_username, a.username as away_username
+    FROM league_matches lm
+    JOIN users h ON lm.home_id = h.id
+    JOIN users a ON lm.away_id = a.id
+    WHERE lm.league_id = ? AND (lm.home_id = ? OR lm.away_id = ?)
+    ORDER BY lm.round ASC
+  `),
+
+  updateLeagueMatchStatus: db.prepare(`
+    UPDATE league_matches SET status = ? WHERE id = ?
+  `),
+
+  updateLeagueMatchResult: db.prepare(`
+    UPDATE league_matches
+    SET result = ?, home_score = ?, away_score = ?, pgn = ?, status = 'completed', played_at = datetime('now')
+    WHERE id = ?
   `)
 };
 
@@ -866,6 +1133,73 @@ export interface TournamentGame {
   black_username?: string;
   white_rating?: number;
   black_rating?: number;
+}
+
+export interface League {
+  id: string;
+  name: string;
+  description: string | null;
+  creator_id: string;
+  club_id: string | null;
+  type: 'individual' | 'team';
+  format: 'round_robin' | 'swiss' | 'double_round_robin';
+  status: 'registration' | 'active' | 'completed' | 'cancelled';
+  time_control: string;
+  season: string | null;
+  division: number;
+  max_divisions: number;
+  promotion_count: number;
+  relegation_count: number;
+  points_for_win: number;
+  points_for_draw: number;
+  points_for_loss: number;
+  current_round: number;
+  total_rounds: number;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  creator_username?: string;
+  club_name?: string;
+  participant_count?: number;
+}
+
+export interface LeagueParticipant {
+  id: string;
+  league_id: string;
+  user_id: string;
+  division: number;
+  points: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  games_played: number;
+  goals_for: number;
+  goals_against: number;
+  form: string;
+  status: 'active' | 'withdrawn' | 'relegated' | 'promoted';
+  joined_at: string;
+  username?: string;
+  rating?: number;
+}
+
+export interface LeagueMatch {
+  id: string;
+  league_id: string;
+  round: number;
+  home_id: string;
+  away_id: string;
+  room_code: string | null;
+  result: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  pgn: string | null;
+  status: 'scheduled' | 'active' | 'completed' | 'forfeit';
+  scheduled_at: string | null;
+  played_at: string | null;
+  home_username?: string;
+  away_username?: string;
+  home_rating?: number;
+  away_rating?: number;
 }
 
 // Database operations
@@ -1748,6 +2082,391 @@ export const dbOperations = {
         tournamentId,
         p.user_id
       );
+    }
+  },
+
+  // League operations
+  createLeague(
+    name: string,
+    description: string | null,
+    creatorId: string,
+    clubId: string | null,
+    type: 'individual' | 'team',
+    format: 'round_robin' | 'swiss' | 'double_round_robin',
+    timeControl: string,
+    season: string | null,
+    maxDivisions: number,
+    pointsForWin: number,
+    pointsForDraw: number,
+    pointsForLoss: number,
+    startDate: string | null,
+    endDate: string | null
+  ): { success: boolean; league?: League; error?: string } {
+    try {
+      const id = uuidv4();
+      statements.createLeague.run(id, name, description, creatorId, clubId, type, format, timeControl, season, maxDivisions, pointsForWin, pointsForDraw, pointsForLoss, startDate, endDate);
+      // Creator automatically joins
+      const participantId = uuidv4();
+      statements.addLeagueParticipant.run(participantId, id, creatorId, 1);
+      const league = statements.getLeagueById.get(id) as League;
+      return { success: true, league };
+    } catch (error) {
+      console.error('Error creating league:', error);
+      return { success: false, error: 'Failed to create league' };
+    }
+  },
+
+  getLeagueById(id: string): League | null {
+    return statements.getLeagueById.get(id) as League | null;
+  },
+
+  updateLeague(
+    leagueId: string,
+    userId: string,
+    updates: { name?: string; description?: string; type?: string; format?: string; timeControl?: string; season?: string; maxDivisions?: number; pointsForWin?: number; pointsForDraw?: number; pointsForLoss?: number; startDate?: string; endDate?: string }
+  ): { success: boolean; error?: string } {
+    try {
+      const league = statements.getLeagueById.get(leagueId) as League | null;
+      if (!league) {
+        return { success: false, error: 'League not found' };
+      }
+      if (league.creator_id !== userId) {
+        return { success: false, error: 'Only the creator can update the league' };
+      }
+      if (league.status !== 'registration') {
+        return { success: false, error: 'Cannot update an active or completed league' };
+      }
+      statements.updateLeague.run(
+        updates.name ?? league.name,
+        updates.description ?? league.description,
+        updates.type ?? league.type,
+        updates.format ?? league.format,
+        updates.timeControl ?? league.time_control,
+        updates.season ?? league.season,
+        updates.maxDivisions ?? league.max_divisions,
+        updates.pointsForWin ?? league.points_for_win,
+        updates.pointsForDraw ?? league.points_for_draw,
+        updates.pointsForLoss ?? league.points_for_loss,
+        updates.startDate ?? league.start_date,
+        updates.endDate ?? league.end_date,
+        leagueId
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating league:', error);
+      return { success: false, error: 'Failed to update league' };
+    }
+  },
+
+  deleteLeague(leagueId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      const league = statements.getLeagueById.get(leagueId) as League | null;
+      if (!league) {
+        return { success: false, error: 'League not found' };
+      }
+      if (league.creator_id !== userId) {
+        return { success: false, error: 'Only the creator can delete the league' };
+      }
+      if (league.status === 'active') {
+        return { success: false, error: 'Cannot delete an active league' };
+      }
+      statements.deleteLeague.run(leagueId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting league:', error);
+      return { success: false, error: 'Failed to delete league' };
+    }
+  },
+
+  getOpenLeagues(limit: number = 20, offset: number = 0): League[] {
+    return statements.getOpenLeagues.all(limit, offset) as League[];
+  },
+
+  getActiveLeagues(limit: number = 20, offset: number = 0): League[] {
+    return statements.getActiveLeagues.all(limit, offset) as League[];
+  },
+
+  getCompletedLeagues(limit: number = 20, offset: number = 0): League[] {
+    return statements.getCompletedLeagues.all(limit, offset) as League[];
+  },
+
+  getClubLeagues(clubId: string, limit: number = 20, offset: number = 0): League[] {
+    return statements.getClubLeagues.all(clubId, limit, offset) as League[];
+  },
+
+  getUserLeagues(userId: string, limit: number = 20, offset: number = 0): League[] {
+    return statements.getUserLeagues.all(userId, limit, offset) as League[];
+  },
+
+  // League participant operations
+  joinLeague(leagueId: string, userId: string, division: number = 1): { success: boolean; error?: string } {
+    try {
+      const league = statements.getLeagueById.get(leagueId) as League | null;
+      if (!league) {
+        return { success: false, error: 'League not found' };
+      }
+      if (league.status !== 'registration') {
+        return { success: false, error: 'League is not open for registration' };
+      }
+      const existing = statements.getLeagueParticipant.get(leagueId, userId) as LeagueParticipant | null;
+      if (existing) {
+        return { success: false, error: 'Already registered for this league' };
+      }
+      const id = uuidv4();
+      statements.addLeagueParticipant.run(id, leagueId, userId, division);
+      return { success: true };
+    } catch (error) {
+      console.error('Error joining league:', error);
+      return { success: false, error: 'Failed to join league' };
+    }
+  },
+
+  leaveLeague(leagueId: string, userId: string): { success: boolean; error?: string } {
+    try {
+      const league = statements.getLeagueById.get(leagueId) as League | null;
+      if (!league) {
+        return { success: false, error: 'League not found' };
+      }
+      if (league.creator_id === userId) {
+        return { success: false, error: 'Creator cannot leave, delete the league instead' };
+      }
+      const participant = statements.getLeagueParticipant.get(leagueId, userId) as LeagueParticipant | null;
+      if (!participant) {
+        return { success: false, error: 'Not registered for this league' };
+      }
+      if (league.status === 'active') {
+        statements.updateLeagueParticipantStatus.run('withdrawn', leagueId, userId);
+      } else {
+        statements.removeLeagueParticipant.run(leagueId, userId);
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Error leaving league:', error);
+      return { success: false, error: 'Failed to leave league' };
+    }
+  },
+
+  getLeagueParticipant(leagueId: string, userId: string): LeagueParticipant | null {
+    return statements.getLeagueParticipant.get(leagueId, userId) as LeagueParticipant | null;
+  },
+
+  getLeagueParticipants(leagueId: string): LeagueParticipant[] {
+    return statements.getLeagueParticipants.all(leagueId) as LeagueParticipant[];
+  },
+
+  getLeagueStandings(leagueId: string, division: number = 1): LeagueParticipant[] {
+    return statements.getLeagueStandings.all(leagueId, division) as LeagueParticipant[];
+  },
+
+  updateLeagueParticipantStats(
+    leagueId: string,
+    userId: string,
+    points: number,
+    wins: number,
+    draws: number,
+    losses: number,
+    gamesPlayed: number,
+    goalsFor: number,
+    goalsAgainst: number,
+    form: string
+  ): void {
+    statements.updateLeagueParticipantStats.run(points, wins, draws, losses, gamesPlayed, goalsFor, goalsAgainst, form, leagueId, userId);
+  },
+
+  // League match operations
+  createLeagueMatch(
+    leagueId: string,
+    round: number,
+    homeId: string,
+    awayId: string,
+    roomCode: string,
+    scheduledAt: string | null
+  ): LeagueMatch | null {
+    try {
+      const id = uuidv4();
+      statements.createLeagueMatch.run(id, leagueId, round, homeId, awayId, roomCode, scheduledAt);
+      return statements.getLeagueMatch.get(id) as LeagueMatch;
+    } catch (error) {
+      console.error('Error creating league match:', error);
+      return null;
+    }
+  },
+
+  getLeagueMatch(matchId: string): LeagueMatch | null {
+    return statements.getLeagueMatch.get(matchId) as LeagueMatch | null;
+  },
+
+  getLeagueMatchByRoom(roomCode: string): LeagueMatch | null {
+    return statements.getLeagueMatchByRoom.get(roomCode) as LeagueMatch | null;
+  },
+
+  getLeagueRoundMatches(leagueId: string, round: number): LeagueMatch[] {
+    return statements.getLeagueRoundMatches.all(leagueId, round) as LeagueMatch[];
+  },
+
+  getLeagueMatches(leagueId: string): LeagueMatch[] {
+    return statements.getLeagueMatches.all(leagueId) as LeagueMatch[];
+  },
+
+  getUserLeagueMatches(leagueId: string, userId: string): LeagueMatch[] {
+    return statements.getUserLeagueMatches.all(leagueId, userId, userId) as LeagueMatch[];
+  },
+
+  updateLeagueMatchStatus(matchId: string, status: 'active' | 'completed' | 'forfeit'): void {
+    statements.updateLeagueMatchStatus.run(status, matchId);
+  },
+
+  updateLeagueMatchResult(
+    matchId: string,
+    result: string,
+    homeScore: number,
+    awayScore: number,
+    pgn: string
+  ): void {
+    statements.updateLeagueMatchResult.run(result, homeScore, awayScore, pgn, matchId);
+  },
+
+  // Start a league and generate fixtures
+  startLeague(leagueId: string, userId: string): { success: boolean; error?: string; matches?: LeagueMatch[] } {
+    try {
+      const league = statements.getLeagueById.get(leagueId) as League | null;
+      if (!league) {
+        return { success: false, error: 'League not found' };
+      }
+      if (league.creator_id !== userId) {
+        return { success: false, error: 'Only the creator can start the league' };
+      }
+      if (league.status !== 'registration') {
+        return { success: false, error: 'League is not in registration status' };
+      }
+      const participants = statements.getLeagueParticipants.all(leagueId) as LeagueParticipant[];
+      if (participants.length < 2) {
+        return { success: false, error: 'Need at least 2 participants to start' };
+      }
+
+      // Calculate total rounds based on format
+      let totalRounds = 0;
+      if (league.format === 'round_robin') {
+        totalRounds = participants.length - 1;
+      } else if (league.format === 'double_round_robin') {
+        totalRounds = (participants.length - 1) * 2;
+      } else if (league.format === 'swiss') {
+        totalRounds = Math.ceil(Math.log2(participants.length));
+      }
+
+      // Update league status
+      statements.updateLeagueStatus.run('active', 1, totalRounds, leagueId);
+
+      // Generate all fixtures for round robin
+      const matches = this.generateLeagueFixtures(leagueId, league.format, participants);
+
+      return { success: true, matches };
+    } catch (error) {
+      console.error('Error starting league:', error);
+      return { success: false, error: 'Failed to start league' };
+    }
+  },
+
+  // Generate round robin fixtures
+  generateLeagueFixtures(leagueId: string, format: string, participants: LeagueParticipant[]): LeagueMatch[] {
+    const matches: LeagueMatch[] = [];
+    const players = [...participants];
+
+    // Add dummy player if odd number
+    if (players.length % 2 === 1) {
+      players.push({ user_id: 'BYE' } as LeagueParticipant);
+    }
+
+    const n = players.length;
+    const rounds = n - 1;
+    const halfSize = n / 2;
+
+    // Generate round robin schedule
+    for (let round = 1; round <= rounds; round++) {
+      for (let i = 0; i < halfSize; i++) {
+        const home = players[i];
+        const away = players[n - 1 - i];
+
+        // Skip bye matches
+        if (home.user_id === 'BYE' || away.user_id === 'BYE') {
+          continue;
+        }
+
+        const roomCode = `L${leagueId.substring(0, 6).toUpperCase()}R${round}M${i + 1}`;
+        const match = this.createLeagueMatch(leagueId, round, home.user_id, away.user_id, roomCode, null);
+        if (match) {
+          matches.push(match);
+        }
+      }
+
+      // Rotate players (keep first fixed, rotate rest)
+      const fixed = players[0];
+      const rotated = [fixed, players[n - 1], ...players.slice(1, n - 1)];
+      players.length = 0;
+      players.push(...rotated);
+    }
+
+    // Double round robin - add reverse fixtures
+    if (format === 'double_round_robin') {
+      const firstHalfMatches = [...matches];
+      for (const match of firstHalfMatches) {
+        const roomCode = `L${leagueId.substring(0, 6).toUpperCase()}R${match.round + rounds}M${matches.length + 1}`;
+        const reverseMatch = this.createLeagueMatch(
+          leagueId,
+          match.round + rounds,
+          match.away_id,
+          match.home_id,
+          roomCode,
+          null
+        );
+        if (reverseMatch) {
+          matches.push(reverseMatch);
+        }
+      }
+    }
+
+    return matches;
+  },
+
+  // Process promotion and relegation at end of season
+  processPromotionRelegation(leagueId: string): { success: boolean; error?: string; promoted: string[]; relegated: string[] } {
+    try {
+      const league = statements.getLeagueById.get(leagueId) as League | null;
+      if (!league) {
+        return { success: false, error: 'League not found', promoted: [], relegated: [] };
+      }
+      if (league.max_divisions <= 1) {
+        return { success: true, promoted: [], relegated: [] }; // No promotion/relegation in single division
+      }
+
+      const promoted: string[] = [];
+      const relegated: string[] = [];
+
+      // Process each division
+      for (let div = 1; div <= league.max_divisions; div++) {
+        const standings = this.getLeagueStandings(leagueId, div);
+
+        // Top N get promoted (except div 1)
+        if (div > 1) {
+          for (let i = 0; i < league.promotion_count && i < standings.length; i++) {
+            promoted.push(standings[i].user_id);
+            statements.updateLeagueParticipantDivision.run(div - 1, leagueId, standings[i].user_id);
+          }
+        }
+
+        // Bottom N get relegated (except last div)
+        if (div < league.max_divisions) {
+          for (let i = standings.length - 1; i >= standings.length - league.relegation_count && i >= 0; i--) {
+            relegated.push(standings[i].user_id);
+            statements.updateLeagueParticipantDivision.run(div + 1, leagueId, standings[i].user_id);
+          }
+        }
+      }
+
+      return { success: true, promoted, relegated };
+    } catch (error) {
+      console.error('Error processing promotion/relegation:', error);
+      return { success: false, error: 'Failed to process promotion/relegation', promoted: [], relegated: [] };
     }
   }
 };

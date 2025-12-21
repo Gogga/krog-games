@@ -495,6 +495,8 @@ interface Room {
     computerDifficulty?: Difficulty;
     // Tournament support
     tournamentGameId?: string;
+    // League support
+    leagueMatchId?: string;
 }
 
 // Helper to parse time control strings like "5+0", "3+2" etc.
@@ -884,6 +886,89 @@ function endGameAndUpdateRatings(
                 whiteScore,
                 blackScore
             });
+        }
+    }
+
+    // Handle league match result
+    if (room.leagueMatchId && room.whiteUserId && room.blackUserId) {
+        let homeScore: number;  // White = Home
+        let awayScore: number;  // Black = Away
+
+        if (result === '1-0') {
+            homeScore = 1;
+            awayScore = 0;
+        } else if (result === '0-1') {
+            homeScore = 0;
+            awayScore = 1;
+        } else {
+            homeScore = 0.5;
+            awayScore = 0.5;
+        }
+
+        // Update league match
+        dbOperations.updateLeagueMatchResult(room.leagueMatchId, result, homeScore, awayScore, room.game.pgn());
+
+        // Update participant stats
+        const leagueMatch = dbOperations.getLeagueMatch(room.leagueMatchId);
+        if (leagueMatch) {
+            const league = dbOperations.getLeagueById(leagueMatch.league_id);
+            if (league) {
+                const homeParticipant = dbOperations.getLeagueParticipant(leagueMatch.league_id, room.whiteUserId);
+                const awayParticipant = dbOperations.getLeagueParticipant(leagueMatch.league_id, room.blackUserId);
+
+                // Calculate points based on league settings
+                const homePoints = result === '1-0' ? league.points_for_win : result === '0-1' ? league.points_for_loss : league.points_for_draw;
+                const awayPoints = result === '0-1' ? league.points_for_win : result === '1-0' ? league.points_for_loss : league.points_for_draw;
+
+                if (homeParticipant) {
+                    const newWins = homeParticipant.wins + (result === '1-0' ? 1 : 0);
+                    const newDraws = homeParticipant.draws + (result === '1/2-1/2' ? 1 : 0);
+                    const newLosses = homeParticipant.losses + (result === '0-1' ? 1 : 0);
+                    const newForm = (homeParticipant.form + (result === '1-0' ? 'W' : result === '0-1' ? 'L' : 'D')).slice(-5);
+
+                    dbOperations.updateLeagueParticipantStats(
+                        leagueMatch.league_id,
+                        room.whiteUserId,
+                        homeParticipant.points + homePoints,
+                        newWins,
+                        newDraws,
+                        newLosses,
+                        homeParticipant.games_played + 1,
+                        homeParticipant.goals_for + (result === '1-0' ? 1 : 0),
+                        homeParticipant.goals_against + (result === '0-1' ? 1 : 0),
+                        newForm
+                    );
+                }
+
+                if (awayParticipant) {
+                    const newWins = awayParticipant.wins + (result === '0-1' ? 1 : 0);
+                    const newDraws = awayParticipant.draws + (result === '1/2-1/2' ? 1 : 0);
+                    const newLosses = awayParticipant.losses + (result === '1-0' ? 1 : 0);
+                    const newForm = (awayParticipant.form + (result === '0-1' ? 'W' : result === '1-0' ? 'L' : 'D')).slice(-5);
+
+                    dbOperations.updateLeagueParticipantStats(
+                        leagueMatch.league_id,
+                        room.blackUserId,
+                        awayParticipant.points + awayPoints,
+                        newWins,
+                        newDraws,
+                        newLosses,
+                        awayParticipant.games_played + 1,
+                        awayParticipant.goals_for + (result === '0-1' ? 1 : 0),
+                        awayParticipant.goals_against + (result === '1-0' ? 1 : 0),
+                        newForm
+                    );
+                }
+
+                // Notify league participants of match result
+                io.emit('league_match_completed', {
+                    leagueId: leagueMatch.league_id,
+                    matchId: room.leagueMatchId,
+                    result,
+                    homeScore,
+                    awayScore
+                });
+            }
         }
     }
 
@@ -3160,6 +3245,283 @@ io.on('connection', (socket) => {
         // Update game status if both players have joined
         if (room.players.white && room.players.black && tournamentGame.status === 'pending') {
             dbOperations.updateTournamentGameStatus(tournamentGame.id, 'active');
+        }
+    });
+
+    // ============ League Events ============
+
+    // Create a league
+    socket.on('create_league', ({ name, description, clubId, type, format, timeControl, season, maxDivisions, pointsForWin, pointsForDraw, pointsForLoss, startDate, endDate }: {
+        name: string;
+        description?: string;
+        clubId?: string;
+        type: 'individual' | 'team';
+        format: 'round_robin' | 'swiss' | 'double_round_robin';
+        timeControl: string;
+        season?: string;
+        maxDivisions?: number;
+        pointsForWin?: number;
+        pointsForDraw?: number;
+        pointsForLoss?: number;
+        startDate?: string;
+        endDate?: string;
+    }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to create leagues' });
+            return;
+        }
+
+        // If club league, verify user is admin/owner
+        if (clubId) {
+            const member = dbOperations.getClubMember(clubId, authInfo.userId);
+            if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
+                socket.emit('error', { message: 'Must be club admin or owner to create club leagues' });
+                return;
+            }
+        }
+
+        const result = dbOperations.createLeague(
+            name,
+            description || null,
+            authInfo.userId,
+            clubId || null,
+            type,
+            format,
+            timeControl,
+            season || null,
+            maxDivisions || 1,
+            pointsForWin ?? 3,
+            pointsForDraw ?? 1,
+            pointsForLoss ?? 0,
+            startDate || null,
+            endDate || null
+        );
+
+        if (result.success && result.league) {
+            socket.emit('league_created', { success: true, league: result.league });
+            io.emit('leagues_updated');
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to create league' });
+        }
+    });
+
+    // Get open leagues (registration)
+    socket.on('get_open_leagues', () => {
+        const leagues = dbOperations.getOpenLeagues();
+        socket.emit('open_leagues', { leagues });
+    });
+
+    // Get active leagues
+    socket.on('get_active_leagues', () => {
+        const leagues = dbOperations.getActiveLeagues();
+        socket.emit('active_leagues', { leagues });
+    });
+
+    // Get completed leagues
+    socket.on('get_completed_leagues', () => {
+        const leagues = dbOperations.getCompletedLeagues();
+        socket.emit('completed_leagues', { leagues });
+    });
+
+    // Get club leagues
+    socket.on('get_club_leagues', ({ clubId }: { clubId: string }) => {
+        const leagues = dbOperations.getClubLeagues(clubId);
+        socket.emit('club_leagues', { clubId, leagues });
+    });
+
+    // Get user's leagues
+    socket.on('get_my_leagues', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('my_leagues', { leagues: [] });
+            return;
+        }
+        const leagues = dbOperations.getUserLeagues(authInfo.userId);
+        socket.emit('my_leagues', { leagues });
+    });
+
+    // Get league details
+    socket.on('get_league', ({ leagueId }: { leagueId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        const league = dbOperations.getLeagueById(leagueId);
+        if (!league) {
+            socket.emit('error', { message: 'League not found' });
+            return;
+        }
+        const participants = dbOperations.getLeagueParticipants(leagueId);
+        const matches = dbOperations.getLeagueMatches(leagueId);
+        const myMatches = authInfo
+            ? dbOperations.getUserLeagueMatches(leagueId, authInfo.userId)
+            : [];
+
+        const participant = authInfo ? dbOperations.getLeagueParticipant(leagueId, authInfo.userId) : null;
+        const isRegistered = participant != null;
+
+        socket.emit('league_details', {
+            league,
+            participants,
+            matches,
+            myMatches,
+            isRegistered
+        });
+    });
+
+    // Get league standings by division
+    socket.on('get_league_standings', ({ leagueId, division }: { leagueId: string; division?: number }) => {
+        const standings = dbOperations.getLeagueStandings(leagueId, division || 1);
+        socket.emit('league_standings', { leagueId, division: division || 1, standings });
+    });
+
+    // Join a league
+    socket.on('join_league', ({ leagueId, division }: { leagueId: string; division?: number }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to join leagues' });
+            return;
+        }
+
+        const result = dbOperations.joinLeague(leagueId, authInfo.userId, division || 1);
+        if (result.success) {
+            socket.emit('league_joined', { success: true, leagueId });
+            io.emit('league_participant_update', { leagueId });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to join league' });
+        }
+    });
+
+    // Leave a league
+    socket.on('leave_league', ({ leagueId }: { leagueId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to leave leagues' });
+            return;
+        }
+
+        const result = dbOperations.leaveLeague(leagueId, authInfo.userId);
+        if (result.success) {
+            socket.emit('league_left', { success: true, leagueId });
+            io.emit('league_participant_update', { leagueId });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to leave league' });
+        }
+    });
+
+    // Start a league (creator only)
+    socket.on('start_league', ({ leagueId }: { leagueId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to start leagues' });
+            return;
+        }
+
+        const result = dbOperations.startLeague(leagueId, authInfo.userId);
+        if (result.success) {
+            socket.emit('league_started', { success: true, leagueId, matches: result.matches });
+            io.emit('league_fixtures_generated', {
+                leagueId,
+                matches: result.matches
+            });
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to start league' });
+        }
+    });
+
+    // Delete a league (creator only, if not active)
+    socket.on('delete_league', ({ leagueId }: { leagueId: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to delete leagues' });
+            return;
+        }
+
+        const result = dbOperations.deleteLeague(leagueId, authInfo.userId);
+        if (result.success) {
+            socket.emit('league_deleted', { success: true, leagueId });
+            io.emit('leagues_updated');
+        } else {
+            socket.emit('error', { message: result.error || 'Failed to delete league' });
+        }
+    });
+
+    // Join a league match room
+    socket.on('join_league_match', ({ roomCode }: { roomCode: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('error', { message: 'Must be logged in to play league matches' });
+            return;
+        }
+
+        const leagueMatch = dbOperations.getLeagueMatchByRoom(roomCode);
+        if (!leagueMatch) {
+            socket.emit('error', { message: 'League match not found' });
+            return;
+        }
+
+        // Check if user is a participant
+        if (leagueMatch.home_id !== authInfo.userId && leagueMatch.away_id !== authInfo.userId) {
+            socket.emit('error', { message: 'You are not a participant in this match' });
+            return;
+        }
+
+        // Create room if it doesn't exist
+        let room = rooms.get(roomCode);
+        if (!room) {
+            const league = dbOperations.getLeagueById(leagueMatch.league_id);
+            const timeControl = parseTimeControlString(league?.time_control || '10+0');
+
+            const newRoom: Room = {
+                game: new Chess(),
+                players: {
+                    white: undefined,
+                    black: undefined,
+                    spectators: []
+                },
+                code: roomCode,
+                timeControl,
+                clock: {
+                    white: timeControl.initialTime,
+                    black: timeControl.initialTime,
+                    lastUpdate: Date.now(),
+                    activeColor: null,
+                    gameStarted: false
+                },
+                variant: 'standard',
+                variantState: { variant: 'standard' },
+                whiteUserId: leagueMatch.home_id,  // Home plays white
+                blackUserId: leagueMatch.away_id,   // Away plays black
+                leagueMatchId: leagueMatch.id
+            };
+            rooms.set(roomCode, newRoom);
+            room = newRoom;
+        }
+
+        // Assign player (home = white, away = black)
+        const color = leagueMatch.home_id === authInfo.userId ? 'white' : 'black';
+        if (color === 'white') {
+            room.players.white = socket.id;
+        } else {
+            room.players.black = socket.id;
+        }
+
+        socket.join(roomCode);
+        socketToRoom.set(socket.id, roomCode);
+
+        socket.emit('player_assigned', { color });
+        socket.emit('game_state', {
+            pgn: room.game.pgn(),
+            fen: room.game.fen(),
+            lastMove: null
+        });
+        socket.emit('clock_update', {
+            white: room.clock.white,
+            black: room.clock.black,
+            activeColor: room.clock.activeColor
+        });
+
+        // Update match status if both players have joined
+        if (room.players.white && room.players.black && leagueMatch.status === 'scheduled') {
+            dbOperations.updateLeagueMatchStatus(leagueMatch.id, 'active');
         }
     });
 
