@@ -605,7 +605,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                               >
                                 ⭐
                               </button>
-                            ) : (
+                            ) : member.role === 'admin' ? (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -613,7 +613,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                                 }}
                                 style={{
                                   padding: '4px 8px',
-                                  background: '#666',
+                                  background: '#e67e22',
                                   border: 'none',
                                   borderRadius: '4px',
                                   color: 'white',
@@ -625,7 +625,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                               >
                                 ↓
                               </button>
-                            )}
+                            ) : null}
                           </>
                         )}
                       </div>
