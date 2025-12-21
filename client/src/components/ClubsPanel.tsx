@@ -194,6 +194,12 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
       }
     }
 
+    function onRoleChanged(data: { clubId: string; userId: string; newRole: string }) {
+      if (selectedClub?.id === data.clubId) {
+        socket.emit('get_club', { clubId: data.clubId });
+      }
+    }
+
     function onUserSearchResults(data: { users: { id: string; username: string; rating: number }[] }) {
       setInviteSearchResults(data.users);
     }
@@ -223,6 +229,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
     socket.on('club_message_deleted', onClubMessageDeleted);
     socket.on('member_joined', onMemberJoined);
     socket.on('member_left', onMemberLeft);
+    socket.on('role_changed', onRoleChanged);
     socket.on('club_invitation_received', fetchInvitations);
 
     return () => {
@@ -243,6 +250,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
       socket.off('club_message_deleted', onClubMessageDeleted);
       socket.off('member_joined', onMemberJoined);
       socket.off('member_left', onMemberLeft);
+      socket.off('role_changed', onRoleChanged);
       socket.off('club_invitation_received');
     };
   }, [socket, fetchMyClubs, fetchPublicClubs, fetchInvitations, selectedClub]);
@@ -541,29 +549,77 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                           </div>
                         </div>
                       </div>
-                      {/* Challenge button for online members (not yourself) */}
-                      {onChallengeMember && member.online && user?.id && member.user_id !== user.id && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (member.username) {
-                              onChallengeMember(member.user_id, member.username);
-                            }
-                          }}
-                          style={{
-                            padding: '6px 10px',
-                            background: '#81b64c',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontFamily: 'inherit'
-                          }}
-                        >
-                          {language === 'en' ? 'Challenge' : 'Utfordre'}
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {/* Challenge button for online members (not yourself) */}
+                        {onChallengeMember && member.online && user?.id && member.user_id !== user.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (member.username) {
+                                onChallengeMember(member.user_id, member.username);
+                              }
+                            }}
+                            style={{
+                              padding: '6px 10px',
+                              background: '#81b64c',
+                              border: 'none',
+                              borderRadius: '4px',
+                              color: 'white',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontFamily: 'inherit'
+                            }}
+                          >
+                            {language === 'en' ? 'Challenge' : 'Utfordre'}
+                          </button>
+                        )}
+                        {/* Owner can promote/demote members (not themselves) */}
+                        {myRole === 'owner' && member.role !== 'owner' && member.user_id !== user?.id && (
+                          <>
+                            {member.role === 'member' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  socket.emit('update_member_role', { clubId: selectedClub?.id, targetUserId: member.user_id, newRole: 'admin' });
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#9b59b6',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  fontSize: '0.7rem',
+                                  fontFamily: 'inherit'
+                                }}
+                                title={language === 'en' ? 'Promote to Admin' : 'Forfrem til admin'}
+                              >
+                                ⭐
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  socket.emit('update_member_role', { clubId: selectedClub?.id, targetUserId: member.user_id, newRole: 'member' });
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#666',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  fontSize: '0.7rem',
+                                  fontFamily: 'inherit'
+                                }}
+                                title={language === 'en' ? 'Demote to Member' : 'Degrader til medlem'}
+                              >
+                                ↓
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
 
