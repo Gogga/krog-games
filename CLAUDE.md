@@ -2,11 +2,13 @@
 
 ## QUICK START FOR CLAUDE CODE
 
-**Current State:** Feature-complete multiplayer chess with user accounts, ELO rating, matchmaking, chess variants, Play vs Computer, KROG move explanations, puzzles, opening explorer, lessons, friends system, direct challenges, and polished UI/UX.
+**Current State:** Production-ready multiplayer chess platform with complete feature set including user accounts, ELO rating, matchmaking, chess variants, AI opponent, KROG rule explanations, educational content, full social features, clubs, tournaments, and leagues.
 
-**What's Implemented:** All of Phase 1-3 + Play vs Computer + Social features. Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent, KROG engine, move explanations, puzzles, openings, lessons, PGN export/import, board themes, piece themes, sound effects, friends list, direct challenges, game chat.
+**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, puzzles (30+), openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
 
-**What's Missing:** Clubs, tournaments, leagues (remaining Phase 6 items).
+**What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
+
+**Documentation:** `docs/FEATURES.md` - Complete feature list. `docs/ROADMAP.md` - Development roadmap.
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -100,7 +102,7 @@
 - [x] PGN import from clipboard
 - [x] Load imported positions for analysis
 
-### Social Features (Phase 6 - Partial)
+### Social Features (Phase 6 - COMPLETE)
 - [x] Friends list with online status indicators
 - [x] User search to find and add friends
 - [x] Friend requests with accept/decline
@@ -112,6 +114,35 @@
 - [x] Chat visible to players and spectators
 - [x] Spectator list showing current viewers
 - [x] Spectator join/leave notifications
+
+### Clubs (Phase 6 - COMPLETE)
+- [x] Create clubs with name, description, emoji logo
+- [x] Public/private club toggle
+- [x] Club search and discovery
+- [x] Join/leave clubs
+- [x] Member roles (member, admin, owner)
+- [x] Club invitations
+- [x] Club chat with message history
+- [x] Club-specific tournaments and leagues
+
+### Tournaments (Phase 6 - COMPLETE)
+- [x] Create tournaments (Swiss, Round-Robin)
+- [x] Tournament registration
+- [x] Automatic fixture generation
+- [x] Round-based pairing
+- [x] Score and Buchholz tracking
+- [x] Tournament game rooms
+- [x] Result recording
+
+### Leagues (Phase 6 - COMPLETE)
+- [x] Create leagues (individual, round-robin/swiss)
+- [x] Division system with promotion/relegation
+- [x] Configurable points (win/draw/loss)
+- [x] League standings table
+- [x] Form tracking (last 5 results)
+- [x] Fixture generation with home/away
+- [x] League match rooms
+- [x] Season support
 
 ### UI/UX Polish
 - [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
@@ -130,10 +161,13 @@
 ```
 chess-project/
 ├── CLAUDE.md                    # THIS FILE
+├── docs/                        # Documentation
+│   ├── FEATURES.md              # Complete feature list
+│   └── ROADMAP.md               # Development roadmap
 ├── client/                      # React 19 + Vite + TypeScript
 │   ├── src/
 │   │   ├── main.tsx
-│   │   ├── App.tsx              # Main app, lobby, game view
+│   │   ├── App.tsx              # Main app, lobby, game view (~3000 lines)
 │   │   ├── index.css
 │   │   ├── api/
 │   │   │   └── auth.ts          # API client for auth
@@ -147,7 +181,10 @@ chess-project/
 │   │   │   ├── AuthModal.tsx    # Login/Register modal
 │   │   │   ├── UserPanel.tsx    # Profile, leaderboard, history
 │   │   │   ├── MatchmakingPanel.tsx # Matchmaking queue UI
-│   │   │   └── FriendsPanel.tsx # Friends list, requests, challenges
+│   │   │   ├── FriendsPanel.tsx # Friends list, requests, challenges
+│   │   │   ├── ClubsPanel.tsx   # Club management, search, chat
+│   │   │   ├── TournamentPanel.tsx # Tournament creation/management
+│   │   │   └── LeaguePanel.tsx  # League management, standings, fixtures
 │   │   └── utils/
 │   │       └── sounds.ts        # Web Audio API sound effects
 ├── server/                      # Express + Socket.IO + chess.js
@@ -423,18 +460,29 @@ Open 2+ browser tabs to http://localhost:5173
 
 ## Future Phases
 
-### Phase 6: Community (Remaining)
-- [x] Friends list (DONE)
-- [x] Direct challenges (DONE)
-- [x] Game chat (DONE)
-- [ ] Clubs
-- [ ] Tournaments
-- [ ] Leagues
+### Phase 6: Community (COMPLETE)
+- [x] Friends list
+- [x] Direct challenges
+- [x] Game chat
+- [x] Clubs with chat
+- [x] Tournaments (Swiss, Round-Robin)
+- [x] Leagues with divisions
 
-### Phase 4: AI Training (Not Started)
+### Phase 4: AI Training (NOT STARTED)
 - [ ] HRM (Human Reasoning Model)
 - [ ] Neural governance
 - [ ] Training data collection
+- [ ] Game annotation system
+- [ ] Explainable AI moves
+
+### Future Enhancements
+- [ ] Game analysis mode
+- [ ] Opening repertoire builder
+- [ ] Mobile responsive UI
+- [ ] Arena tournaments
+- [ ] Team battles
+- [ ] Puzzle rush mode
+- [ ] Multi-game platform (Shogi, Go, etc.)
 
 ---
 
@@ -453,16 +501,20 @@ Open 2+ browser tabs to http://localhost:5173
 - Modular server architecture (db, auth, variants, ai, krog)
 
 **Current state:**
-- Phase 1-3 feature-complete + Play vs Computer + Social features
+- Phase 1-7 complete (except Phase 4 AI Training)
 - User accounts with ELO rating and matchmaking
 - Chess variants (Chess960, 3-Check, King of the Hill)
 - AI opponent with three difficulty levels
 - Bilingual support (EN/NO)
+- KROG engine with 36 operators, 15 R-types
 - Learn mode with hover explanations
 - Comprehensive move explanations
 - Polished UI with board/piece themes and sound feedback
 - Friends list with direct challenges
 - Game chat for players and spectators
+- Clubs with chat and member management
+- Tournaments (Swiss, Round-Robin) with fixtures
+- Leagues with divisions, promotion/relegation
 - PGN import/export
 
 ---
