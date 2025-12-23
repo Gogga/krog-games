@@ -4,7 +4,7 @@
 
 **Current State:** Production-ready multiplayer chess platform with complete feature set including user accounts, ELO rating, matchmaking, chess variants, AI opponent, KROG rule explanations, educational content, full social features, clubs, tournaments, and leagues.
 
-**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, puzzles (30+), openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
+**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
 
 **What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
 
@@ -20,7 +20,7 @@
 
 ### User Accounts & Rating (Phase 2)
 - [x] User registration/login with JWT authentication
-- [x] SQLite database (users, games, rating_history, matchmaking_queue)
+- [x] SQLite database (users, games, rating_history, matchmaking_queue, daily_puzzles, daily_puzzle_completions, daily_puzzle_streaks)
 - [x] ELO rating system (K=32, starting rating 1200)
 - [x] Profile panel with stats (rating, games, wins, win rate)
 - [x] Leaderboard (top players by rating)
@@ -144,6 +144,18 @@
 - [x] League match rooms
 - [x] Season support
 
+### Daily Puzzle
+- [x] One puzzle per day (resets at midnight UTC)
+- [x] Same puzzle globally (deterministic selection via date hash)
+- [x] KROG formula explanation after solving
+- [x] FIDE rules display (Norwegian §X.X and English Article X.X)
+- [x] Streak tracking (current streak, longest streak, total completed)
+- [x] Social sharing button (Wordle-style emoji grid)
+- [x] Countdown timer to next puzzle
+- [x] Guest support with localStorage fallback
+- [x] Leaderboard for daily puzzle completions
+- [x] Database tables: daily_puzzles, daily_puzzle_completions, daily_puzzle_streaks
+
 ### UI/UX Polish
 - [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
 - [x] Theme selector with visual previews
@@ -176,6 +188,7 @@ chess-project/
 │   │   ├── components/
 │   │   │   ├── ChessBoard.tsx   # Board with drag-drop, learn mode, themes
 │   │   │   ├── PuzzleMode.tsx   # Tactical puzzles
+│   │   │   ├── DailyPuzzle.tsx  # Daily puzzle with KROG explanations
 │   │   │   ├── OpeningExplorer.tsx # Opening tree browser
 │   │   │   ├── LessonsMode.tsx  # Interactive lessons with quizzes
 │   │   │   ├── AuthModal.tsx    # Login/Register modal
@@ -423,6 +436,26 @@ chess-project/
 'spectator_list'   → { spectators: { id: string, username: string }[] }
 ```
 
+### Daily Puzzle
+```typescript
+// Client → Server
+'get_daily_puzzle'         → void
+'check_daily_puzzle_move'  → { puzzleId: string, moveIndex: number, move: string }
+'complete_daily_puzzle'    → { puzzleId: string, timeSpentMs: number, attempts: number }
+'get_daily_puzzle_stats'   → void
+'get_daily_puzzle_leaderboard' → void
+
+// Server → Client
+'daily_puzzle_data'        → { puzzle: Puzzle, puzzleNumber: number, date: string,
+                               alreadyCompleted: boolean, streak: StreakData | null }
+'daily_puzzle_move_result' → { correct: boolean, completed: boolean, message: string,
+                               hint?: string, krogExplanation?: KROGExplanation }
+'daily_puzzle_completed'   → { success: boolean, krogExplanation: KROGExplanation,
+                               streak: StreakData, timeSpentMs: number, attempts: number }
+'daily_puzzle_stats'       → { streak: StreakData }
+'daily_puzzle_leaderboard' → { leaderboard: LeaderboardEntry[] }
+```
+
 ---
 
 ## Running the Project
@@ -515,6 +548,7 @@ Open 2+ browser tabs to http://localhost:5173
 - Clubs with chat and member management
 - Tournaments (Swiss, Round-Robin) with fixtures
 - Leagues with divisions, promotion/relegation
+- Daily puzzle with KROG explanations and streak tracking
 - PGN import/export
 
 ---
