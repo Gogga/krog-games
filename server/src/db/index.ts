@@ -298,6 +298,41 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_league_participants_user_id ON league_participants(user_id);
   CREATE INDEX IF NOT EXISTS idx_league_matches_league_id ON league_matches(league_id);
   CREATE INDEX IF NOT EXISTS idx_league_matches_round ON league_matches(round);
+
+  -- Daily puzzle schedule (which puzzle shows on which day)
+  CREATE TABLE IF NOT EXISTS daily_puzzles (
+    id TEXT PRIMARY KEY,
+    puzzle_id TEXT NOT NULL,
+    puzzle_date TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- User completion tracking for daily puzzles
+  CREATE TABLE IF NOT EXISTS daily_puzzle_completions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    puzzle_date TEXT NOT NULL,
+    completed_at TEXT DEFAULT (datetime('now')),
+    time_spent_ms INTEGER,
+    attempts INTEGER DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, puzzle_date)
+  );
+
+  -- Streak tracking for daily puzzles (denormalized for fast queries)
+  CREATE TABLE IF NOT EXISTS daily_puzzle_streaks (
+    user_id TEXT PRIMARY KEY,
+    current_streak INTEGER DEFAULT 0,
+    longest_streak INTEGER DEFAULT 0,
+    last_completed_date TEXT,
+    total_completed INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  -- Daily puzzle indexes
+  CREATE INDEX IF NOT EXISTS idx_daily_puzzles_date ON daily_puzzles(puzzle_date);
+  CREATE INDEX IF NOT EXISTS idx_daily_completions_user ON daily_puzzle_completions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_daily_completions_date ON daily_puzzle_completions(puzzle_date);
 `);
 
 // Prepared statements
@@ -969,6 +1004,47 @@ const statements = {
     UPDATE league_matches
     SET result = ?, home_score = ?, away_score = ?, pgn = ?, status = 'completed', played_at = datetime('now')
     WHERE id = ?
+  `),
+
+  // Daily puzzle operations
+  getDailyPuzzle: db.prepare(`
+    SELECT * FROM daily_puzzles WHERE puzzle_date = ?
+  `),
+
+  setDailyPuzzle: db.prepare(`
+    INSERT OR REPLACE INTO daily_puzzles (id, puzzle_id, puzzle_date)
+    VALUES (?, ?, ?)
+  `),
+
+  getDailyPuzzleCompletion: db.prepare(`
+    SELECT * FROM daily_puzzle_completions WHERE user_id = ? AND puzzle_date = ?
+  `),
+
+  recordDailyPuzzleCompletion: db.prepare(`
+    INSERT INTO daily_puzzle_completions (id, user_id, puzzle_date, time_spent_ms, attempts)
+    VALUES (?, ?, ?, ?, ?)
+  `),
+
+  getDailyPuzzleStreak: db.prepare(`
+    SELECT * FROM daily_puzzle_streaks WHERE user_id = ?
+  `),
+
+  upsertDailyPuzzleStreak: db.prepare(`
+    INSERT INTO daily_puzzle_streaks (user_id, current_streak, longest_streak, last_completed_date, total_completed)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      current_streak = excluded.current_streak,
+      longest_streak = excluded.longest_streak,
+      last_completed_date = excluded.last_completed_date,
+      total_completed = excluded.total_completed
+  `),
+
+  getDailyPuzzleLeaderboard: db.prepare(`
+    SELECT dps.*, u.username
+    FROM daily_puzzle_streaks dps
+    JOIN users u ON dps.user_id = u.id
+    ORDER BY dps.current_streak DESC, dps.longest_streak DESC
+    LIMIT ?
   `)
 };
 
@@ -1200,6 +1276,31 @@ export interface LeagueMatch {
   away_username?: string;
   home_rating?: number;
   away_rating?: number;
+}
+
+export interface DailyPuzzle {
+  id: string;
+  puzzle_id: string;
+  puzzle_date: string;
+  created_at: string;
+}
+
+export interface DailyPuzzleCompletion {
+  id: string;
+  user_id: string;
+  puzzle_date: string;
+  completed_at: string;
+  time_spent_ms: number | null;
+  attempts: number;
+}
+
+export interface DailyPuzzleStreak {
+  user_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_completed_date: string | null;
+  total_completed: number;
+  username?: string;
 }
 
 // Database operations
@@ -2468,6 +2569,77 @@ export const dbOperations = {
       console.error('Error processing promotion/relegation:', error);
       return { success: false, error: 'Failed to process promotion/relegation', promoted: [], relegated: [] };
     }
+  },
+
+  // Daily puzzle operations
+  getDailyPuzzle(date: string): DailyPuzzle | null {
+    return statements.getDailyPuzzle.get(date) as DailyPuzzle | null;
+  },
+
+  setDailyPuzzle(date: string, puzzleId: string): void {
+    const id = uuidv4();
+    statements.setDailyPuzzle.run(id, puzzleId, date);
+  },
+
+  getDailyPuzzleCompletion(userId: string, date: string): DailyPuzzleCompletion | null {
+    return statements.getDailyPuzzleCompletion.get(userId, date) as DailyPuzzleCompletion | null;
+  },
+
+  recordDailyPuzzleCompletion(userId: string, date: string, timeSpentMs: number, attempts: number): DailyPuzzleCompletion {
+    const id = uuidv4();
+    statements.recordDailyPuzzleCompletion.run(id, userId, date, timeSpentMs, attempts);
+    return statements.getDailyPuzzleCompletion.get(userId, date) as DailyPuzzleCompletion;
+  },
+
+  getDailyPuzzleStreak(userId: string): DailyPuzzleStreak | null {
+    return statements.getDailyPuzzleStreak.get(userId) as DailyPuzzleStreak | null;
+  },
+
+  updateDailyPuzzleStreak(userId: string, currentStreak: number, longestStreak: number, lastCompletedDate: string, totalCompleted: number): void {
+    statements.upsertDailyPuzzleStreak.run(userId, currentStreak, longestStreak, lastCompletedDate, totalCompleted);
+  },
+
+  getDailyPuzzleLeaderboard(limit: number = 20): DailyPuzzleStreak[] {
+    return statements.getDailyPuzzleLeaderboard.all(limit) as DailyPuzzleStreak[];
+  },
+
+  // Calculate and update streak after completion
+  processStreakAfterCompletion(userId: string, completionDate: string): DailyPuzzleStreak {
+    const existingStreak = this.getDailyPuzzleStreak(userId);
+
+    // Calculate yesterday's date
+    const today = new Date(completionDate);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    let currentStreak = 1;
+    let longestStreak = 1;
+    let totalCompleted = 1;
+
+    if (existingStreak) {
+      totalCompleted = existingStreak.total_completed + 1;
+      longestStreak = existingStreak.longest_streak;
+
+      if (existingStreak.last_completed_date === completionDate) {
+        // Already completed today - no change
+        return existingStreak;
+      } else if (existingStreak.last_completed_date === yesterdayStr) {
+        // Consecutive day - extend streak
+        currentStreak = existingStreak.current_streak + 1;
+        longestStreak = Math.max(currentStreak, existingStreak.longest_streak);
+      }
+      // Otherwise streak resets to 1
+    }
+
+    this.updateDailyPuzzleStreak(userId, currentStreak, longestStreak, completionDate, totalCompleted);
+    return {
+      user_id: userId,
+      current_streak: currentStreak,
+      longest_streak: longestStreak,
+      last_completed_date: completionDate,
+      total_completed: totalCompleted
+    };
   }
 };
 

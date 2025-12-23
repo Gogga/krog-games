@@ -19,7 +19,7 @@ import {
     createKROGEngine,
     KROGValidation
 } from './krog';
-import { dbOperations, calculateEloChange, User, Game } from './db';
+import { dbOperations, calculateEloChange, User, Game, DailyPuzzleStreak } from './db';
 import * as auth from './auth';
 import {
     VariantType,
@@ -2069,6 +2069,221 @@ io.on('connection', (socket) => {
             krog: puzzle.krog,
             currentIndex: newIndex,
             totalPuzzles: puzzles.length
+        });
+    });
+
+    // ==================== DAILY PUZZLE ====================
+
+    // Helper function to get today's date in UTC
+    function getTodayUTC(): string {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    // Helper function to calculate puzzle number (days since epoch)
+    function calculatePuzzleNumber(dateStr: string): number {
+        const date = new Date(dateStr);
+        const epoch = new Date('2024-01-01');
+        return Math.floor((date.getTime() - epoch.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    // Helper function to get or assign today's puzzle
+    function getOrAssignDailyPuzzle(date: string): Puzzle | null {
+        // Check if already assigned
+        let dailyPuzzle = dbOperations.getDailyPuzzle(date);
+
+        if (!dailyPuzzle) {
+            // Generate deterministic puzzle selection based on date
+            // Use a simple hash of the date string
+            let hash = 0;
+            for (let i = 0; i < date.length; i++) {
+                const char = date.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            const puzzleIndex = Math.abs(hash) % puzzles.length;
+            const selectedPuzzle = puzzles[puzzleIndex];
+
+            // Save to database
+            dbOperations.setDailyPuzzle(date, selectedPuzzle.id);
+            dailyPuzzle = dbOperations.getDailyPuzzle(date);
+        }
+
+        if (!dailyPuzzle) return null;
+
+        // Return the actual puzzle data
+        return puzzles.find(p => p.id === dailyPuzzle!.puzzle_id) || null;
+    }
+
+    // Get today's daily puzzle
+    socket.on('get_daily_puzzle', () => {
+        const today = getTodayUTC();
+        const puzzle = getOrAssignDailyPuzzle(today);
+
+        if (!puzzle) {
+            socket.emit('error', { message: 'Failed to get daily puzzle' });
+            return;
+        }
+
+        // Check if user has already completed today's puzzle
+        let alreadyCompleted = false;
+        let completion = null;
+        let streak: DailyPuzzleStreak | null = null;
+
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (authInfo) {
+            completion = dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
+            alreadyCompleted = !!completion;
+            streak = dbOperations.getDailyPuzzleStreak(authInfo.userId);
+        }
+
+        socket.emit('daily_puzzle_data', {
+            puzzleNumber: calculatePuzzleNumber(today),
+            date: today,
+            puzzle: {
+                id: puzzle.id,
+                fen: puzzle.fen,
+                themes: puzzle.themes,
+                level: puzzle.level,
+                rating: puzzle.rating,
+                solutionLength: puzzle.solution.length,
+                krog: puzzle.krog
+            },
+            alreadyCompleted,
+            completion: completion ? {
+                completedAt: completion.completed_at,
+                timeSpentMs: completion.time_spent_ms,
+                attempts: completion.attempts
+            } : null,
+            streak: streak ? {
+                current: streak.current_streak,
+                longest: streak.longest_streak,
+                total: streak.total_completed
+            } : { current: 0, longest: 0, total: 0 }
+        });
+    });
+
+    // Check daily puzzle move
+    socket.on('check_daily_puzzle_move', ({ moveIndex, move, attempts }: { moveIndex: number; move: string; attempts: number }) => {
+        const today = getTodayUTC();
+        const puzzle = getOrAssignDailyPuzzle(today);
+
+        if (!puzzle) {
+            socket.emit('error', { message: 'Daily puzzle not found' });
+            return;
+        }
+
+        const expectedMoves = puzzle.solution[moveIndex];
+        const correctMoves = Array.isArray(expectedMoves) ? expectedMoves : [expectedMoves];
+
+        // Check if move matches (ignore +, #, and x notation differences)
+        const normalizeMove = (m: string) => m.replace(/[+#x]/g, '');
+        const isCorrect = correctMoves.some(cm =>
+            cm === move || normalizeMove(cm) === normalizeMove(move)
+        );
+
+        if (isCorrect) {
+            const isComplete = moveIndex >= puzzle.solution.length - 1;
+
+            socket.emit('daily_puzzle_move_result', {
+                correct: true,
+                completed: isComplete,
+                message: isComplete ? 'Puzzle solved!' : 'Correct! Keep going...',
+                krog: isComplete ? puzzle.krog : undefined
+            });
+        } else {
+            socket.emit('daily_puzzle_move_result', {
+                correct: false,
+                completed: false,
+                message: 'Incorrect move. Try again!',
+                hint: `The correct move starts with ${expectedMoves.toString().charAt(0)}...`
+            });
+        }
+    });
+
+    // Complete daily puzzle (record completion)
+    socket.on('complete_daily_puzzle', ({ timeSpentMs, attempts }: { timeSpentMs: number; attempts: number }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            // For guests, just confirm completion without saving
+            socket.emit('daily_puzzle_completed', {
+                success: true,
+                streak: { current: 0, longest: 0, total: 0 },
+                isGuest: true
+            });
+            return;
+        }
+
+        const today = getTodayUTC();
+
+        // Check if already completed
+        const existing = dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
+        if (existing) {
+            const streak = dbOperations.getDailyPuzzleStreak(authInfo.userId);
+            socket.emit('daily_puzzle_completed', {
+                success: true,
+                alreadyCompleted: true,
+                streak: streak ? {
+                    current: streak.current_streak,
+                    longest: streak.longest_streak,
+                    total: streak.total_completed
+                } : { current: 0, longest: 0, total: 0 }
+            });
+            return;
+        }
+
+        // Record completion
+        dbOperations.recordDailyPuzzleCompletion(authInfo.userId, today, timeSpentMs, attempts);
+
+        // Update streak
+        const updatedStreak = dbOperations.processStreakAfterCompletion(authInfo.userId, today);
+
+        socket.emit('daily_puzzle_completed', {
+            success: true,
+            streak: {
+                current: updatedStreak.current_streak,
+                longest: updatedStreak.longest_streak,
+                total: updatedStreak.total_completed
+            }
+        });
+    });
+
+    // Get user's daily puzzle stats
+    socket.on('get_daily_puzzle_stats', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('daily_puzzle_stats', {
+                streak: { current: 0, longest: 0, total: 0 },
+                isGuest: true
+            });
+            return;
+        }
+
+        const streak = dbOperations.getDailyPuzzleStreak(authInfo.userId);
+        const today = getTodayUTC();
+        const todayCompletion = dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
+
+        socket.emit('daily_puzzle_stats', {
+            streak: streak ? {
+                current: streak.current_streak,
+                longest: streak.longest_streak,
+                total: streak.total_completed
+            } : { current: 0, longest: 0, total: 0 },
+            completedToday: !!todayCompletion
+        });
+    });
+
+    // Get daily puzzle leaderboard
+    socket.on('get_daily_puzzle_leaderboard', ({ limit }: { limit?: number }) => {
+        const leaderboard = dbOperations.getDailyPuzzleLeaderboard(limit || 20);
+
+        socket.emit('daily_puzzle_leaderboard', {
+            entries: leaderboard.map((entry, index) => ({
+                rank: index + 1,
+                username: entry.username,
+                currentStreak: entry.current_streak,
+                longestStreak: entry.longest_streak,
+                totalCompleted: entry.total_completed
+            }))
         });
     });
 

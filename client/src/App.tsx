@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
 import PuzzleMode from './components/PuzzleMode';
+import DailyPuzzle from './components/DailyPuzzle';
 import OpeningExplorer from './components/OpeningExplorer';
 import LessonsMode from './components/LessonsMode';
 import { ChessSounds, resumeAudio } from './utils/sounds';
@@ -174,6 +175,7 @@ function App() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
   const [puzzleMode, setPuzzleMode] = useState(false);
+  const [dailyPuzzleMode, setDailyPuzzleMode] = useState(false);
   const [openingExplorer, setOpeningExplorer] = useState(false);
   const [lessonsMode, setLessonsMode] = useState(false);
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
@@ -957,6 +959,18 @@ function App() {
     );
   }
 
+  // Daily Puzzle view
+  if (dailyPuzzleMode) {
+    return (
+      <DailyPuzzle
+        socket={socket}
+        language={language}
+        user={null}
+        onExit={() => setDailyPuzzleMode(false)}
+      />
+    );
+  }
+
   // Opening Explorer view
   if (openingExplorer) {
     return (
@@ -1438,6 +1452,32 @@ function App() {
             >
               <span style={{ fontSize: '1.2rem' }}>{'\u265F'}</span>
               Puzzles
+            </button>
+
+            <button
+              onClick={() => setDailyPuzzleMode(true)}
+              disabled={!isConnected}
+              style={{
+                flex: '1 1 calc(50% - 5px)',
+                minWidth: '100px',
+                background: '#f39c12',
+                border: 'none',
+                color: 'white',
+                padding: '15px 12px',
+                borderRadius: '6px',
+                cursor: isConnected ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit',
+                fontSize: '1rem',
+                fontWeight: 600,
+                opacity: isConnected ? 1 : 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>{'\u{1F4C5}'}</span>
+              Daily
             </button>
 
             <button
