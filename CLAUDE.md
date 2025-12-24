@@ -4,7 +4,7 @@
 
 **Current State:** Production-ready multiplayer chess platform with complete feature set including user accounts, ELO rating, matchmaking, chess variants, AI opponent, KROG rule explanations, educational content, full social features, clubs, tournaments, and leagues.
 
-**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
+**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, "Explain This Move" button with shareable KROG explanations, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
 
 **What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
 
@@ -156,6 +156,18 @@
 - [x] Leaderboard for daily puzzle completions
 - [x] Database tables: daily_puzzles, daily_puzzle_completions, daily_puzzle_streaks
 
+### Explain This Move
+- [x] Clickable ℹ️ icon on every move in Move History panel
+- [x] Modal popup with full KROG explanation
+- [x] KROG formula display (green, monospace)
+- [x] Operator (P/O/F) and T-Type information
+- [x] R-Type badge with description (purple)
+- [x] Bilingual explanations (🇬🇧 English / 🇳🇴 Norwegian)
+- [x] Condition badges with ✓/✗ status
+- [x] FIDE rules in both languages (§X.X / Article X.X)
+- [x] Share Explanation button (copy to clipboard)
+- [x] Shareable text format for social media
+
 ### UI/UX Polish
 - [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
 - [x] Theme selector with visual previews
@@ -189,6 +201,7 @@ chess-project/
 │   │   │   ├── ChessBoard.tsx   # Board with drag-drop, learn mode, themes
 │   │   │   ├── PuzzleMode.tsx   # Tactical puzzles
 │   │   │   ├── DailyPuzzle.tsx  # Daily puzzle with KROG explanations
+│   │   │   ├── MoveExplanationModal.tsx # Explain This Move modal
 │   │   │   ├── OpeningExplorer.tsx # Opening tree browser
 │   │   │   ├── LessonsMode.tsx  # Interactive lessons with quizzes
 │   │   │   ├── AuthModal.tsx    # Login/Register modal
@@ -456,6 +469,25 @@ chess-project/
 'daily_puzzle_leaderboard' → { leaderboard: LeaderboardEntry[] }
 ```
 
+### Explain This Move
+```typescript
+// Client → Server
+'explain_historical_move'  → { moves: string[], moveIndex: number }
+
+// Server → Client
+'historical_move_explanation' → {
+  moveIndex: number,
+  move: string,
+  from: string,
+  to: string,
+  piece: string,
+  krog: { formula, operator, tType, rType, rTypeDescription },
+  fide: { article, en, no },
+  explanation: { en, no },
+  conditions: { name, met, description }[]
+}
+```
+
 ---
 
 ## Running the Project
@@ -549,6 +581,7 @@ Open 2+ browser tabs to http://localhost:5173
 - Tournaments (Swiss, Round-Robin) with fixtures
 - Leagues with divisions, promotion/relegation
 - Daily puzzle with KROG explanations and streak tracking
+- Explain This Move button with shareable KROG explanations
 - PGN import/export
 
 ---
