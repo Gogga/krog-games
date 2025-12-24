@@ -1582,6 +1582,69 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ==================== EXPLAIN HISTORICAL MOVE ====================
+    // Explain any move from a game's move history
+    socket.on('explain_historical_move', ({ moves, moveIndex }: { moves: string[]; moveIndex: number }) => {
+        try {
+            // Create a fresh game and replay moves up to the one before the target
+            const tempGame = new Chess();
+
+            // Make all moves up to (but not including) the target move
+            for (let i = 0; i < moveIndex; i++) {
+                const result = tempGame.move(moves[i]);
+                if (!result) {
+                    socket.emit('error', { message: `Invalid move at index ${i}: ${moves[i]}` });
+                    return;
+                }
+            }
+
+            // Now get the move we want to explain
+            const targetMove = moves[moveIndex];
+
+            // Get detailed move info before making the move
+            const legalMoves = tempGame.moves({ verbose: true });
+            const moveInfo = legalMoves.find(m => m.san === targetMove);
+
+            if (!moveInfo) {
+                socket.emit('error', { message: `Move not found: ${targetMove}` });
+                return;
+            }
+
+            // Generate KROG explanation
+            const explanation = explainMove(tempGame, moveInfo.from as Square, moveInfo.to as Square, moveInfo.promotion);
+
+            if ('isLegal' in explanation && explanation.isLegal) {
+                // Classify R-type
+                const rType = classifyMoveRType(moveInfo);
+                const rTypeDescription = getRTypeDescription(rType);
+
+                socket.emit('historical_move_explanation', {
+                    moveIndex,
+                    move: targetMove,
+                    from: moveInfo.from,
+                    to: moveInfo.to,
+                    piece: moveInfo.piece,
+                    krog: {
+                        formula: explanation.krog.formula,
+                        operator: explanation.krog.operator,
+                        tType: explanation.krog.tType,
+                        rType: rType,
+                        rTypeDescription: rTypeDescription
+                    },
+                    fide: explanation.fide,
+                    explanation: explanation.explanation,
+                    conditions: explanation.conditions || []
+                });
+            } else {
+                // This shouldn't happen for historical moves, but handle it
+                socket.emit('error', { message: 'Could not explain move' });
+            }
+        } catch (error) {
+            console.error('Error explaining historical move:', error);
+            socket.emit('error', { message: 'Failed to explain move' });
+        }
+    });
+
     // Reset game (only players can reset)
     socket.on('reset_game', (roomId: string) => {
         const room = rooms.get(roomId);

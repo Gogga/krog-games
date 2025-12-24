@@ -15,6 +15,7 @@ import { FriendsPanel } from './components/FriendsPanel';
 import { ClubsPanel } from './components/ClubsPanel';
 import { TournamentPanel } from './components/TournamentPanel';
 import { LeaguePanel } from './components/LeaguePanel';
+import MoveExplanationModal from './components/MoveExplanationModal';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -167,6 +168,8 @@ function App() {
   const [rematchRequest, setRematchRequest] = useState<'white' | 'black' | null>(null);
   const [moveExplanation, setMoveExplanation] = useState<MoveExplanation | null>(null);
   const [illegalMoveExplanation, setIllegalMoveExplanation] = useState<IllegalMoveExplanation | null>(null);
+  const [explainModalOpen, setExplainModalOpen] = useState(false);
+  const [explainModalData, setExplainModalData] = useState<any | null>(null);
   const [language, setLanguage] = useState<Language>('en');
   const [showExplanation, setShowExplanation] = useState(true);
   const [learnMode, setLearnMode] = useState(false);
@@ -488,6 +491,11 @@ function App() {
       setTimeout(() => setIllegalMoveExplanation(null), 10000);
     }
 
+    function onHistoricalMoveExplanation(data: any) {
+      setExplainModalData(data);
+      setExplainModalOpen(true);
+    }
+
     function onMoveSuggestions({ suggestions: newSuggestions }: { suggestions: MoveSuggestion[] }) {
       setSuggestions(newSuggestions);
       setLoadingSuggestions(false);
@@ -581,6 +589,7 @@ function App() {
     socket.on('rematch_declined', onRematchDeclined);
     socket.on('move_explanation', onMoveExplanation);
     socket.on('illegal_move', onIllegalMove);
+    socket.on('historical_move_explanation', onHistoricalMoveExplanation);
     socket.on('move_suggestions', onMoveSuggestions);
     socket.on('spectator_update', onSpectatorUpdate);
     socket.on('chat_message', onChatMessage);
@@ -616,6 +625,7 @@ function App() {
       socket.off('rematch_declined', onRematchDeclined);
       socket.off('move_explanation', onMoveExplanation);
       socket.off('illegal_move', onIllegalMove);
+      socket.off('historical_move_explanation', onHistoricalMoveExplanation);
       socket.off('move_suggestions', onMoveSuggestions);
       socket.off('spectator_update', onSpectatorUpdate);
       socket.off('chat_message', onChatMessage);
@@ -652,6 +662,14 @@ function App() {
     }
     setError(null);
     socket.emit('join_room', { code: joinCodeInput.trim() });
+  };
+
+  const handleExplainMove = (moveIndex: number) => {
+    const moves = game.history();
+    socket.emit('explain_historical_move', {
+      moves: moves.slice(0, moveIndex + 1),
+      moveIndex
+    });
   };
 
   const leaveRoom = () => {
@@ -2922,25 +2940,47 @@ function App() {
                           {moveNumber}.
                         </span>
                         {/* White's move */}
-                        <span style={{
-                          color: isLastWhite && !blackMove ? '#81b64c' : '#fff',
-                          fontWeight: isLastWhite && !blackMove ? 700 : 400,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          background: isLastWhite && !blackMove ? 'rgba(129, 182, 76, 0.2)' : 'transparent'
-                        }}>
+                        <span
+                          style={{
+                            color: isLastWhite && !blackMove ? '#81b64c' : '#fff',
+                            fontWeight: isLastWhite && !blackMove ? 700 : 400,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: isLastWhite && !blackMove ? 'rgba(129, 182, 76, 0.2)' : 'transparent',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onClick={() => handleExplainMove(i)}
+                          title={language === 'en' ? 'Click to explain this move' : 'Klikk for å forklare dette trekket'}
+                        >
                           {whiteMove}
+                          <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>ℹ️</span>
                         </span>
                         {/* Black's move */}
-                        <span style={{
-                          color: isLastBlack ? '#81b64c' : '#ccc',
-                          fontWeight: isLastBlack ? 700 : 400,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          background: isLastBlack ? 'rgba(129, 182, 76, 0.2)' : 'transparent'
-                        }}>
-                          {blackMove || ''}
-                        </span>
+                        {blackMove ? (
+                          <span
+                            style={{
+                              color: isLastBlack ? '#81b64c' : '#ccc',
+                              fontWeight: isLastBlack ? 700 : 400,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: isLastBlack ? 'rgba(129, 182, 76, 0.2)' : 'transparent',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            onClick={() => handleExplainMove(i + 1)}
+                            title={language === 'en' ? 'Click to explain this move' : 'Klikk for å forklare dette trekket'}
+                          >
+                            {blackMove}
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>ℹ️</span>
+                          </span>
+                        ) : (
+                          <span></span>
+                        )}
                       </React.Fragment>
                     );
                   }
@@ -3111,6 +3151,14 @@ function App() {
           )}
         </div>
       )}
+
+      {/* Move Explanation Modal */}
+      <MoveExplanationModal
+        isOpen={explainModalOpen}
+        onClose={() => setExplainModalOpen(false)}
+        data={explainModalData}
+        language={language}
+      />
     </div>
   );
 }
