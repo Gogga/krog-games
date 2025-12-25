@@ -189,6 +189,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
   const { user } = useAuth();
   const t = translations[language];
 
+  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'open' | 'active' | 'completed' | 'my' | 'create'>('open');
   const [openLeagues, setOpenLeagues] = useState<League[]>([]);
   const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
@@ -215,11 +216,13 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
   const [createPointsLoss, setCreatePointsLoss] = useState(0);
 
   useEffect(() => {
-    // Request leagues
-    socket.emit('get_open_leagues');
-    socket.emit('get_active_leagues');
-    socket.emit('get_completed_leagues');
-    socket.emit('get_my_leagues');
+    // Request leagues only when panel is open
+    if (isOpen) {
+      socket.emit('get_open_leagues');
+      socket.emit('get_active_leagues');
+      socket.emit('get_completed_leagues');
+      socket.emit('get_my_leagues');
+    }
 
     // Listen for league updates
     socket.on('open_leagues', ({ leagues }) => setOpenLeagues(leagues));
@@ -310,7 +313,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
       socket.off('league_fixtures_generated');
       socket.off('league_match_completed');
     };
-  }, [socket, selectedLeague?.id]);
+  }, [socket, selectedLeague?.id, isOpen]);
 
   const handleCreateLeague = () => {
     if (!createName.trim()) return;
@@ -955,37 +958,79 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
   }
 
   return (
-    <div style={{ padding: '16px', background: '#121212', borderRadius: '8px', minHeight: '400px' }}>
-      <h2 style={{ margin: '0 0 16px 0' }}>{t.leagues}</h2>
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          background: isOpen ? '#4CAF50' : 'transparent',
+          border: '1px solid #444',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+      >
+        <span style={{ fontSize: '1rem' }}>{'\u{1F3C5}'}</span>
+        {t.leagues}
+      </button>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {(['open', 'active', 'completed', 'my', 'create'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '8px 16px',
-              background: activeTab === tab ? '#4CAF50' : '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            {tab === 'open' ? t.open :
-             tab === 'active' ? t.active :
-             tab === 'completed' ? t.completed :
-             tab === 'my' ? t.myLeagues :
-             t.create}
-          </button>
-        ))}
-      </div>
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          width: '400px',
+          maxHeight: '500px',
+          background: '#121212',
+          border: '1px solid #333',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          zIndex: 100,
+          marginTop: '8px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: '4px', padding: '8px', flexWrap: 'wrap', borderBottom: '1px solid #333' }}>
+            {(['open', 'active', 'completed', 'my', 'create'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: '6px 12px',
+                  background: activeTab === tab ? '#4CAF50' : '#333',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                {tab === 'open' ? t.open :
+                 tab === 'active' ? t.active :
+                 tab === 'completed' ? t.completed :
+                 tab === 'my' ? t.myLeagues :
+                 t.create}
+              </button>
+            ))}
+          </div>
 
-      {activeTab === 'open' && renderLeagueList(openLeagues)}
-      {activeTab === 'active' && renderLeagueList(activeLeagues)}
-      {activeTab === 'completed' && renderLeagueList(completedLeagues)}
-      {activeTab === 'my' && renderLeagueList(myLeagues)}
-      {activeTab === 'create' && renderCreateForm()}
+          {/* Content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+            {activeTab === 'open' && renderLeagueList(openLeagues)}
+            {activeTab === 'active' && renderLeagueList(activeLeagues)}
+            {activeTab === 'completed' && renderLeagueList(completedLeagues)}
+            {activeTab === 'my' && renderLeagueList(myLeagues)}
+            {activeTab === 'create' && renderCreateForm()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

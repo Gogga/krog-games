@@ -151,6 +151,7 @@ export function TournamentPanel({ socket, language, onJoinTournamentGame }: Tour
   const { user } = useAuth();
   const t = translations[language];
 
+  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'active' | 'completed' | 'my' | 'create'>('upcoming');
   const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
   const [activeTournaments, setActiveTournaments] = useState<Tournament[]>([]);
@@ -172,8 +173,9 @@ export function TournamentPanel({ socket, language, onJoinTournamentGame }: Tour
     maxParticipants: 16
   });
 
-  // Fetch tournaments on mount and when tab changes
+  // Fetch tournaments when panel opens and when tab changes
   useEffect(() => {
+    if (!isOpen) return;
     if (activeTab === 'upcoming') {
       socket.emit('get_upcoming_tournaments');
     } else if (activeTab === 'active') {
@@ -183,7 +185,7 @@ export function TournamentPanel({ socket, language, onJoinTournamentGame }: Tour
     } else if (activeTab === 'my') {
       socket.emit('get_my_tournaments');
     }
-  }, [activeTab, socket]);
+  }, [isOpen, activeTab, socket]);
 
   // Socket event listeners
   useEffect(() => {
@@ -785,62 +787,85 @@ export function TournamentPanel({ socket, language, onJoinTournamentGame }: Tour
   }
 
   return (
-    <div style={{
-      background: '#1e1e1e',
-      borderRadius: '8px',
-      border: '1px solid #333',
-      minHeight: '400px',
-      maxHeight: '500px',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      <div style={{
-        padding: '12px 16px',
-        borderBottom: '1px solid #333',
-        fontWeight: 'bold'
-      }}>
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          background: isOpen ? '#3498db' : 'transparent',
+          border: '1px solid #444',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+      >
+        <span style={{ fontSize: '1rem' }}>{'\u{1F3C6}'}</span>
         {t.tournaments}
-      </div>
+      </button>
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid #333',
-        padding: '0 8px'
-      }}>
-        {[
-          { key: 'upcoming', label: t.upcoming },
-          { key: 'active', label: t.active },
-          { key: 'completed', label: t.completed },
-          { key: 'my', label: t.myTournaments },
-          { key: 'create', label: t.create }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
-            style={{
-              padding: '8px 12px',
-              background: activeTab === tab.key ? '#2a2a2a' : 'transparent',
-              border: 'none',
-              borderBottom: activeTab === tab.key ? '2px solid #3498db' : '2px solid transparent',
-              color: activeTab === tab.key ? 'white' : '#888',
-              cursor: 'pointer',
-              fontSize: '13px'
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          width: '400px',
+          maxHeight: '500px',
+          background: '#1e1e1e',
+          border: '1px solid #333',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          zIndex: 100,
+          marginTop: '8px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Tabs */}
+          <div style={{
+            display: 'flex',
+            borderBottom: '1px solid #333',
+            padding: '0 8px'
+          }}>
+            {[
+              { key: 'upcoming', label: t.upcoming },
+              { key: 'active', label: t.active },
+              { key: 'completed', label: t.completed },
+              { key: 'my', label: t.myTournaments },
+              { key: 'create', label: t.create }
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                style={{
+                  padding: '8px 12px',
+                  background: activeTab === tab.key ? '#2a2a2a' : 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === tab.key ? '2px solid #3498db' : '2px solid transparent',
+                  color: activeTab === tab.key ? 'white' : '#888',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: activeTab === 'create' ? 0 : '12px' }}>
-        {activeTab === 'upcoming' && renderTournamentList(upcomingTournaments)}
-        {activeTab === 'active' && renderTournamentList(activeTournaments)}
-        {activeTab === 'completed' && renderTournamentList(completedTournaments)}
-        {activeTab === 'my' && renderTournamentList(myTournaments)}
-        {activeTab === 'create' && renderCreateForm()}
-      </div>
+          {/* Content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: activeTab === 'create' ? 0 : '12px' }}>
+            {activeTab === 'upcoming' && renderTournamentList(upcomingTournaments)}
+            {activeTab === 'active' && renderTournamentList(activeTournaments)}
+            {activeTab === 'completed' && renderTournamentList(completedTournaments)}
+            {activeTab === 'my' && renderTournamentList(myTournaments)}
+            {activeTab === 'create' && renderCreateForm()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

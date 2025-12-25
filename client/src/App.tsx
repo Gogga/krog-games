@@ -1702,6 +1702,37 @@ function App() {
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
       <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+        {/* Back button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '10px' }}>
+          <button
+            onClick={leaveRoom}
+            style={{
+              background: 'transparent',
+              border: '1px solid #444',
+              color: '#888',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#666';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#444';
+              e.currentTarget.style.color = '#888';
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>{'\u2190'}</span>
+            {language === 'en' ? 'Back to Lobby' : 'Tilbake til lobbyen'}
+          </button>
+        </div>
         <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
         <div style={{
           display: 'flex',
