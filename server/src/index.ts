@@ -1645,6 +1645,65 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ==================== KROG LEADERBOARD ====================
+
+    // Track KROG explanation view
+    socket.on('track_krog_view', ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            // Guest users don't track stats
+            return;
+        }
+        try {
+            dbOperations.recordKrogActivity(authInfo.userId, 'view', moveSan, rType, operator);
+            dbOperations.updateKrogStats(authInfo.userId, 'view', rType, operator);
+        } catch (error) {
+            console.error('Error tracking KROG view:', error);
+        }
+    });
+
+    // Track KROG explanation share
+    socket.on('track_krog_share', ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            return;
+        }
+        try {
+            dbOperations.recordKrogActivity(authInfo.userId, 'share', moveSan, rType, operator);
+            dbOperations.updateKrogStats(authInfo.userId, 'share', rType, operator);
+        } catch (error) {
+            console.error('Error tracking KROG share:', error);
+        }
+    });
+
+    // Get KROG leaderboard
+    socket.on('get_krog_leaderboard', ({ type }: { type: 'views' | 'shares' | 'rtypes' }) => {
+        try {
+            const leaderboard = dbOperations.getKrogLeaderboard(type, 50);
+            socket.emit('krog_leaderboard', { type, leaderboard });
+        } catch (error) {
+            console.error('Error getting KROG leaderboard:', error);
+            socket.emit('error', { message: 'Failed to get leaderboard' });
+        }
+    });
+
+    // Get user's KROG stats
+    socket.on('get_krog_stats', () => {
+        const authInfo = authenticatedSockets.get(socket.id);
+        if (!authInfo) {
+            socket.emit('krog_stats', { stats: null, rank: 0 });
+            return;
+        }
+        try {
+            const stats = dbOperations.getKrogStats(authInfo.userId);
+            const rank = stats ? dbOperations.getKrogRank(authInfo.userId) : 0;
+            socket.emit('krog_stats', { stats, rank });
+        } catch (error) {
+            console.error('Error getting KROG stats:', error);
+            socket.emit('error', { message: 'Failed to get stats' });
+        }
+    });
+
     // Reset game (only players can reset)
     socket.on('reset_game', (roomId: string) => {
         const room = rooms.get(roomId);

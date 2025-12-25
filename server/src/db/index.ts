@@ -333,6 +333,35 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_daily_puzzles_date ON daily_puzzles(puzzle_date);
   CREATE INDEX IF NOT EXISTS idx_daily_completions_user ON daily_puzzle_completions(user_id);
   CREATE INDEX IF NOT EXISTS idx_daily_completions_date ON daily_puzzle_completions(puzzle_date);
+
+  -- KROG activity tracking (individual events)
+  CREATE TABLE IF NOT EXISTS krog_activity (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    activity_type TEXT NOT NULL,
+    move_san TEXT,
+    r_type TEXT,
+    operator TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  -- KROG stats (denormalized for fast leaderboard queries)
+  CREATE TABLE IF NOT EXISTS krog_stats (
+    user_id TEXT PRIMARY KEY,
+    explanations_viewed INTEGER DEFAULT 0,
+    explanations_shared INTEGER DEFAULT 0,
+    unique_rtypes_seen TEXT DEFAULT '',
+    unique_operators_seen TEXT DEFAULT '',
+    last_activity_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  -- KROG indexes
+  CREATE INDEX IF NOT EXISTS idx_krog_activity_user ON krog_activity(user_id);
+  CREATE INDEX IF NOT EXISTS idx_krog_activity_type ON krog_activity(activity_type);
+  CREATE INDEX IF NOT EXISTS idx_krog_stats_views ON krog_stats(explanations_viewed);
+  CREATE INDEX IF NOT EXISTS idx_krog_stats_shares ON krog_stats(explanations_shared);
 `);
 
 // Prepared statements
@@ -1045,6 +1074,59 @@ const statements = {
     JOIN users u ON dps.user_id = u.id
     ORDER BY dps.current_streak DESC, dps.longest_streak DESC
     LIMIT ?
+  `),
+
+  // KROG activity operations
+  recordKrogActivity: db.prepare(`
+    INSERT INTO krog_activity (id, user_id, activity_type, move_san, r_type, operator)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `),
+
+  getKrogStats: db.prepare(`
+    SELECT * FROM krog_stats WHERE user_id = ?
+  `),
+
+  upsertKrogStats: db.prepare(`
+    INSERT INTO krog_stats (user_id, explanations_viewed, explanations_shared, unique_rtypes_seen, unique_operators_seen, last_activity_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(user_id) DO UPDATE SET
+      explanations_viewed = excluded.explanations_viewed,
+      explanations_shared = excluded.explanations_shared,
+      unique_rtypes_seen = excluded.unique_rtypes_seen,
+      unique_operators_seen = excluded.unique_operators_seen,
+      last_activity_at = datetime('now')
+  `),
+
+  getKrogLeaderboardByViews: db.prepare(`
+    SELECT ks.*, u.username
+    FROM krog_stats ks
+    JOIN users u ON ks.user_id = u.id
+    ORDER BY ks.explanations_viewed DESC
+    LIMIT ?
+  `),
+
+  getKrogLeaderboardByShares: db.prepare(`
+    SELECT ks.*, u.username
+    FROM krog_stats ks
+    JOIN users u ON ks.user_id = u.id
+    ORDER BY ks.explanations_shared DESC
+    LIMIT ?
+  `),
+
+  getKrogLeaderboardByRtypes: db.prepare(`
+    SELECT ks.*, u.username,
+      LENGTH(ks.unique_rtypes_seen) - LENGTH(REPLACE(ks.unique_rtypes_seen, ',', '')) +
+      CASE WHEN ks.unique_rtypes_seen != '' THEN 1 ELSE 0 END as rtype_count
+    FROM krog_stats ks
+    JOIN users u ON ks.user_id = u.id
+    ORDER BY rtype_count DESC, ks.explanations_viewed DESC
+    LIMIT ?
+  `),
+
+  getKrogRank: db.prepare(`
+    SELECT COUNT(*) + 1 as rank
+    FROM krog_stats
+    WHERE explanations_viewed > (SELECT explanations_viewed FROM krog_stats WHERE user_id = ?)
   `)
 };
 
@@ -1301,6 +1383,27 @@ export interface DailyPuzzleStreak {
   last_completed_date: string | null;
   total_completed: number;
   username?: string;
+}
+
+export interface KrogActivity {
+  id: string;
+  user_id: string;
+  activity_type: 'view' | 'share';
+  move_san: string | null;
+  r_type: string | null;
+  operator: string | null;
+  created_at: string;
+}
+
+export interface KrogStats {
+  user_id: string;
+  explanations_viewed: number;
+  explanations_shared: number;
+  unique_rtypes_seen: string;
+  unique_operators_seen: string;
+  last_activity_at: string | null;
+  username?: string;
+  rtype_count?: number;
 }
 
 // Database operations
@@ -2640,6 +2743,71 @@ export const dbOperations = {
       last_completed_date: completionDate,
       total_completed: totalCompleted
     };
+  },
+
+  // KROG activity tracking operations
+  recordKrogActivity(userId: string, activityType: 'view' | 'share', moveSan: string | null, rType: string | null, operator: string | null): void {
+    const id = uuidv4();
+    statements.recordKrogActivity.run(id, userId, activityType, moveSan, rType, operator);
+  },
+
+  getKrogStats(userId: string): KrogStats | null {
+    return statements.getKrogStats.get(userId) as KrogStats | null;
+  },
+
+  updateKrogStats(userId: string, activityType: 'view' | 'share', rType: string | null, operator: string | null): KrogStats {
+    const existing = this.getKrogStats(userId);
+
+    let views = existing?.explanations_viewed || 0;
+    let shares = existing?.explanations_shared || 0;
+    let rtypes = existing?.unique_rtypes_seen || '';
+    let operators = existing?.unique_operators_seen || '';
+
+    if (activityType === 'view') {
+      views++;
+    } else if (activityType === 'share') {
+      shares++;
+    }
+
+    // Track unique R-types
+    if (rType) {
+      const rtypeSet = new Set(rtypes ? rtypes.split(',') : []);
+      rtypeSet.add(rType);
+      rtypes = Array.from(rtypeSet).filter(Boolean).join(',');
+    }
+
+    // Track unique operators
+    if (operator) {
+      const operatorSet = new Set(operators ? operators.split(',') : []);
+      operatorSet.add(operator);
+      operators = Array.from(operatorSet).filter(Boolean).join(',');
+    }
+
+    statements.upsertKrogStats.run(userId, views, shares, rtypes, operators);
+
+    return {
+      user_id: userId,
+      explanations_viewed: views,
+      explanations_shared: shares,
+      unique_rtypes_seen: rtypes,
+      unique_operators_seen: operators,
+      last_activity_at: new Date().toISOString()
+    };
+  },
+
+  getKrogLeaderboard(type: 'views' | 'shares' | 'rtypes', limit: number = 50): KrogStats[] {
+    if (type === 'views') {
+      return statements.getKrogLeaderboardByViews.all(limit) as KrogStats[];
+    } else if (type === 'shares') {
+      return statements.getKrogLeaderboardByShares.all(limit) as KrogStats[];
+    } else {
+      return statements.getKrogLeaderboardByRtypes.all(limit) as KrogStats[];
+    }
+  },
+
+  getKrogRank(userId: string): number {
+    const result = statements.getKrogRank.get(userId) as { rank: number } | null;
+    return result?.rank || 0;
   }
 };
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Socket } from 'socket.io-client';
 
 interface Condition {
   name: string;
@@ -36,6 +37,7 @@ interface MoveExplanationModalProps {
   onClose: () => void;
   data: MoveExplanationData | null;
   language: 'en' | 'no';
+  socket?: Socket;
 }
 
 // FIDE articles for common moves (expanded from existing patterns)
@@ -55,8 +57,25 @@ const OPERATOR_DESCRIPTIONS: Record<string, { en: string; no: string }> = {
   'F': { en: 'Forbidden (must not do)', no: 'Forbudt (kan ikke gjore)' }
 };
 
-export default function MoveExplanationModal({ isOpen, onClose, data, language }: MoveExplanationModalProps) {
+export default function MoveExplanationModal({ isOpen, onClose, data, language, socket }: MoveExplanationModalProps) {
   const [showCopied, setShowCopied] = useState(false);
+  const hasTrackedView = useRef(false);
+
+  // Track view when modal opens
+  useEffect(() => {
+    if (isOpen && data && socket && !hasTrackedView.current) {
+      socket.emit('track_krog_view', {
+        rType: data.krog.rType,
+        operator: data.krog.operator,
+        moveSan: data.move
+      });
+      hasTrackedView.current = true;
+    }
+    // Reset tracking flag when modal closes
+    if (!isOpen) {
+      hasTrackedView.current = false;
+    }
+  }, [isOpen, data, socket]);
 
   if (!isOpen || !data) return null;
 
@@ -90,6 +109,15 @@ Learn chess with KROG formulas!`;
     navigator.clipboard.writeText(generateShareText());
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
+
+    // Track share event
+    if (socket && data) {
+      socket.emit('track_krog_share', {
+        rType: data.krog.rType,
+        operator: data.krog.operator,
+        moveSan: data.move
+      });
+    }
   };
 
   return (

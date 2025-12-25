@@ -16,6 +16,7 @@ import { ClubsPanel } from './components/ClubsPanel';
 import { TournamentPanel } from './components/TournamentPanel';
 import { LeaguePanel } from './components/LeaguePanel';
 import MoveExplanationModal from './components/MoveExplanationModal';
+import KrogLeaderboard from './components/KrogLeaderboard';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -181,6 +182,7 @@ function App() {
   const [dailyPuzzleMode, setDailyPuzzleMode] = useState(false);
   const [openingExplorer, setOpeningExplorer] = useState(false);
   const [lessonsMode, setLessonsMode] = useState(false);
+  const [showKrogLeaderboard, setShowKrogLeaderboard] = useState(false);
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     const saved = localStorage.getItem('krog-board-theme');
     if (saved) {
@@ -1547,6 +1549,30 @@ function App() {
               <span style={{ fontSize: '1.2rem' }}>📋</span>
               Import PGN
             </button>
+
+            <button
+              onClick={() => setShowKrogLeaderboard(true)}
+              style={{
+                flex: '1 1 calc(50% - 5px)',
+                minWidth: '100px',
+                background: 'linear-gradient(135deg, #81b64c 0%, #5d8c3a 100%)',
+                border: 'none',
+                color: 'white',
+                padding: '15px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: '1rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>{'\u{1F3C6}'}</span>
+              KROG
+            </button>
           </div>
 
           {/* PGN Import Modal */}
@@ -1653,6 +1679,14 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* KROG Leaderboard - Lobby */}
+        <KrogLeaderboard
+          isOpen={showKrogLeaderboard}
+          onClose={() => setShowKrogLeaderboard(false)}
+          socket={socket}
+          language={language}
+        />
       </div>
     );
   }
@@ -3157,6 +3191,15 @@ function App() {
         isOpen={explainModalOpen}
         onClose={() => setExplainModalOpen(false)}
         data={explainModalData}
+        language={language}
+        socket={socket}
+      />
+
+      {/* KROG Leaderboard */}
+      <KrogLeaderboard
+        isOpen={showKrogLeaderboard}
+        onClose={() => setShowKrogLeaderboard(false)}
+        socket={socket}
         language={language}
       />
     </div>
