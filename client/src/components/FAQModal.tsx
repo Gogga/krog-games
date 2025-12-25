@@ -1,6 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 type Language = 'en' | 'no';
+
+// Hook to detect mobile screen
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
 
 interface FAQItem {
   question: { en: string; no: string };
@@ -244,6 +257,7 @@ interface FAQModalProps {
 export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set([0]));
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const isMobile = useIsMobile();
 
   if (!isOpen) return null;
 
@@ -283,19 +297,19 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
         background: 'rgba(0, 0, 0, 0.85)',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-end' : 'center',
         zIndex: 1000,
-        padding: '20px'
+        padding: isMobile ? '0' : '20px'
       }}
       onClick={onClose}
     >
       <div
         style={{
           background: 'var(--bg-secondary, #1a1a1a)',
-          borderRadius: '16px',
-          maxWidth: '700px',
+          borderRadius: isMobile ? '16px 16px 0 0' : '16px',
+          maxWidth: isMobile ? '100%' : '700px',
           width: '100%',
-          maxHeight: '85vh',
+          maxHeight: isMobile ? '90vh' : '85vh',
           overflow: 'hidden',
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           display: 'flex',
@@ -306,7 +320,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
         {/* Header */}
         <div
           style={{
-            padding: '20px 24px',
+            padding: isMobile ? '16px' : '20px 24px',
             borderBottom: '1px solid #333',
             display: 'flex',
             justifyContent: 'space-between',
@@ -314,9 +328,15 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
             background: 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)'
           }}
         >
-          <h2 style={{ margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.8rem' }}>{'\u2753'}</span>
-            {language === 'en' ? 'Frequently Asked Questions' : 'Ofte stilte spørsmål'}
+          <h2 style={{
+            margin: 0,
+            fontSize: isMobile ? '1.1rem' : '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '8px' : '10px'
+          }}>
+            <span style={{ fontSize: isMobile ? '1.4rem' : '1.8rem' }}>{'\u2753'}</span>
+            {language === 'en' ? (isMobile ? 'FAQ' : 'Frequently Asked Questions') : (isMobile ? 'FAQ' : 'Ofte stilte spørsmål')}
           </h2>
           <button
             onClick={onClose}
@@ -324,10 +344,15 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
               background: 'transparent',
               border: 'none',
               color: '#888',
-              fontSize: '1.5rem',
+              fontSize: isMobile ? '1.3rem' : '1.5rem',
               cursor: 'pointer',
-              padding: '5px',
-              lineHeight: 1
+              padding: isMobile ? '8px' : '5px',
+              lineHeight: 1,
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             {'\u2715'}
@@ -337,9 +362,10 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
         {/* Content */}
         <div
           style={{
-            padding: '16px 24px',
+            padding: isMobile ? '12px' : '16px 24px',
             overflowY: 'auto',
-            flex: 1
+            flex: 1,
+            WebkitOverflowScrolling: 'touch'
           }}
         >
           {faqData.map((category, catIndex) => (
@@ -354,15 +380,16 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
                     : '#2d2d2d',
                   border: 'none',
                   color: 'white',
-                  padding: '14px 16px',
+                  padding: isMobile ? '12px 14px' : '14px 16px',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  fontSize: '1.1rem',
+                  fontSize: isMobile ? '0.95rem' : '1.1rem',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  minHeight: '44px'
                 }}
               >
                 <span>{category.title[language]}</span>
@@ -376,7 +403,7 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
 
               {/* Category Items */}
               {expandedCategories.has(catIndex) && (
-                <div style={{ marginTop: '8px', paddingLeft: '8px' }}>
+                <div style={{ marginTop: '8px', paddingLeft: isMobile ? '4px' : '8px' }}>
                   {category.items.map((item, itemIndex) => {
                     const itemKey = `${catIndex}-${itemIndex}`;
                     const isExpanded = expandedItems.has(itemKey);
@@ -399,23 +426,25 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
                             background: 'transparent',
                             border: 'none',
                             color: isExpanded ? '#81b64c' : '#ddd',
-                            padding: '12px 14px',
+                            padding: isMobile ? '12px' : '12px 14px',
                             cursor: 'pointer',
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center',
-                            fontSize: '0.95rem',
+                            alignItems: 'flex-start',
+                            fontSize: isMobile ? '0.9rem' : '0.95rem',
                             fontWeight: 500,
                             textAlign: 'left',
-                            gap: '12px'
+                            gap: isMobile ? '8px' : '12px',
+                            minHeight: '44px'
                           }}
                         >
-                          <span>{item.question[language]}</span>
+                          <span style={{ flex: 1 }}>{item.question[language]}</span>
                           <span style={{
                             flexShrink: 0,
                             transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)',
                             transition: 'transform 0.2s ease',
-                            fontSize: '1.2rem'
+                            fontSize: isMobile ? '1.1rem' : '1.2rem',
+                            marginTop: '2px'
                           }}>
                             +
                           </span>
@@ -425,9 +454,9 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
                         {isExpanded && (
                           <div
                             style={{
-                              padding: '0 14px 14px 14px',
+                              padding: isMobile ? '0 12px 12px 12px' : '0 14px 14px 14px',
                               color: '#aaa',
-                              fontSize: '0.9rem',
+                              fontSize: isMobile ? '0.85rem' : '0.9rem',
                               lineHeight: 1.6,
                               borderTop: '1px solid #333'
                             }}
@@ -449,12 +478,12 @@ export const FAQModal: React.FC<FAQModalProps> = ({ isOpen, onClose, language })
         {/* Footer */}
         <div
           style={{
-            padding: '16px 24px',
+            padding: isMobile ? '14px 16px' : '16px 24px',
             borderTop: '1px solid #333',
             background: '#1a1a1a',
             textAlign: 'center',
             color: '#666',
-            fontSize: '0.85rem'
+            fontSize: isMobile ? '0.8rem' : '0.85rem'
           }}
         >
           {language === 'en'
