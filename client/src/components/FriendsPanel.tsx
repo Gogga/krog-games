@@ -1,6 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 
+// Hook to detect mobile viewport
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
 interface Friend {
   id: string;
   username: string;
@@ -31,6 +44,7 @@ interface FriendsPanelProps {
 }
 
 export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPanelProps) {
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
@@ -146,18 +160,19 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
           background: isOpen ? '#2980b9' : 'transparent',
           border: '1px solid #444',
           color: 'white',
-          padding: '8px 16px',
+          padding: isMobile ? '10px 12px' : '8px 16px',
           borderRadius: '6px',
           cursor: 'pointer',
           fontFamily: 'inherit',
-          fontSize: '0.9rem',
+          fontSize: isMobile ? '0.85rem' : '0.9rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: isMobile ? '6px' : '8px',
+          minHeight: isMobile ? '44px' : 'auto'
         }}
       >
-        <span style={{ fontSize: '1rem' }}>&#128101;</span>
-        {language === 'en' ? 'Friends' : 'Venner'}
+        <span style={{ fontSize: isMobile ? '1.1rem' : '1rem' }}>&#128101;</span>
+        {isMobile ? '' : (language === 'en' ? 'Friends' : 'Venner')}
         {totalRequests > 0 && (
           <span style={{
             background: '#e74c3c',
@@ -175,21 +190,72 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
         )}
       </button>
 
+      {/* Mobile overlay backdrop */}
+      {isOpen && isMobile && (
+        <div
+          onClick={() => setIsOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 99
+          }}
+        />
+      )}
+
       {isOpen && (
         <div style={{
-          position: 'absolute',
-          top: '100%',
-          right: 0,
-          width: '320px',
-          maxHeight: '450px',
+          position: isMobile ? 'fixed' : 'absolute',
+          top: isMobile ? 'auto' : '100%',
+          bottom: isMobile ? 0 : 'auto',
+          left: isMobile ? 0 : 'auto',
+          right: isMobile ? 0 : 0,
+          width: isMobile ? '100%' : '320px',
+          maxHeight: isMobile ? '70vh' : '450px',
           background: 'var(--bg-secondary)',
-          border: '1px solid #444',
-          borderRadius: '8px',
+          border: isMobile ? 'none' : '1px solid #444',
+          borderRadius: isMobile ? '16px 16px 0 0' : '8px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           zIndex: 100,
-          marginTop: '8px',
+          marginTop: isMobile ? 0 : '8px',
           overflow: 'hidden'
         }}>
+          {/* Mobile header with close button */}
+          {isMobile && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderBottom: '1px solid #333'
+            }}>
+              <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                {language === 'en' ? 'Friends' : 'Venner'}
+              </span>
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#888',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
           {/* Tabs */}
           <div style={{
             display: 'flex',
@@ -205,18 +271,19 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                 onClick={() => setActiveTab(tab.key as typeof activeTab)}
                 style={{
                   flex: 1,
-                  padding: '12px 8px',
+                  padding: isMobile ? '14px 8px' : '12px 8px',
                   background: activeTab === tab.key ? 'var(--bg-primary)' : 'transparent',
                   border: 'none',
                   borderBottom: activeTab === tab.key ? '2px solid #3498db' : '2px solid transparent',
                   color: activeTab === tab.key ? 'white' : '#888',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
-                  fontSize: '0.85rem',
+                  fontSize: isMobile ? '0.9rem' : '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  minHeight: isMobile ? '48px' : 'auto'
                 }}
               >
                 {tab.label}
@@ -237,16 +304,17 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
 
           {/* Content */}
           <div style={{
-            maxHeight: '350px',
+            maxHeight: isMobile ? 'calc(70vh - 120px)' : '350px',
             overflowY: 'auto',
-            padding: '12px'
+            padding: isMobile ? '16px' : '12px',
+            WebkitOverflowScrolling: 'touch'
           }}>
             {/* Friends Tab */}
             {activeTab === 'friends' && (
               <>
                 {friends.length === 0 ? (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
-                    {language === 'en' ? 'No friends yet. Search to add friends!' : 'Ingen venner enda. Sok for a legge til venner!'}
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
+                    {language === 'en' ? 'No friends yet. Search to add!' : 'Ingen venner enda. Sok for a legge til!'}
                   </div>
                 ) : (
                   friends.map(friend => (
@@ -256,55 +324,58 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px',
+                        padding: isMobile ? '12px' : '10px',
                         background: 'var(--bg-primary)',
                         borderRadius: '6px',
-                        marginBottom: '8px'
+                        marginBottom: isMobile ? '10px' : '8px'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '10px', flex: 1, minWidth: 0 }}>
                         <div style={{
-                          width: '8px',
-                          height: '8px',
+                          width: isMobile ? '10px' : '8px',
+                          height: isMobile ? '10px' : '8px',
                           borderRadius: '50%',
-                          background: friend.online ? '#2ecc71' : '#666'
+                          background: friend.online ? '#2ecc71' : '#666',
+                          flexShrink: 0
                         }} />
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{friend.username}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#888' }}>
-                            {friend.rating} rating
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{friend.username}</div>
+                          <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
+                            {friend.rating}
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                         {onChallengeFriend && friend.online && (
                           <button
                             onClick={() => onChallengeFriend(friend.id, friend.username)}
                             style={{
-                              padding: '6px 10px',
+                              padding: isMobile ? '10px 14px' : '6px 10px',
                               background: '#81b64c',
                               border: 'none',
                               borderRadius: '4px',
                               color: 'white',
                               cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              fontFamily: 'inherit'
+                              fontSize: isMobile ? '0.8rem' : '0.75rem',
+                              fontFamily: 'inherit',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           >
-                            {language === 'en' ? 'Challenge' : 'Utfordre'}
+                            {isMobile ? '⚔️' : (language === 'en' ? 'Challenge' : 'Utfordre')}
                           </button>
                         )}
                         <button
                           onClick={() => removeFriend(friend.id)}
                           style={{
-                            padding: '6px 10px',
+                            padding: isMobile ? '10px 14px' : '6px 10px',
                             background: 'transparent',
                             border: '1px solid #666',
                             borderRadius: '4px',
                             color: '#888',
                             cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontFamily: 'inherit'
+                            fontSize: isMobile ? '0.8rem' : '0.75rem',
+                            fontFamily: 'inherit',
+                            minHeight: isMobile ? '44px' : 'auto'
                           }}
                           title={language === 'en' ? 'Remove friend' : 'Fjern venn'}
                         >
@@ -322,7 +393,7 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
               <>
                 {incomingRequests.length > 0 && (
                   <>
-                    <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '8px' }}>
+                    <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888', marginBottom: '8px' }}>
                       {language === 'en' ? 'Incoming' : 'Innkommende'}
                     </div>
                     {incomingRequests.map(request => (
@@ -332,31 +403,32 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          padding: '10px',
+                          padding: isMobile ? '12px' : '10px',
                           background: 'var(--bg-primary)',
                           borderRadius: '6px',
-                          marginBottom: '8px',
+                          marginBottom: isMobile ? '10px' : '8px',
                           border: '1px solid #3498db'
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{request.username}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#888' }}>
-                            {request.rating} rating
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1rem' }}>{request.username}</div>
+                          <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
+                            {request.rating}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                           <button
                             onClick={() => acceptRequest(request.request_id)}
                             style={{
-                              padding: '6px 12px',
+                              padding: isMobile ? '10px 16px' : '6px 12px',
                               background: '#2ecc71',
                               border: 'none',
                               borderRadius: '4px',
                               color: 'white',
                               cursor: 'pointer',
-                              fontSize: '0.8rem',
-                              fontFamily: 'inherit'
+                              fontSize: isMobile ? '0.9rem' : '0.8rem',
+                              fontFamily: 'inherit',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           >
                             &#10003;
@@ -364,14 +436,15 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                           <button
                             onClick={() => declineRequest(request.request_id)}
                             style={{
-                              padding: '6px 12px',
+                              padding: isMobile ? '10px 16px' : '6px 12px',
                               background: '#e74c3c',
                               border: 'none',
                               borderRadius: '4px',
                               color: 'white',
                               cursor: 'pointer',
-                              fontSize: '0.8rem',
-                              fontFamily: 'inherit'
+                              fontSize: isMobile ? '0.9rem' : '0.8rem',
+                              fontFamily: 'inherit',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           >
                             &#10005;
@@ -384,7 +457,7 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
 
                 {outgoingRequests.length > 0 && (
                   <>
-                    <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '16px', marginBottom: '8px' }}>
+                    <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888', marginTop: isMobile ? '12px' : '16px', marginBottom: '8px' }}>
                       {language === 'en' ? 'Sent' : 'Sendt'}
                     </div>
                     {outgoingRequests.map(request => (
@@ -394,30 +467,31 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          padding: '10px',
+                          padding: isMobile ? '12px' : '10px',
                           background: 'var(--bg-primary)',
                           borderRadius: '6px',
-                          marginBottom: '8px',
+                          marginBottom: isMobile ? '10px' : '8px',
                           opacity: 0.7
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{request.username}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1rem' }}>{request.username}</div>
+                          <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
                             {language === 'en' ? 'Pending...' : 'Venter...'}
                           </div>
                         </div>
                         <button
                           onClick={() => declineRequest(request.request_id)}
                           style={{
-                            padding: '6px 12px',
+                            padding: isMobile ? '10px 14px' : '6px 12px',
                             background: 'transparent',
                             border: '1px solid #666',
                             borderRadius: '4px',
                             color: '#888',
                             cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontFamily: 'inherit'
+                            fontSize: isMobile ? '0.8rem' : '0.75rem',
+                            fontFamily: 'inherit',
+                            minHeight: isMobile ? '44px' : 'auto'
                           }}
                         >
                           {language === 'en' ? 'Cancel' : 'Avbryt'}
@@ -428,7 +502,7 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                 )}
 
                 {incomingRequests.length === 0 && outgoingRequests.length === 0 && (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                     {language === 'en' ? 'No pending requests' : 'Ingen ventende foresporrsler'}
                   </div>
                 )}
@@ -438,7 +512,7 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
             {/* Search Tab */}
             {activeTab === 'search' && (
               <>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: isMobile ? '16px' : '12px' }}>
                   <input
                     type="text"
                     value={searchQuery}
@@ -447,26 +521,29 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                     placeholder={language === 'en' ? 'Search username...' : 'Sok brukernavn...'}
                     style={{
                       flex: 1,
-                      padding: '10px 12px',
+                      padding: isMobile ? '12px 14px' : '10px 12px',
                       borderRadius: '6px',
                       border: '1px solid #444',
                       background: 'var(--bg-primary)',
                       color: 'white',
                       fontFamily: 'inherit',
-                      fontSize: '0.9rem'
+                      fontSize: isMobile ? '1rem' : '0.9rem',
+                      minHeight: isMobile ? '44px' : 'auto'
                     }}
                   />
                   <button
                     onClick={handleSearch}
                     disabled={searchQuery.trim().length < 2}
                     style={{
-                      padding: '10px 16px',
+                      padding: isMobile ? '12px 18px' : '10px 16px',
                       background: searchQuery.trim().length >= 2 ? '#3498db' : '#555',
                       border: 'none',
                       borderRadius: '6px',
                       color: 'white',
                       cursor: searchQuery.trim().length >= 2 ? 'pointer' : 'not-allowed',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      minHeight: isMobile ? '44px' : 'auto',
+                      fontSize: isMobile ? '1.1rem' : '1rem'
                     }}
                   >
                     &#128269;
@@ -474,7 +551,7 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                 </div>
 
                 {isSearching && (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                     {language === 'en' ? 'Searching...' : 'Soker...'}
                   </div>
                 )}
@@ -487,48 +564,49 @@ export function FriendsPanel({ socket, language, onChallengeFriend }: FriendsPan
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px',
+                        padding: isMobile ? '12px' : '10px',
                         background: 'var(--bg-primary)',
                         borderRadius: '6px',
-                        marginBottom: '8px'
+                        marginBottom: isMobile ? '10px' : '8px'
                       }}
                     >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{user.username}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#888' }}>
-                          {user.rating} rating
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1rem' }}>{user.username}</div>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
+                          {user.rating}
                         </div>
                       </div>
                       <button
                         onClick={() => sendFriendRequest(user.id)}
                         style={{
-                          padding: '6px 12px',
+                          padding: isMobile ? '10px 16px' : '6px 12px',
                           background: '#3498db',
                           border: 'none',
                           borderRadius: '4px',
                           color: 'white',
                           cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          fontFamily: 'inherit'
+                          fontSize: isMobile ? '0.85rem' : '0.8rem',
+                          fontFamily: 'inherit',
+                          minHeight: isMobile ? '44px' : 'auto'
                         }}
                       >
-                        {language === 'en' ? 'Add Friend' : 'Legg til'}
+                        {language === 'en' ? 'Add' : 'Legg til'}
                       </button>
                     </div>
                   ))
                 )}
 
                 {!isSearching && searchResults.length === 0 && searchQuery.length >= 2 && (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                     {language === 'en' ? 'No users found' : 'Ingen brukere funnet'}
                   </div>
                 )}
 
                 {searchQuery.length < 2 && (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: '0.9rem' }}>
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
                     {language === 'en'
-                      ? 'Enter at least 2 characters to search'
-                      : 'Skriv minst 2 tegn for a soke'}
+                      ? 'Enter at least 2 characters'
+                      : 'Skriv minst 2 tegn'}
                   </div>
                 )}
               </>
