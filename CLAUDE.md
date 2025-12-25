@@ -8,7 +8,7 @@
 
 **What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
 
-**Documentation:** `docs/FEATURES.md` - Complete feature list. `docs/ROADMAP.md` - Development roadmap.
+**Documentation:** `docs/FEATURES.md` - Complete feature list. `docs/ROADMAP.md` - Development roadmap. `docs/FAQ.md` - Comprehensive FAQ.
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
