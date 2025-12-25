@@ -19,6 +19,7 @@ import { LeaguePanel } from './components/LeaguePanel';
 import MoveExplanationModal from './components/MoveExplanationModal';
 import KrogLeaderboard from './components/KrogLeaderboard';
 import FAQModal from './components/FAQModal';
+import { MobileNav } from './components/MobileNav';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -187,6 +188,7 @@ function App() {
   const [lessonsMode, setLessonsMode] = useState(false);
   const [showKrogLeaderboard, setShowKrogLeaderboard] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [mobileNavTab, setMobileNavTab] = useState('home');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     const saved = localStorage.getItem('krog-board-theme');
     if (saved) {
@@ -695,6 +697,43 @@ function App() {
     setShowComputerOptions(false);
     setSpectators([]);
     setChatMessages([]);
+  };
+
+  // Mobile navigation tab change handler
+  const handleMobileNavChange = (tabId: string) => {
+    setMobileNavTab(tabId);
+    // Navigate based on tab
+    switch (tabId) {
+      case 'home':
+        // Reset to lobby
+        setPuzzleMode(false);
+        setDailyPuzzleMode(false);
+        setOpeningExplorer(false);
+        setLessonsMode(false);
+        setShowKrogLeaderboard(false);
+        break;
+      case 'daily':
+        setDailyPuzzleMode(true);
+        setPuzzleMode(false);
+        setOpeningExplorer(false);
+        setLessonsMode(false);
+        setShowKrogLeaderboard(false);
+        break;
+      case 'krog':
+        setShowKrogLeaderboard(true);
+        setPuzzleMode(false);
+        setDailyPuzzleMode(false);
+        setOpeningExplorer(false);
+        setLessonsMode(false);
+        break;
+      case 'profile':
+        // Open auth modal if not logged in, otherwise just scroll to profile area
+        setShowAuthModal(true);
+        break;
+      default:
+        break;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleMove = (move: { from: string; to: string; promotion?: string }) => {
@@ -3338,6 +3377,12 @@ function App() {
         isOpen={showFAQ}
         onClose={() => setShowFAQ(false)}
         language={language}
+      />
+
+      {/* Mobile Navigation */}
+      <MobileNav
+        activeTab={mobileNavTab}
+        onTabChange={handleMobileNavChange}
       />
     </div>
   );
