@@ -4,7 +4,7 @@
 
 **Current State:** Production-ready multiplayer chess platform with complete feature set including user accounts, ELO rating, matchmaking, chess variants, AI opponent, KROG rule explanations, educational content, full social features, clubs, tournaments, and leagues.
 
-**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, "Explain This Move" button with shareable KROG explanations, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
+**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, "Explain This Move" button with shareable KROG explanations, KROG Leaderboard with gamification badges, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
 
 **What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
 
@@ -20,7 +20,7 @@
 
 ### User Accounts & Rating (Phase 2)
 - [x] User registration/login with JWT authentication
-- [x] SQLite database (users, games, rating_history, matchmaking_queue, daily_puzzles, daily_puzzle_completions, daily_puzzle_streaks)
+- [x] SQLite database (users, games, rating_history, matchmaking_queue, daily_puzzles, daily_puzzle_completions, daily_puzzle_streaks, krog_activity, krog_stats)
 - [x] ELO rating system (K=32, starting rating 1200)
 - [x] Profile panel with stats (rating, games, wins, win rate)
 - [x] Leaderboard (top players by rating)
@@ -168,6 +168,22 @@
 - [x] Share Explanation button (copy to clipboard)
 - [x] Shareable text format for social media
 
+### KROG Leaderboard
+- [x] Track KROG explanation views per user
+- [x] Track KROG explanation shares per user
+- [x] Track unique R-types learned (15 total)
+- [x] Leaderboard with 3 tabs (Views, Shares, R-Types)
+- [x] User stats panel with current rank
+- [x] Badge system with 6 achievement badges:
+  - 📚 KROG Novice (10 views)
+  - 📖 KROG Learner (50 views)
+  - 🎓 KROG Expert (200 views)
+  - 🏅 KROG Master (15/15 R-types)
+  - 📤 KROG Educator (50 shares)
+  - 🌟 KROG Ambassador (200 shares)
+- [x] Real-time tracking via Socket.IO
+- [x] Database tables: krog_activity, krog_stats
+
 ### UI/UX Polish
 - [x] Board themes (8 color schemes: Classic, Green, Blue, Purple, Gray, Wood, Ice, Tournament)
 - [x] Theme selector with visual previews
@@ -202,6 +218,7 @@ chess-project/
 │   │   │   ├── PuzzleMode.tsx   # Tactical puzzles
 │   │   │   ├── DailyPuzzle.tsx  # Daily puzzle with KROG explanations
 │   │   │   ├── MoveExplanationModal.tsx # Explain This Move modal
+│   │   │   ├── KrogLeaderboard.tsx # KROG gamification leaderboard
 │   │   │   ├── OpeningExplorer.tsx # Opening tree browser
 │   │   │   ├── LessonsMode.tsx  # Interactive lessons with quizzes
 │   │   │   ├── AuthModal.tsx    # Login/Register modal
@@ -488,6 +505,19 @@ chess-project/
 }
 ```
 
+### KROG Leaderboard
+```typescript
+// Client → Server
+'track_krog_view'      → { rType: string, operator: string, moveSan: string }
+'track_krog_share'     → { rType: string, operator: string, moveSan: string }
+'get_krog_leaderboard' → { type: 'views' | 'shares' | 'rtypes' }
+'get_krog_stats'       → void
+
+// Server → Client
+'krog_leaderboard'     → { type: string, leaderboard: KrogStats[] }
+'krog_stats'           → { stats: KrogStats | null, rank: number }
+```
+
 ---
 
 ## Running the Project
@@ -582,6 +612,7 @@ Open 2+ browser tabs to http://localhost:5173
 - Leagues with divisions, promotion/relegation
 - Daily puzzle with KROG explanations and streak tracking
 - Explain This Move button with shareable KROG explanations
+- KROG Leaderboard with gamification badges
 - PGN import/export
 
 ---
