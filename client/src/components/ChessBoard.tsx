@@ -3,6 +3,31 @@ import { Chess } from 'chess.js';
 import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
 
+// Hook to detect mobile viewport and calculate board size
+const useResponsiveBoard = () => {
+    const [dimensions, setDimensions] = useState(() => {
+        const width = window.innerWidth;
+        const isMobile = width < 768;
+        // On mobile, use almost full width minus padding
+        // On desktop, use fixed 600px
+        const boardSize = isMobile ? Math.min(width - 16, 400) : 600;
+        return { isMobile, boardSize };
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            const width = window.innerWidth;
+            const isMobile = width < 768;
+            const boardSize = isMobile ? Math.min(width - 16, 400) : 600;
+            setDimensions({ isMobile, boardSize });
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return dimensions;
+};
+
 interface PotentialMoveExplanation {
     from: string;
     to: string;
@@ -218,6 +243,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     theme = BOARD_THEMES[0],
     pieceTheme = PIECE_THEMES[0]
 }) => {
+    const { isMobile, boardSize } = useResponsiveBoard();
+    const squareSize = boardSize / 8;
+
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
     const [optionSquares, setOptionSquares] = useState<Square[]>([]);
     const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
@@ -400,15 +428,17 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         <div style={{ position: 'relative' }}>
         <div
             onMouseLeave={handleBoardLeave}
+            onTouchEnd={isMobile ? handleBoardLeave : undefined}
             style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(8, 1fr)',
-                width: '600px',
-                height: '600px',
-                border: '5px solid #333',
-                borderRadius: '4px',
+                width: `${boardSize}px`,
+                height: `${boardSize}px`,
+                border: isMobile ? '3px solid #333' : '5px solid #333',
+                borderRadius: isMobile ? '6px' : '4px',
                 overflow: 'hidden',
-                position: 'relative'
+                position: 'relative',
+                touchAction: 'manipulation'
             }}
         >
             {board.map((square, index) => {
@@ -476,8 +506,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         {/* Helper dot for valid moves */}
                         {isOption && !piece && (
                             <div style={{
-                                width: '20px',
-                                height: '20px',
+                                width: `${squareSize * 0.28}px`,
+                                height: `${squareSize * 0.28}px`,
                                 borderRadius: '50%',
                                 backgroundColor: 'rgba(0,0,0,0.2)',
                                 zIndex: 1
@@ -490,7 +520,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 position: 'absolute',
                                 width: '100%',
                                 height: '100%',
-                                border: '4px solid rgba(0,0,0,0.2)',
+                                border: `${isMobile ? 3 : 4}px solid rgba(0,0,0,0.2)`,
                                 borderRadius: '50%',
                                 boxSizing: 'border-box',
                                 zIndex: 1
@@ -529,9 +559,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         {col === 0 && (
                             <span style={{
                                 position: 'absolute',
-                                top: 2,
-                                left: 2,
-                                fontSize: '10px',
+                                top: isMobile ? 1 : 2,
+                                left: isMobile ? 1 : 2,
+                                fontSize: isMobile ? '8px' : '10px',
                                 fontWeight: 'bold',
                                 color: isDark ? theme.light : theme.dark
                             }}>
@@ -541,9 +571,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         {row === 7 && (
                             <span style={{
                                 position: 'absolute',
-                                bottom: 2,
-                                right: 2,
-                                fontSize: '10px',
+                                bottom: isMobile ? 1 : 2,
+                                right: isMobile ? 1 : 2,
+                                fontSize: isMobile ? '8px' : '10px',
                                 fontWeight: 'bold',
                                 color: isDark ? theme.light : theme.dark
                             }}>
@@ -574,8 +604,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                     <div
                         style={{
                             background: '#2d2d2d',
-                            borderRadius: '12px',
-                            padding: '20px',
+                            borderRadius: isMobile ? '14px' : '12px',
+                            padding: isMobile ? '16px' : '20px',
                             boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
                         }}
                         onClick={(e) => e.stopPropagation()}
@@ -583,41 +613,53 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         <div style={{
                             color: '#888',
                             textAlign: 'center',
-                            marginBottom: '15px',
-                            fontSize: '0.9rem'
+                            marginBottom: isMobile ? '12px' : '15px',
+                            fontSize: isMobile ? '0.85rem' : '0.9rem'
                         }}>
                             Choose promotion piece
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: isMobile ? '8px' : '10px' }}>
                             {PROMOTION_PIECES.map((piece) => (
                                 <button
                                     key={piece}
                                     onClick={() => handlePromotionSelect(piece)}
                                     style={{
-                                        width: '70px',
-                                        height: '70px',
+                                        width: isMobile ? `${squareSize * 0.9}px` : '70px',
+                                        height: isMobile ? `${squareSize * 0.9}px` : '70px',
+                                        minWidth: isMobile ? '50px' : '70px',
+                                        minHeight: isMobile ? '50px' : '70px',
                                         border: '2px solid #444',
-                                        borderRadius: '8px',
+                                        borderRadius: isMobile ? '10px' : '8px',
                                         background: '#3d3d3d',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         justifyContent: 'center',
                                         alignItems: 'center',
-                                        transition: 'all 0.15s ease'
+                                        transition: 'all 0.15s ease',
+                                        WebkitTapHighlightColor: 'transparent'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = '#4d4d4d';
-                                        e.currentTarget.style.borderColor = '#81b64c';
+                                        if (!isMobile) {
+                                            e.currentTarget.style.background = '#4d4d4d';
+                                            e.currentTarget.style.borderColor = '#81b64c';
+                                        }
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = '#3d3d3d';
-                                        e.currentTarget.style.borderColor = '#444';
+                                        if (!isMobile) {
+                                            e.currentTarget.style.background = '#3d3d3d';
+                                            e.currentTarget.style.borderColor = '#444';
+                                        }
                                     }}
                                 >
                                     <img
                                         src={pieceTheme.pieces[pendingPromotion.color][piece]}
                                         alt={piece}
-                                        style={{ width: '55px', height: '55px' }}
+                                        style={{
+                                            width: isMobile ? `${squareSize * 0.7}px` : '55px',
+                                            height: isMobile ? `${squareSize * 0.7}px` : '55px',
+                                            minWidth: isMobile ? '40px' : '55px',
+                                            minHeight: isMobile ? '40px' : '55px'
+                                        }}
                                     />
                                 </button>
                             ))}
@@ -625,18 +667,18 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         <div style={{
                             color: '#666',
                             textAlign: 'center',
-                            marginTop: '12px',
-                            fontSize: '0.8rem'
+                            marginTop: isMobile ? '10px' : '12px',
+                            fontSize: isMobile ? '0.75rem' : '0.8rem'
                         }}>
-                            Click outside to cancel
+                            {isMobile ? 'Tap outside to cancel' : 'Click outside to cancel'}
                         </div>
                     </div>
                 </div>
             )}
         </div>
 
-            {/* Learn Mode Tooltip */}
-            {learnMode && hoverExplanation && tooltipPosition && (
+            {/* Learn Mode Tooltip - Hidden on mobile since hover doesn't work well */}
+            {learnMode && hoverExplanation && tooltipPosition && !isMobile && (
                 <div
                     style={{
                         position: 'fixed',
