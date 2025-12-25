@@ -17,6 +17,7 @@ import { TournamentPanel } from './components/TournamentPanel';
 import { LeaguePanel } from './components/LeaguePanel';
 import MoveExplanationModal from './components/MoveExplanationModal';
 import KrogLeaderboard from './components/KrogLeaderboard';
+import FAQModal from './components/FAQModal';
 import { getStoredToken } from './api/auth';
 import './index.css';
 
@@ -183,6 +184,7 @@ function App() {
   const [openingExplorer, setOpeningExplorer] = useState(false);
   const [lessonsMode, setLessonsMode] = useState(false);
   const [showKrogLeaderboard, setShowKrogLeaderboard] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
     const saved = localStorage.getItem('krog-board-theme');
     if (saved) {
@@ -1573,6 +1575,30 @@ function App() {
               <span style={{ fontSize: '1.2rem' }}>{'\u{1F3C6}'}</span>
               KROG
             </button>
+
+            <button
+              onClick={() => setShowFAQ(true)}
+              style={{
+                flex: '1 1 calc(50% - 5px)',
+                minWidth: '100px',
+                background: 'linear-gradient(135deg, #6c5ce7 0%, #5541d7 100%)',
+                border: 'none',
+                color: 'white',
+                padding: '15px 12px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: '1rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>{'\u2753'}</span>
+              {language === 'en' ? 'Help / FAQ' : 'Hjelp / FAQ'}
+            </button>
           </div>
 
           {/* PGN Import Modal */}
@@ -1685,6 +1711,13 @@ function App() {
           isOpen={showKrogLeaderboard}
           onClose={() => setShowKrogLeaderboard(false)}
           socket={socket}
+          language={language}
+        />
+
+        {/* FAQ Modal - Lobby */}
+        <FAQModal
+          isOpen={showFAQ}
+          onClose={() => setShowFAQ(false)}
           language={language}
         />
       </div>
@@ -2353,6 +2386,28 @@ function App() {
         >
           <span style={{ fontSize: '1.1rem' }}>{soundEnabled ? '\u{1F50A}' : '\u{1F507}'}</span>
           {language === 'en' ? 'Sound' : 'Lyd'}
+        </button>
+
+        {/* Help/FAQ button */}
+        <button
+          onClick={() => setShowFAQ(true)}
+          title={language === 'en' ? 'Help / FAQ' : 'Hjelp / FAQ'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            border: '1px solid #444',
+            background: 'transparent',
+            color: '#888',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: '0.85rem'
+          }}
+        >
+          <span style={{ fontSize: '1.1rem' }}>{'\u2753'}</span>
+          {language === 'en' ? 'Help' : 'Hjelp'}
         </button>
       </div>
 
@@ -3231,6 +3286,13 @@ function App() {
         isOpen={showKrogLeaderboard}
         onClose={() => setShowKrogLeaderboard(false)}
         socket={socket}
+        language={language}
+      />
+
+      {/* FAQ Modal */}
+      <FAQModal
+        isOpen={showFAQ}
+        onClose={() => setShowFAQ(false)}
         language={language}
       />
     </div>
