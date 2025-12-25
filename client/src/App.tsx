@@ -2,6 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
+
+// Hook to detect mobile viewport
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
 import PuzzleMode from './components/PuzzleMode';
 import DailyPuzzle from './components/DailyPuzzle';
 import OpeningExplorer from './components/OpeningExplorer';
@@ -155,6 +168,7 @@ function formatTime(ms: number): string {
 }
 
 function App() {
+  const isMobile = useIsMobile();
   const [game, setGame] = useState(new Chess());
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [roomCode, setRoomCode] = useState<string | null>(null);
@@ -1018,10 +1032,21 @@ function App() {
   // Lobby view (no room joined)
   if (!roomCode) {
     return (
-      <div className="app-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="app-container" style={{ padding: isMobile ? '8px' : undefined }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'stretch' : 'flex-start',
+          gap: isMobile ? '8px' : '0'
+        }}>
           <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{
+            display: 'flex',
+            gap: isMobile ? '6px' : '10px',
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            justifyContent: isMobile ? 'center' : 'flex-end'
+          }}>
             <TournamentPanel socket={socket} language={language} onJoinTournamentGame={(roomCode) => {
               socket.emit('join_tournament_game', { roomCode });
               setRoomCode(roomCode);
@@ -1036,19 +1061,19 @@ function App() {
         </div>
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
-        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
-          <div style={{ color: isConnected ? '#81b64c' : 'red', marginTop: '5px' }}>
+        <div style={{ marginBottom: isMobile ? '16px' : '20px', textAlign: 'center' }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
+          <div style={{ color: isConnected ? '#81b64c' : 'red', marginTop: '5px', fontSize: isMobile ? '0.85rem' : '1rem' }}>
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
         </div>
 
         <div style={{
           background: 'var(--bg-secondary)',
-          padding: '30px',
-          borderRadius: '12px',
+          padding: isMobile ? '16px' : '30px',
+          borderRadius: isMobile ? '10px' : '12px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          maxWidth: '400px',
+          maxWidth: isMobile ? '100%' : '400px',
           margin: '0 auto'
         }}>
           {/* Matchmaking Section - for logged in users */}
@@ -1175,59 +1200,63 @@ function App() {
           )}
 
           {/* Time Control Selection */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.9rem' }}>
+          <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
+            <div style={{ color: '#888', marginBottom: isMobile ? '8px' : '10px', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
               Time Control
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px' }}>
               {TIME_CONTROL_OPTIONS.map((option) => (
                 <button
                   key={option.type}
                   onClick={() => setSelectedTimeControl(option.type)}
                   style={{
                     flex: 1,
-                    padding: '12px 8px',
-                    borderRadius: '6px',
+                    padding: isMobile ? '10px 6px' : '12px 8px',
+                    minHeight: isMobile ? '54px' : 'auto',
+                    borderRadius: isMobile ? '8px' : '6px',
                     border: selectedTimeControl === option.type ? '2px solid #81b64c' : '1px solid #444',
                     background: selectedTimeControl === option.type ? 'rgba(129, 182, 76, 0.2)' : 'transparent',
                     color: 'white',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                 >
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{option.label}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '2px' }}>{option.description}</div>
+                  <div style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 600 }}>{option.label}</div>
+                  <div style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: '#888', marginTop: '2px' }}>{option.description}</div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Variant Selection */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ color: '#888', marginBottom: '10px', fontSize: '0.9rem' }}>
+          <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
+            <div style={{ color: '#888', marginBottom: isMobile ? '8px' : '10px', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
               Variant
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px', flexWrap: 'wrap' }}>
               {VARIANT_OPTIONS.map((option) => (
                 <button
                   key={option.type}
                   onClick={() => setSelectedVariant(option.type)}
                   style={{
                     flex: '1 1 calc(50% - 4px)',
-                    minWidth: '90px',
-                    padding: '10px 8px',
-                    borderRadius: '6px',
+                    minWidth: isMobile ? '80px' : '90px',
+                    minHeight: isMobile ? '50px' : 'auto',
+                    padding: isMobile ? '8px 6px' : '10px 8px',
+                    borderRadius: isMobile ? '8px' : '6px',
                     border: selectedVariant === option.type ? '2px solid #9b59b6' : '1px solid #444',
                     background: selectedVariant === option.type ? 'rgba(155, 89, 182, 0.2)' : 'transparent',
                     color: 'white',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                 >
-                  <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{option.label}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#888', marginTop: '2px' }}>{option.description}</div>
+                  <div style={{ fontSize: isMobile ? '0.85rem' : '0.95rem', fontWeight: 600 }}>{option.label}</div>
+                  <div style={{ fontSize: isMobile ? '0.65rem' : '0.7rem', color: '#888', marginTop: '2px' }}>{option.description}</div>
                 </button>
               ))}
             </div>
@@ -1241,14 +1270,16 @@ function App() {
               background: '#81b64c',
               border: 'none',
               color: 'white',
-              padding: '15px 20px',
-              borderRadius: '6px',
+              padding: isMobile ? '14px 16px' : '15px 20px',
+              minHeight: isMobile ? '50px' : 'auto',
+              borderRadius: isMobile ? '10px' : '6px',
               cursor: isConnected ? 'pointer' : 'not-allowed',
               fontFamily: 'inherit',
-              fontSize: '1.1rem',
+              fontSize: isMobile ? '1rem' : '1.1rem',
               fontWeight: 600,
-              marginBottom: '10px',
-              opacity: isConnected ? 1 : 0.5
+              marginBottom: isMobile ? '8px' : '10px',
+              opacity: isConnected ? 1 : 0.5,
+              WebkitTapHighlightColor: 'transparent'
             }}
           >
             Create New Game
@@ -1262,13 +1293,15 @@ function App() {
               background: showComputerOptions ? '#2980b9' : '#3498db',
               border: 'none',
               color: 'white',
-              padding: '15px 20px',
-              borderRadius: '6px',
+              padding: isMobile ? '14px 16px' : '15px 20px',
+              minHeight: isMobile ? '50px' : 'auto',
+              borderRadius: isMobile ? '10px' : '6px',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              fontSize: '1.1rem',
+              fontSize: isMobile ? '1rem' : '1.1rem',
               fontWeight: 600,
-              marginBottom: '10px'
+              marginBottom: isMobile ? '8px' : '10px',
+              WebkitTapHighlightColor: 'transparent'
             }}
           >
             {showComputerOptions ? '▼' : '▶'} Play vs Computer
@@ -1419,34 +1452,36 @@ function App() {
           )}
 
           {/* Practice & Learn */}
-          <div style={{ textAlign: 'center', color: '#666', margin: '20px 0' }}>
+          <div style={{ textAlign: 'center', color: '#666', margin: isMobile ? '16px 0' : '20px 0', fontSize: isMobile ? '0.85rem' : '1rem' }}>
             — or practice & learn —
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: isMobile ? '8px' : '10px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setLessonsMode(true)}
               disabled={!isConnected}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: '#e67e22',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: isConnected ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 opacity: isConnected ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>{'\u{1F393}'}</span>
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{'\u{1F393}'}</span>
               Lessons
             </button>
 
@@ -1455,24 +1490,26 @@ function App() {
               disabled={!isConnected}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: '#9b59b6',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: isConnected ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 opacity: isConnected ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>{'\u265F'}</span>
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{'\u265F'}</span>
               Puzzles
             </button>
 
@@ -1481,24 +1518,26 @@ function App() {
               disabled={!isConnected}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: '#f39c12',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: isConnected ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 opacity: isConnected ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>{'\u{1F4C5}'}</span>
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{'\u{1F4C5}'}</span>
               Daily
             </button>
 
@@ -1507,24 +1546,26 @@ function App() {
               disabled={!isConnected}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: '#2ecc71',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: isConnected ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 opacity: isConnected ? 1 : 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>{'\u{1F4D6}'}</span>
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{'\u{1F4D6}'}</span>
               Openings
             </button>
 
@@ -1532,47 +1573,51 @@ function App() {
               onClick={() => setShowPGNImport(true)}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: '#1abc9c',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>📋</span>
-              Import PGN
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>📋</span>
+              {isMobile ? 'PGN' : 'Import PGN'}
             </button>
 
             <button
               onClick={() => setShowKrogLeaderboard(true)}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: 'linear-gradient(135deg, #81b64c 0%, #5d8c3a 100%)',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>{'\u{1F3C6}'}</span>
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{'\u{1F3C6}'}</span>
               KROG
             </button>
 
@@ -1580,24 +1625,26 @@ function App() {
               onClick={() => setShowFAQ(true)}
               style={{
                 flex: '1 1 calc(50% - 5px)',
-                minWidth: '100px',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
                 background: 'linear-gradient(135deg, #6c5ce7 0%, #5541d7 100%)',
                 border: 'none',
                 color: 'white',
-                padding: '15px 12px',
-                borderRadius: '6px',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.9rem' : '1rem',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <span style={{ fontSize: '1.2rem' }}>{'\u2753'}</span>
-              {language === 'en' ? 'Help / FAQ' : 'Hjelp / FAQ'}
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>{'\u2753'}</span>
+              {isMobile ? 'Help' : (language === 'en' ? 'Help / FAQ' : 'Hjelp / FAQ')}
             </button>
           </div>
 
@@ -1734,100 +1781,106 @@ function App() {
       <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
-      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+      <div style={{ marginBottom: isMobile ? '12px' : '20px', textAlign: 'center' }}>
         {/* Back button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: isMobile ? '8px' : '10px' }}>
           <button
             onClick={leaveRoom}
             style={{
               background: 'transparent',
               border: '1px solid #444',
               color: '#888',
-              padding: '8px 16px',
-              borderRadius: '6px',
+              padding: isMobile ? '8px 12px' : '8px 16px',
+              borderRadius: isMobile ? '8px' : '6px',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              fontSize: '0.9rem',
+              fontSize: isMobile ? '0.85rem' : '0.9rem',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              minHeight: isMobile ? '40px' : 'auto',
+              WebkitTapHighlightColor: 'transparent'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#666';
-              e.currentTarget.style.color = '#fff';
+              if (!isMobile) {
+                e.currentTarget.style.borderColor = '#666';
+                e.currentTarget.style.color = '#fff';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#444';
-              e.currentTarget.style.color = '#888';
+              if (!isMobile) {
+                e.currentTarget.style.borderColor = '#444';
+                e.currentTarget.style.color = '#888';
+              }
             }}
           >
             <span style={{ fontSize: '1rem' }}>{'\u2190'}</span>
-            {language === 'en' ? 'Back to Lobby' : 'Tilbake til lobbyen'}
+            {isMobile ? (language === 'en' ? 'Back' : 'Tilbake') : (language === 'en' ? 'Back to Lobby' : 'Tilbake til lobbyen')}
           </button>
         </div>
-        <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
+        <h1 style={{ margin: 0, fontSize: isMobile ? '1.6rem' : '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
         <div style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '15px',
-          marginTop: '10px',
+          gap: isMobile ? '6px' : '15px',
+          marginTop: isMobile ? '8px' : '10px',
           flexWrap: 'wrap'
         }}>
           <div style={{
             background: roomCode === 'ANALYSIS' ? '#1abc9c' : 'var(--bg-secondary)',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            fontSize: '1.1rem',
+            padding: isMobile ? '6px 10px' : '8px 16px',
+            borderRadius: isMobile ? '8px' : '6px',
+            fontSize: isMobile ? '0.85rem' : '1.1rem',
             fontWeight: 600,
-            letterSpacing: roomCode === 'ANALYSIS' ? '1px' : '3px',
+            letterSpacing: roomCode === 'ANALYSIS' ? '1px' : (isMobile ? '1px' : '3px'),
             color: roomCode === 'ANALYSIS' ? 'white' : 'inherit'
           }}>
-            {roomCode === 'ANALYSIS' ? (language === 'en' ? 'Analysis Mode' : 'Analysemodus') : `Room: ${roomCode}`}
+            {roomCode === 'ANALYSIS' ? (language === 'en' ? 'Analysis' : 'Analyse') : (isMobile ? roomCode : `Room: ${roomCode}`)}
           </div>
           {roomCode !== 'ANALYSIS' && (
             <div style={{
               background: playerColor === 'white' ? '#f0d9b5' :
                          playerColor === 'black' ? '#b58863' : '#666',
               color: playerColor === 'white' ? '#000' : '#fff',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
+              padding: isMobile ? '6px 10px' : '8px 16px',
+              borderRadius: isMobile ? '8px' : '6px',
+              fontSize: isMobile ? '0.8rem' : '0.9rem',
               fontWeight: 600
             }}>
-              {playerColor === 'spectator' ? 'Spectating' : `Playing as ${playerColor}`}
+              {isMobile ? (playerColor === 'spectator' ? '👁' : (playerColor === 'white' ? '♔' : '♚')) : (playerColor === 'spectator' ? 'Spectating' : `Playing as ${playerColor}`)}
             </div>
           )}
           {matchOpponent && (
             <div style={{
               background: 'var(--bg-secondary)',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '0.9rem'
+              padding: isMobile ? '6px 10px' : '8px 16px',
+              borderRadius: isMobile ? '8px' : '6px',
+              fontSize: isMobile ? '0.8rem' : '0.9rem'
             }}>
-              vs <span style={{ fontWeight: 600 }}>{matchOpponent.username}</span> ({matchOpponent.rating})
+              vs <span style={{ fontWeight: 600 }}>{matchOpponent.username}</span> {!isMobile && `(${matchOpponent.rating})`}
             </div>
           )}
           {isComputerGame && (
             <div style={{
               background: '#3498db',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
+              padding: isMobile ? '6px 10px' : '8px 16px',
+              borderRadius: isMobile ? '8px' : '6px',
+              fontSize: isMobile ? '0.8rem' : '0.9rem',
               fontWeight: 600,
               color: 'white'
             }}>
-              vs Computer
+              {isMobile ? '🤖' : 'vs Computer'}
             </div>
           )}
           {/* Variant badge */}
           {variant !== 'standard' && (
             <div style={{
               background: '#9b59b6',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
+              padding: isMobile ? '6px 10px' : '8px 16px',
+              borderRadius: isMobile ? '8px' : '6px',
+              fontSize: isMobile ? '0.8rem' : '0.9rem',
               fontWeight: 600,
               color: 'white'
             }}>
@@ -1839,16 +1892,16 @@ function App() {
             <div
               style={{
                 background: '#95a5a6',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
+                padding: isMobile ? '6px 10px' : '8px 16px',
+                borderRadius: isMobile ? '8px' : '6px',
+                fontSize: isMobile ? '0.8rem' : '0.9rem',
                 fontWeight: 600,
                 color: 'white',
                 cursor: 'help'
               }}
               title={spectators.map(s => s.username).join(', ')}
             >
-              👁 {spectators.length} watching
+              👁 {spectators.length}
             </div>
           )}
         </div>
@@ -1906,8 +1959,8 @@ function App() {
 
       <div style={{
         background: 'var(--bg-secondary)',
-        padding: '20px',
-        borderRadius: '12px',
+        padding: isMobile ? '10px' : '20px',
+        borderRadius: isMobile ? '10px' : '12px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
       }}>
         {/* Opponent's clock (top) */}
@@ -1916,18 +1969,18 @@ function App() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '10px',
-            padding: '10px 15px',
+            marginBottom: isMobile ? '6px' : '10px',
+            padding: isMobile ? '8px 10px' : '10px 15px',
             background: clock.activeColor === (playerColor === 'black' ? 'white' : 'black')
               ? 'rgba(129, 182, 76, 0.3)' : 'rgba(0,0,0,0.3)',
-            borderRadius: '8px'
+            borderRadius: isMobile ? '6px' : '8px'
           }}>
-            <span style={{ fontWeight: 600, color: '#888' }}>
+            <span style={{ fontWeight: 600, color: '#888', fontSize: isMobile ? '0.85rem' : '1rem' }}>
               {playerColor === 'black' ? 'White' : 'Black'}
             </span>
             <span style={{
               fontFamily: 'monospace',
-              fontSize: '1.5rem',
+              fontSize: isMobile ? '1.2rem' : '1.5rem',
               fontWeight: 700,
               color: (playerColor === 'black' ? clock.white : clock.black) < 30000 ? '#e74c3c' : 'white'
             }}>
@@ -1954,18 +2007,18 @@ function App() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: '10px',
-            padding: '10px 15px',
+            marginTop: isMobile ? '6px' : '10px',
+            padding: isMobile ? '8px 10px' : '10px 15px',
             background: clock.activeColor === playerColor
               ? 'rgba(129, 182, 76, 0.3)' : 'rgba(0,0,0,0.3)',
-            borderRadius: '8px'
+            borderRadius: isMobile ? '6px' : '8px'
           }}>
-            <span style={{ fontWeight: 600, color: '#888' }}>
-              {playerColor === 'black' ? 'Black' : 'White'} (You)
+            <span style={{ fontWeight: 600, color: '#888', fontSize: isMobile ? '0.85rem' : '1rem' }}>
+              {playerColor === 'black' ? 'Black' : 'White'} {isMobile ? '' : '(You)'}
             </span>
             <span style={{
               fontFamily: 'monospace',
-              fontSize: '1.5rem',
+              fontSize: isMobile ? '1.2rem' : '1.5rem',
               fontWeight: 700,
               color: (playerColor === 'black' ? clock.black : clock.white) < 30000 ? '#e74c3c' : 'white'
             }}>
@@ -2142,25 +2195,28 @@ function App() {
         </div>
       )}
 
-      <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <div style={{ marginTop: isMobile ? '12px' : '20px', display: 'flex', gap: isMobile ? '6px' : '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button
           onClick={() => setLearnMode(!learnMode)}
           style={{
             background: learnMode ? '#9b59b6' : 'var(--bg-secondary)',
             border: learnMode ? '2px solid #9b59b6' : '1px solid #444',
             color: 'white',
-            padding: '10px 20px',
-            borderRadius: '6px',
+            padding: isMobile ? '8px 12px' : '10px 20px',
+            minHeight: isMobile ? '40px' : 'auto',
+            borderRadius: isMobile ? '8px' : '6px',
             cursor: 'pointer',
             fontFamily: 'inherit',
             fontWeight: learnMode ? 600 : 400,
+            fontSize: isMobile ? '0.85rem' : '1rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '6px',
+            WebkitTapHighlightColor: 'transparent'
           }}
         >
-          <span style={{ fontSize: '1.1rem' }}>{'\u{1F4DA}'}</span>
-          {learnMode ? 'Learn Mode ON' : 'Learn Mode'}
+          <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>{'\u{1F4DA}'}</span>
+          {isMobile ? (learnMode ? 'Learn ON' : 'Learn') : (learnMode ? 'Learn Mode ON' : 'Learn Mode')}
         </button>
 
         {/* Draw/Resign buttons - only for players, only during active game, not in analysis mode */}
