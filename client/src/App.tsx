@@ -2,19 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
-
-// Hook to detect mobile viewport
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return isMobile;
-};
+import { useMediaQuery } from './hooks/useMediaQuery';
 import PuzzleMode from './components/PuzzleMode';
 import DailyPuzzle from './components/DailyPuzzle';
 import OpeningExplorer from './components/OpeningExplorer';
@@ -168,7 +156,7 @@ function formatTime(ms: number): string {
 }
 
 function App() {
-  const isMobile = useIsMobile();
+  const { isMobile, isTablet: _isTablet } = useMediaQuery();
   const [game, setGame] = useState(new Chess());
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [roomCode, setRoomCode] = useState<string | null>(null);

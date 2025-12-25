@@ -2,31 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Chess } from 'chess.js';
 import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
-
-// Hook to detect mobile viewport and calculate board size
-const useResponsiveBoard = () => {
-    const [dimensions, setDimensions] = useState(() => {
-        const width = window.innerWidth;
-        const isMobile = width < 768;
-        // On mobile, use almost full width minus padding
-        // On desktop, use fixed 600px
-        const boardSize = isMobile ? Math.min(width - 16, 400) : 600;
-        return { isMobile, boardSize };
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            const width = window.innerWidth;
-            const isMobile = width < 768;
-            const boardSize = isMobile ? Math.min(width - 16, 400) : 600;
-            setDimensions({ isMobile, boardSize });
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    return dimensions;
-};
+import { useResponsiveBoard } from '../hooks/useMediaQuery';
 
 interface PotentialMoveExplanation {
     from: string;

@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
-
-// Hook to detect mobile viewport
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return isMobile;
-};
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface League {
   id: string;
@@ -204,7 +192,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
   const t = translations[language];
 
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'open' | 'active' | 'completed' | 'my' | 'create'>('open');
+  const [activeTab, setActiveTab] = useState<'open' | 'active' | 'completed' | 'my' | 'create' | 'standings' | 'fixtures' | 'myMatches'>('open');
   const [openLeagues, setOpenLeagues] = useState<League[]>([]);
   const [activeLeagues, setActiveLeagues] = useState<League[]>([]);
   const [completedLeagues, setCompletedLeagues] = useState<League[]>([]);
@@ -227,7 +215,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
   const [createMaxDivisions, setCreateMaxDivisions] = useState(1);
   const [createPointsWin, setCreatePointsWin] = useState(3);
   const [createPointsDraw, setCreatePointsDraw] = useState(1);
-  const [createPointsLoss, setCreatePointsLoss] = useState(0);
+  const [createPointsLoss, _setCreatePointsLoss] = useState(0);
 
   useEffect(() => {
     // Request leagues only when panel is open
@@ -705,7 +693,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: isMobile ? '12px' : '16px', flexWrap: 'wrap' }}>
           <button
-            onClick={() => setActiveTab('standings' as any)}
+            onClick={() => setActiveTab('standings')}
             style={{
               padding: isMobile ? '10px 16px' : '8px 16px',
               background: activeTab === 'standings' ? '#4CAF50' : '#333',
@@ -720,7 +708,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
             {t.standings}
           </button>
           <button
-            onClick={() => setActiveTab('fixtures' as any)}
+            onClick={() => setActiveTab('fixtures')}
             style={{
               padding: isMobile ? '10px 16px' : '8px 16px',
               background: activeTab === 'fixtures' ? '#4CAF50' : '#333',
@@ -736,7 +724,7 @@ export function LeaguePanel({ socket, language, onJoinLeagueMatch }: LeaguePanel
           </button>
           {myMatches.length > 0 && (
             <button
-              onClick={() => setActiveTab('myMatches' as any)}
+              onClick={() => setActiveTab('myMatches')}
               style={{
                 padding: isMobile ? '10px 16px' : '8px 16px',
                 background: activeTab === 'myMatches' ? '#4CAF50' : '#333',

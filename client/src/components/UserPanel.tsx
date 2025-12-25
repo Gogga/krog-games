@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLeaderboard, LeaderboardEntry, getUserGames, Game } from '../api/auth';
-
-// Hook to detect mobile viewport
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return isMobile;
-};
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 interface UserPanelProps {
   onOpenAuth: () => void;
