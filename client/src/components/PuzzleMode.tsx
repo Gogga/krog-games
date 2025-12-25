@@ -4,6 +4,19 @@ import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
 import ChessBoard from './ChessBoard';
 
+// Hook to detect mobile viewport
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return isMobile;
+};
+
 interface PuzzleData {
     id: string;
     fen: string;
@@ -43,6 +56,7 @@ interface PuzzleModeProps {
 }
 
 const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => {
+    const isMobile = useIsMobile();
     const [puzzle, setPuzzle] = useState<PuzzleData | null>(null);
     const [game, setGame] = useState<Chess>(new Chess());
     const [moveIndex, setMoveIndex] = useState(0);
@@ -180,18 +194,20 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
     if (loading) {
         return (
             <div className="app-container">
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <h2>{language === 'en' ? 'Loading puzzle...' : 'Laster oppgave...'}</h2>
+                <div style={{ textAlign: 'center', padding: isMobile ? '24px 16px' : '40px' }}>
+                    <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.5rem' }}>
+                        {language === 'en' ? 'Loading puzzle...' : 'Laster oppgave...'}
+                    </h2>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="app-container">
+        <div className="app-container" style={{ padding: isMobile ? '12px' : undefined }}>
             {/* Header */}
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>
+            <div style={{ marginBottom: isMobile ? '12px' : '20px', textAlign: 'center' }}>
+                <h1 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 700 }}>
                     {language === 'en' ? 'Puzzle Mode' : 'Oppgavemodus'}
                 </h1>
                 {puzzle && (
@@ -199,35 +215,39 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        gap: '15px',
-                        marginTop: '10px',
+                        gap: isMobile ? '6px' : '15px',
+                        marginTop: isMobile ? '8px' : '10px',
                         flexWrap: 'wrap'
                     }}>
                         <span style={{
                             background: 'var(--bg-secondary)',
-                            padding: '6px 12px',
+                            padding: isMobile ? '4px 8px' : '6px 12px',
                             borderRadius: '6px',
-                            fontSize: '0.9rem'
+                            fontSize: isMobile ? '0.75rem' : '0.9rem'
                         }}>
                             #{puzzle.currentIndex + 1} / {puzzle.totalPuzzles}
                         </span>
                         <span style={{
                             background: '#4a90d9',
                             color: 'white',
-                            padding: '6px 12px',
+                            padding: isMobile ? '4px 8px' : '6px 12px',
                             borderRadius: '6px',
-                            fontSize: '0.9rem',
+                            fontSize: isMobile ? '0.75rem' : '0.9rem',
                             fontWeight: 600
                         }}>
-                            {language === 'en' ? 'Rating' : 'Vurdering'}: {puzzle.rating}
+                            {isMobile ? '' : (language === 'en' ? 'Rating: ' : 'Vurdering: ')}{puzzle.rating}
                         </span>
-                        {puzzle.themes.slice(0, 2).map(theme => (
+                        {puzzle.themes.slice(0, isMobile ? 1 : 2).map(theme => (
                             <span key={theme} style={{
                                 background: '#9b59b6',
                                 color: 'white',
-                                padding: '6px 12px',
+                                padding: isMobile ? '4px 8px' : '6px 12px',
                                 borderRadius: '6px',
-                                fontSize: '0.85rem'
+                                fontSize: isMobile ? '0.7rem' : '0.85rem',
+                                maxWidth: isMobile ? '100px' : 'none',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
                             }}>
                                 {theme.replace(/_/g, ' ')}
                             </span>
@@ -239,8 +259,8 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
             {/* Board */}
             <div style={{
                 background: 'var(--bg-secondary)',
-                padding: '20px',
-                borderRadius: '12px',
+                padding: isMobile ? '8px' : '20px',
+                borderRadius: isMobile ? '8px' : '12px',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
                 <ChessBoard
@@ -253,8 +273,8 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
 
             {/* Status message */}
             <div style={{
-                marginTop: '20px',
-                padding: '16px',
+                marginTop: isMobile ? '12px' : '20px',
+                padding: isMobile ? '12px' : '16px',
                 borderRadius: '8px',
                 textAlign: 'center',
                 background: status === 'solved' ? 'rgba(129, 182, 76, 0.2)' :
@@ -267,7 +287,7 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                        '1px solid #333'
             }}>
                 <div style={{
-                    fontSize: '1.2rem',
+                    fontSize: isMobile ? '1rem' : '1.2rem',
                     fontWeight: 600,
                     color: status === 'solved' || status === 'correct' ? '#81b64c' :
                           status === 'incorrect' ? '#e74c3c' : 'white'
@@ -275,7 +295,7 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                     {message}
                 </div>
                 {hint && (
-                    <div style={{ color: '#888', marginTop: '8px', fontSize: '0.9rem' }}>
+                    <div style={{ color: '#888', marginTop: isMobile ? '6px' : '8px', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>
                         {hint}
                     </div>
                 )}
@@ -284,27 +304,29 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
             {/* KROG Explanation (on solve) */}
             {solvedKrog && (
                 <div style={{
-                    marginTop: '20px',
+                    marginTop: isMobile ? '12px' : '20px',
                     background: 'var(--bg-secondary)',
-                    borderRadius: '12px',
-                    padding: '16px',
+                    borderRadius: isMobile ? '8px' : '12px',
+                    padding: isMobile ? '12px' : '16px',
                     border: '2px solid #81b64c'
                 }}>
-                    <div style={{ fontWeight: 600, marginBottom: '10px', color: '#81b64c' }}>
+                    <div style={{ fontWeight: 600, marginBottom: isMobile ? '8px' : '10px', color: '#81b64c', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                         KROG {language === 'en' ? 'Explanation' : 'Forklaring'}
                     </div>
                     <div style={{
                         fontFamily: 'monospace',
-                        fontSize: '0.95rem',
+                        fontSize: isMobile ? '0.8rem' : '0.95rem',
                         color: '#81b64c',
                         background: 'rgba(0,0,0,0.3)',
-                        padding: '10px 14px',
+                        padding: isMobile ? '8px 10px' : '10px 14px',
                         borderRadius: '6px',
-                        marginBottom: '10px'
+                        marginBottom: isMobile ? '8px' : '10px',
+                        overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch'
                     }}>
                         {solvedKrog.formula}
                     </div>
-                    <div style={{ color: '#ccc' }}>
+                    <div style={{ color: '#ccc', fontSize: isMobile ? '0.85rem' : '1rem', lineHeight: 1.5 }}>
                         {solvedKrog.explanation[language]}
                     </div>
                 </div>
@@ -312,9 +334,9 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
 
             {/* Controls */}
             <div style={{
-                marginTop: '20px',
+                marginTop: isMobile ? '12px' : '20px',
                 display: 'flex',
-                gap: '10px',
+                gap: isMobile ? '6px' : '10px',
                 justifyContent: 'center',
                 flexWrap: 'wrap'
             }}>
@@ -324,14 +346,16 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                         background: 'var(--bg-secondary)',
                         border: '1px solid #444',
                         color: 'white',
-                        padding: '10px 20px',
+                        padding: isMobile ? '10px 12px' : '10px 20px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '1rem'
+                        fontSize: isMobile ? '0.85rem' : '1rem',
+                        minHeight: '44px',
+                        minWidth: isMobile ? '44px' : 'auto'
                     }}
                 >
-                    ← {language === 'en' ? 'Previous' : 'Forrige'}
+                    {isMobile ? '←' : `← ${language === 'en' ? 'Previous' : 'Forrige'}`}
                 </button>
 
                 {status === 'incorrect' || status === 'solved' ? (
@@ -341,15 +365,16 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                             background: '#f39c12',
                             border: 'none',
                             color: 'white',
-                            padding: '10px 20px',
+                            padding: isMobile ? '10px 14px' : '10px 20px',
                             borderRadius: '6px',
                             cursor: 'pointer',
                             fontFamily: 'inherit',
-                            fontSize: '1rem',
-                            fontWeight: 600
+                            fontSize: isMobile ? '0.85rem' : '1rem',
+                            fontWeight: 600,
+                            minHeight: '44px'
                         }}
                     >
-                        {language === 'en' ? 'Retry' : 'Prøv igjen'}
+                        {isMobile ? '↺' : (language === 'en' ? 'Retry' : 'Prøv igjen')}
                     </button>
                 ) : null}
 
@@ -359,15 +384,16 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                         background: '#9b59b6',
                         border: 'none',
                         color: 'white',
-                        padding: '10px 20px',
+                        padding: isMobile ? '10px 14px' : '10px 20px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '1rem',
-                        fontWeight: 600
+                        fontSize: isMobile ? '0.85rem' : '1rem',
+                        fontWeight: 600,
+                        minHeight: '44px'
                     }}
                 >
-                    {language === 'en' ? 'Random' : 'Tilfeldig'}
+                    {isMobile ? '🎲' : (language === 'en' ? 'Random' : 'Tilfeldig')}
                 </button>
 
                 <button
@@ -376,31 +402,34 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                         background: status === 'solved' ? '#81b64c' : 'var(--bg-secondary)',
                         border: status === 'solved' ? 'none' : '1px solid #444',
                         color: 'white',
-                        padding: '10px 20px',
+                        padding: isMobile ? '10px 12px' : '10px 20px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '1rem',
-                        fontWeight: status === 'solved' ? 600 : 400
+                        fontSize: isMobile ? '0.85rem' : '1rem',
+                        fontWeight: status === 'solved' ? 600 : 400,
+                        minHeight: '44px',
+                        minWidth: isMobile ? '44px' : 'auto'
                     }}
                 >
-                    {language === 'en' ? 'Next' : 'Neste'} →
+                    {isMobile ? '→' : `${language === 'en' ? 'Next' : 'Neste'} →`}
                 </button>
             </div>
 
             {/* Exit button */}
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div style={{ marginTop: isMobile ? '16px' : '20px', textAlign: 'center' }}>
                 <button
                     onClick={onExit}
                     style={{
                         background: '#e74c3c',
                         border: 'none',
                         color: 'white',
-                        padding: '10px 30px',
+                        padding: isMobile ? '12px 24px' : '10px 30px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '1rem'
+                        fontSize: isMobile ? '0.9rem' : '1rem',
+                        minHeight: '44px'
                     }}
                 >
                     {language === 'en' ? 'Exit Puzzles' : 'Avslutt oppgaver'}

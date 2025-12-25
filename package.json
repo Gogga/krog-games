@@ -1,0 +1,23 @@
+{
+  "name": "krog-chess",
+  "version": "1.0.0",
+  "description": "KROG Chess - Multiplayer chess platform with formal rule explanations",
+  "scripts": {
+    "dev": "./scripts/start-dev.sh",
+    "dev:safe": "./scripts/start-dev.sh",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "clean": "pkill -9 node 2>/dev/null; lsof -ti:3000 | xargs kill -9 2>/dev/null; lsof -ti:5173 | xargs kill -9 2>/dev/null; echo 'Cleaned up'"
+  },
+  "keywords": [
+    "chess",
+    "krog",
+    "multiplayer",
+    "game",
+    "react",
+    "socket.io"
+  ],
+  "author": "",
+  "license": "ISC"
+}
