@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 
+// Hook to detect mobile screen
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
 interface Condition {
   name: string;
   met: boolean;
@@ -60,6 +73,7 @@ const OPERATOR_DESCRIPTIONS: Record<string, { en: string; no: string }> = {
 export default function MoveExplanationModal({ isOpen, onClose, data, language, socket }: MoveExplanationModalProps) {
   const [showCopied, setShowCopied] = useState(false);
   const hasTrackedView = useRef(false);
+  const isMobile = useIsMobile();
 
   // Track view when modal opens
   useEffect(() => {
@@ -130,22 +144,24 @@ Learn chess with KROG formulas!`;
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-end' : 'center',
         justifyContent: 'center',
-        zIndex: 1000
+        zIndex: 1000,
+        padding: isMobile ? 0 : undefined
       }}
       onClick={onClose}
     >
       <div
         style={{
           backgroundColor: '#1a1a1a',
-          borderRadius: '12px',
-          border: '1px solid #333',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '85vh',
+          borderRadius: isMobile ? '16px 16px 0 0' : '12px',
+          border: isMobile ? 'none' : '1px solid #333',
+          maxWidth: isMobile ? '100%' : '500px',
+          width: isMobile ? '100%' : '90%',
+          maxHeight: isMobile ? '90vh' : '85vh',
           overflow: 'auto',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          WebkitOverflowScrolling: 'touch'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -155,13 +171,13 @@ Learn chess with KROG formulas!`;
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '16px 20px',
+            padding: isMobile ? '14px 16px' : '16px 20px',
             borderBottom: '1px solid #333',
             background: 'linear-gradient(180deg, #252525 0%, #1a1a1a 100%)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '12px' }}>
+            <span style={{ fontSize: isMobile ? '1.3rem' : '1.5rem' }}>
               {data.piece === 'k' ? (isWhiteMove ? '♔' : '♚') :
                data.piece === 'q' ? (isWhiteMove ? '♕' : '♛') :
                data.piece === 'r' ? (isWhiteMove ? '♖' : '♜') :
@@ -169,7 +185,7 @@ Learn chess with KROG formulas!`;
                data.piece === 'n' ? (isWhiteMove ? '♘' : '♞') :
                (isWhiteMove ? '♙' : '♟')}
             </span>
-            <span style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff' }}>
+            <span style={{ fontSize: isMobile ? '1.05rem' : '1.2rem', fontWeight: 600, color: '#fff' }}>
               {moveLabel}
             </span>
           </div>
@@ -179,10 +195,15 @@ Learn chess with KROG formulas!`;
               background: 'none',
               border: 'none',
               color: '#888',
-              fontSize: '1.5rem',
+              fontSize: isMobile ? '1.3rem' : '1.5rem',
               cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '4px'
+              padding: isMobile ? '8px' : '4px 8px',
+              borderRadius: '4px',
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
@@ -192,12 +213,12 @@ Learn chess with KROG formulas!`;
         </div>
 
         {/* KROG Formula */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #333' }}>
+        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
           <div style={{
             fontWeight: 600,
-            marginBottom: '12px',
+            marginBottom: isMobile ? '10px' : '12px',
             color: '#81b64c',
-            fontSize: '0.9rem',
+            fontSize: isMobile ? '0.8rem' : '0.9rem',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
@@ -206,30 +227,32 @@ Learn chess with KROG formulas!`;
           <div
             style={{
               fontFamily: 'monospace',
-              fontSize: '1rem',
+              fontSize: isMobile ? '0.85rem' : '1rem',
               color: '#81b64c',
               backgroundColor: 'rgba(129, 182, 76, 0.1)',
-              padding: '12px 16px',
+              padding: isMobile ? '10px 12px' : '12px 16px',
               borderRadius: '8px',
               border: '1px solid rgba(129, 182, 76, 0.2)',
               lineHeight: 1.5,
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
+              overflowX: 'auto'
             }}
           >
             {data.krog.formula}
           </div>
           <div style={{
             display: 'flex',
-            gap: '16px',
-            marginTop: '12px',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '8px' : '16px',
+            marginTop: isMobile ? '10px' : '12px',
             flexWrap: 'wrap'
           }}>
-            <div style={{ color: '#aaa', fontSize: '0.9rem' }}>
+            <div style={{ color: '#aaa', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
               <span style={{ color: '#666' }}>{language === 'en' ? 'Operator' : 'Operator'}:</span>{' '}
               <span style={{ color: '#81b64c', fontWeight: 500 }}>{data.krog.operator}</span>
               <span style={{ color: '#888' }}> ({operatorDesc[language]})</span>
             </div>
-            <div style={{ color: '#aaa', fontSize: '0.9rem' }}>
+            <div style={{ color: '#aaa', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
               <span style={{ color: '#666' }}>T-Type:</span>{' '}
               <span style={{ color: '#81b64c', fontWeight: 500 }}>{data.krog.tType}</span>
             </div>
@@ -237,12 +260,12 @@ Learn chess with KROG formulas!`;
         </div>
 
         {/* R-Type Badge */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #333' }}>
+        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
           <div style={{
             fontWeight: 600,
-            marginBottom: '10px',
+            marginBottom: isMobile ? '8px' : '10px',
             color: '#9b59b6',
-            fontSize: '0.9rem',
+            fontSize: isMobile ? '0.8rem' : '0.9rem',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
@@ -253,69 +276,69 @@ Learn chess with KROG formulas!`;
               display: 'inline-block',
               backgroundColor: 'rgba(155, 89, 182, 0.15)',
               color: '#9b59b6',
-              padding: '8px 14px',
+              padding: isMobile ? '6px 12px' : '8px 14px',
               borderRadius: '6px',
               fontWeight: 500,
-              fontSize: '0.95rem'
+              fontSize: isMobile ? '0.85rem' : '0.95rem'
             }}
           >
             {data.krog.rType.replace(/_/g, ' ')}
           </div>
-          <div style={{ color: '#ccc', marginTop: '8px', fontSize: '0.9rem' }}>
+          <div style={{ color: '#ccc', marginTop: '8px', fontSize: isMobile ? '0.85rem' : '0.9rem', lineHeight: 1.5 }}>
             {data.krog.rTypeDescription[language]}
           </div>
         </div>
 
         {/* Explanation */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #333' }}>
+        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
           <div style={{
             fontWeight: 600,
-            marginBottom: '12px',
+            marginBottom: isMobile ? '10px' : '12px',
             color: '#ddd',
-            fontSize: '0.9rem',
+            fontSize: isMobile ? '0.8rem' : '0.9rem',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
             {language === 'en' ? 'Explanation' : 'Forklaring'}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1.1rem' }}>&#127468;&#127463;</span>
-              <span style={{ color: '#ddd', lineHeight: 1.5 }}>{data.explanation.en}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '10px' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '8px' : '10px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: isMobile ? '1rem' : '1.1rem', flexShrink: 0 }}>&#127468;&#127463;</span>
+              <span style={{ color: '#ddd', lineHeight: 1.5, fontSize: isMobile ? '0.9rem' : '1rem' }}>{data.explanation.en}</span>
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1.1rem' }}>&#127475;&#127476;</span>
-              <span style={{ color: '#bbb', lineHeight: 1.5 }}>{data.explanation.no}</span>
+            <div style={{ display: 'flex', gap: isMobile ? '8px' : '10px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: isMobile ? '1rem' : '1.1rem', flexShrink: 0 }}>&#127475;&#127476;</span>
+              <span style={{ color: '#bbb', lineHeight: 1.5, fontSize: isMobile ? '0.9rem' : '1rem' }}>{data.explanation.no}</span>
             </div>
           </div>
         </div>
 
         {/* Conditions */}
         {data.conditions && data.conditions.length > 0 && (
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #333' }}>
+          <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
             <div style={{
               fontWeight: 600,
-              marginBottom: '12px',
+              marginBottom: isMobile ? '10px' : '12px',
               color: '#ddd',
-              fontSize: '0.9rem',
+              fontSize: isMobile ? '0.8rem' : '0.9rem',
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
               {language === 'en' ? 'Conditions' : 'Betingelser'}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '6px' : '8px' }}>
               {data.conditions.map((condition, idx) => (
                 <div
                   key={idx}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: isMobile ? '4px' : '6px',
                     backgroundColor: condition.met ? 'rgba(129, 182, 76, 0.1)' : 'rgba(231, 76, 60, 0.1)',
                     color: condition.met ? '#81b64c' : '#e74c3c',
-                    padding: '6px 12px',
+                    padding: isMobile ? '5px 10px' : '6px 12px',
                     borderRadius: '6px',
-                    fontSize: '0.85rem',
+                    fontSize: isMobile ? '0.75rem' : '0.85rem',
                     fontFamily: 'monospace'
                   }}
                   title={condition.description}
@@ -329,37 +352,37 @@ Learn chess with KROG formulas!`;
         )}
 
         {/* FIDE Rules */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #333' }}>
+        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
           <div style={{
             fontWeight: 600,
-            marginBottom: '12px',
+            marginBottom: isMobile ? '10px' : '12px',
             color: '#4a90d9',
-            fontSize: '0.9rem',
+            fontSize: isMobile ? '0.8rem' : '0.9rem',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
             FIDE {language === 'en' ? 'Rules' : 'Regler'}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '10px' : '12px' }}>
             <div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '1.1rem' }}>&#127475;&#127476;</span>
-                <span style={{ fontWeight: 600, color: '#4a90d9' }}>
+                <span style={{ fontSize: isMobile ? '1rem' : '1.1rem', flexShrink: 0 }}>&#127475;&#127476;</span>
+                <span style={{ fontWeight: 600, color: '#4a90d9', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                   &sect;{fideInfo.article}
                 </span>
               </div>
-              <div style={{ color: '#bbb', fontSize: '0.9rem', paddingLeft: '28px', lineHeight: 1.4 }}>
+              <div style={{ color: '#bbb', fontSize: isMobile ? '0.85rem' : '0.9rem', paddingLeft: isMobile ? '24px' : '28px', lineHeight: 1.5 }}>
                 {fideInfo.no}
               </div>
             </div>
             <div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '1.1rem' }}>&#127468;&#127463;</span>
-                <span style={{ fontWeight: 600, color: '#4a90d9' }}>
+                <span style={{ fontSize: isMobile ? '1rem' : '1.1rem', flexShrink: 0 }}>&#127468;&#127463;</span>
+                <span style={{ fontWeight: 600, color: '#4a90d9', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                   Article {fideInfo.article}
                 </span>
               </div>
-              <div style={{ color: '#bbb', fontSize: '0.9rem', paddingLeft: '28px', lineHeight: 1.4 }}>
+              <div style={{ color: '#bbb', fontSize: isMobile ? '0.85rem' : '0.9rem', paddingLeft: isMobile ? '24px' : '28px', lineHeight: 1.5 }}>
                 {fideInfo.en}
               </div>
             </div>
@@ -367,24 +390,25 @@ Learn chess with KROG formulas!`;
         </div>
 
         {/* Share Button */}
-        <div style={{ padding: '16px 20px' }}>
+        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px' }}>
           <button
             onClick={handleShare}
             style={{
               width: '100%',
-              padding: '14px',
+              padding: isMobile ? '12px' : '14px',
               backgroundColor: showCopied ? '#81b64c' : '#333',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
-              fontSize: '1rem',
+              fontSize: isMobile ? '0.95rem' : '1rem',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              minHeight: '48px'
             }}
             onMouseEnter={(e) => {
               if (!showCopied) e.currentTarget.style.backgroundColor = '#444';
@@ -396,7 +420,7 @@ Learn chess with KROG formulas!`;
             {showCopied ? (
               <>
                 <span>✓</span>
-                <span>{language === 'en' ? 'Copied to clipboard!' : 'Kopiert til utklippstavlen!'}</span>
+                <span>{language === 'en' ? 'Copied!' : 'Kopiert!'}</span>
               </>
             ) : (
               <>
