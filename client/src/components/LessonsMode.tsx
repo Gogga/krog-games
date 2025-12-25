@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import type { Socket } from 'socket.io-client';
 
+// Hook to detect mobile viewport
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return isMobile;
+};
+
 interface LocalizedText {
     en: string;
     no: string;
@@ -65,6 +78,7 @@ const PIECE_ICONS: Record<string, string> = {
 };
 
 const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) => {
+    const isMobile = useIsMobile();
     const [view, setView] = useState<'overview' | 'lesson'>('overview');
     const [levels, setLevels] = useState<LevelSummary[]>([]);
     const [currentLesson, setCurrentLesson] = useState<LessonData | null>(null);
@@ -195,8 +209,10 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
     if (loading && view === 'overview') {
         return (
             <div className="app-container">
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <h2>{language === 'en' ? 'Loading lessons...' : 'Laster leksjoner...'}</h2>
+                <div style={{ textAlign: 'center', padding: isMobile ? '24px 16px' : '40px' }}>
+                    <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.5rem' }}>
+                        {language === 'en' ? 'Loading lessons...' : 'Laster leksjoner...'}
+                    </h2>
                 </div>
             </div>
         );
@@ -205,9 +221,9 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
     // Lesson View
     if (view === 'lesson' && currentLesson) {
         return (
-            <div className="app-container">
+            <div className="app-container" style={{ padding: isMobile ? '12px' : undefined }}>
                 {/* Header */}
-                <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
                     <button
                         onClick={backToOverview}
                         style={{
@@ -216,19 +232,21 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                             color: '#888',
                             cursor: 'pointer',
                             fontFamily: 'inherit',
-                            fontSize: '1rem',
+                            fontSize: isMobile ? '0.9rem' : '1rem',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            marginBottom: '10px'
+                            marginBottom: isMobile ? '8px' : '10px',
+                            padding: isMobile ? '8px 0' : '0',
+                            minHeight: isMobile ? '44px' : 'auto'
                         }}
                     >
-                        <span style={{ fontSize: '1.2rem' }}>&larr;</span>
-                        {language === 'en' ? 'Back to lessons' : 'Tilbake til leksjoner'}
+                        <span style={{ fontSize: isMobile ? '1rem' : '1.2rem' }}>&larr;</span>
+                        {language === 'en' ? 'Back' : 'Tilbake'}
                     </button>
-                    <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 700 }}>
+                    <h1 style={{ margin: 0, fontSize: isMobile ? '1.4rem' : '2rem', fontWeight: 700 }}>
                         {currentLesson.piece && (
-                            <span style={{ marginRight: '10px' }}>
+                            <span style={{ marginRight: isMobile ? '8px' : '10px' }}>
                                 {PIECE_ICONS[currentLesson.piece] || ''}
                             </span>
                         )}
@@ -237,33 +255,33 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
-                        marginTop: '10px',
+                        gap: isMobile ? '8px' : '12px',
+                        marginTop: isMobile ? '8px' : '10px',
                         color: '#888'
                     }}>
                         <span style={{
                             background: LEVEL_COLORS[currentLesson.level] || '#666',
                             color: 'white',
-                            padding: '4px 10px',
+                            padding: isMobile ? '3px 8px' : '4px 10px',
                             borderRadius: '4px',
-                            fontSize: '0.8rem',
+                            fontSize: isMobile ? '0.7rem' : '0.8rem',
                             fontWeight: 600
                         }}>
-                            Level {currentLesson.level}
+                            L{currentLesson.level}
                         </span>
-                        <span>{currentLesson.duration} min</span>
+                        <span style={{ fontSize: isMobile ? '0.85rem' : '1rem' }}>{currentLesson.duration} min</span>
                     </div>
                 </div>
 
                 {/* Content */}
                 <div style={{
                     background: 'var(--bg-secondary)',
-                    padding: '24px',
-                    borderRadius: '12px',
-                    marginBottom: '20px'
+                    padding: isMobile ? '16px' : '24px',
+                    borderRadius: isMobile ? '8px' : '12px',
+                    marginBottom: isMobile ? '12px' : '20px'
                 }}>
                     <p style={{
-                        fontSize: '1.1rem',
+                        fontSize: isMobile ? '0.95rem' : '1.1rem',
                         lineHeight: 1.7,
                         margin: 0,
                         color: '#e0e0e0'
@@ -276,19 +294,20 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                 {currentLesson.keyPoints && currentLesson.keyPoints.length > 0 && (
                     <div style={{
                         background: 'var(--bg-secondary)',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        marginBottom: '20px',
+                        padding: isMobile ? '14px' : '20px',
+                        borderRadius: isMobile ? '8px' : '12px',
+                        marginBottom: isMobile ? '12px' : '20px',
                         border: '1px solid #333'
                     }}>
-                        <h3 style={{ margin: '0 0 12px 0', color: '#81b64c' }}>
+                        <h3 style={{ margin: isMobile ? '0 0 10px 0' : '0 0 12px 0', color: '#81b64c', fontSize: isMobile ? '1rem' : '1.17rem' }}>
                             {language === 'en' ? 'Key Points' : 'Hovedpunkter'}
                         </h3>
-                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                        <ul style={{ margin: 0, paddingLeft: isMobile ? '16px' : '20px' }}>
                             {currentLesson.keyPoints.map((point, i) => (
                                 <li key={i} style={{
-                                    marginBottom: '8px',
-                                    color: '#ccc'
+                                    marginBottom: isMobile ? '6px' : '8px',
+                                    color: '#ccc',
+                                    fontSize: isMobile ? '0.85rem' : '1rem'
                                 }}>
                                     {point[language]}
                                 </li>
@@ -302,39 +321,40 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                     <div style={{
                         background: 'rgba(129, 182, 76, 0.1)',
                         border: '2px solid #81b64c',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        marginBottom: '20px'
+                        padding: isMobile ? '14px' : '20px',
+                        borderRadius: isMobile ? '8px' : '12px',
+                        marginBottom: isMobile ? '12px' : '20px'
                     }}>
-                        <h3 style={{ margin: '0 0 12px 0', color: '#81b64c' }}>
-                            KROG Formula
+                        <h3 style={{ margin: isMobile ? '0 0 10px 0' : '0 0 12px 0', color: '#81b64c', fontSize: isMobile ? '1rem' : '1.17rem' }}>
+                            KROG
                         </h3>
                         <div style={{
                             fontFamily: 'monospace',
-                            fontSize: '1rem',
+                            fontSize: isMobile ? '0.8rem' : '1rem',
                             color: '#81b64c',
                             background: 'rgba(0,0,0,0.3)',
-                            padding: '12px 16px',
+                            padding: isMobile ? '10px 12px' : '12px 16px',
                             borderRadius: '6px',
                             overflowX: 'auto',
-                            whiteSpace: 'pre-wrap'
+                            whiteSpace: 'pre-wrap',
+                            WebkitOverflowScrolling: 'touch'
                         }}>
                             {currentLesson.krog.formula}
                         </div>
                         {currentLesson.krog.note && (
                             <p style={{
-                                margin: '12px 0 0 0',
+                                margin: isMobile ? '10px 0 0 0' : '12px 0 0 0',
                                 color: '#888',
-                                fontSize: '0.9rem'
+                                fontSize: isMobile ? '0.8rem' : '0.9rem'
                             }}>
                                 {currentLesson.krog.note}
                             </p>
                         )}
                         {currentLesson.krog.fide && (
                             <p style={{
-                                margin: '8px 0 0 0',
+                                margin: isMobile ? '6px 0 0 0' : '8px 0 0 0',
                                 color: '#666',
-                                fontSize: '0.85rem'
+                                fontSize: isMobile ? '0.75rem' : '0.85rem'
                             }}>
                                 FIDE: {currentLesson.krog.fide}
                             </p>
@@ -346,34 +366,34 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                 {currentLesson.quiz && currentLesson.quiz.length > 0 && !quizCompleted && (
                     <div style={{
                         background: 'var(--bg-secondary)',
-                        padding: '24px',
-                        borderRadius: '12px',
-                        marginBottom: '20px',
+                        padding: isMobile ? '16px' : '24px',
+                        borderRadius: isMobile ? '8px' : '12px',
+                        marginBottom: isMobile ? '12px' : '20px',
                         border: '2px solid #4a90d9'
                     }}>
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            marginBottom: '16px'
+                            marginBottom: isMobile ? '12px' : '16px'
                         }}>
-                            <h3 style={{ margin: 0, color: '#4a90d9' }}>
-                                {language === 'en' ? 'Quiz' : 'Quiz'}
+                            <h3 style={{ margin: 0, color: '#4a90d9', fontSize: isMobile ? '1rem' : '1.17rem' }}>
+                                Quiz
                             </h3>
-                            <span style={{ color: '#888', fontSize: '0.9rem' }}>
+                            <span style={{ color: '#888', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>
                                 {quizIndex + 1} / {currentLesson.quiz.length}
                             </span>
                         </div>
 
                         <p style={{
-                            fontSize: '1.1rem',
-                            marginBottom: '20px',
+                            fontSize: isMobile ? '0.95rem' : '1.1rem',
+                            marginBottom: isMobile ? '16px' : '20px',
                             color: 'white'
                         }}>
                             {currentLesson.quiz[quizIndex].question[language]}
                         </p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '10px' }}>
                             {currentLesson.quiz[quizIndex].options.map((option, i) => {
                                 const isSelected = selectedAnswer === i;
                                 const isCorrect = currentLesson.quiz![quizIndex].correct === i;
@@ -404,13 +424,14 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                                             background: bg,
                                             border,
                                             color: 'white',
-                                            padding: '14px 18px',
+                                            padding: isMobile ? '12px 14px' : '14px 18px',
                                             borderRadius: '8px',
                                             cursor: quizResult !== null ? 'default' : 'pointer',
                                             fontFamily: 'inherit',
-                                            fontSize: '1rem',
+                                            fontSize: isMobile ? '0.9rem' : '1rem',
                                             textAlign: 'left',
-                                            transition: 'all 0.2s'
+                                            transition: 'all 0.2s',
+                                            minHeight: '44px'
                                         }}
                                     >
                                         {option}
@@ -420,16 +441,16 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                         </div>
 
                         {quizResult && (
-                            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                            <div style={{ marginTop: isMobile ? '16px' : '20px', textAlign: 'center' }}>
                                 <p style={{
                                     color: quizResult === 'correct' ? '#81b64c' : '#e74c3c',
                                     fontWeight: 600,
-                                    fontSize: '1.1rem',
-                                    marginBottom: '15px'
+                                    fontSize: isMobile ? '0.95rem' : '1.1rem',
+                                    marginBottom: isMobile ? '12px' : '15px'
                                 }}>
                                     {quizResult === 'correct'
                                         ? (language === 'en' ? 'Correct!' : 'Riktig!')
-                                        : (language === 'en' ? 'Incorrect. The correct answer is highlighted.' : 'Feil. Riktig svar er markert.')}
+                                        : (language === 'en' ? 'Incorrect' : 'Feil')}
                                 </p>
                                 <button
                                     onClick={nextQuizQuestion}
@@ -437,17 +458,18 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                                         background: '#4a90d9',
                                         border: 'none',
                                         color: 'white',
-                                        padding: '12px 24px',
+                                        padding: isMobile ? '12px 20px' : '12px 24px',
                                         borderRadius: '6px',
                                         cursor: 'pointer',
                                         fontFamily: 'inherit',
-                                        fontSize: '1rem',
-                                        fontWeight: 600
+                                        fontSize: isMobile ? '0.9rem' : '1rem',
+                                        fontWeight: 600,
+                                        minHeight: '44px'
                                     }}
                                 >
                                     {quizIndex < currentLesson.quiz.length - 1
-                                        ? (language === 'en' ? 'Next Question' : 'Neste sporsmal')
-                                        : (language === 'en' ? 'Complete Quiz' : 'Fullfør Quiz')}
+                                        ? (language === 'en' ? 'Next' : 'Neste')
+                                        : (language === 'en' ? 'Complete' : 'Fullfør')}
                                 </button>
                             </div>
                         )}
@@ -459,18 +481,18 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                     <div style={{
                         background: 'rgba(129, 182, 76, 0.15)',
                         border: '2px solid #81b64c',
-                        padding: '24px',
-                        borderRadius: '12px',
-                        marginBottom: '20px',
+                        padding: isMobile ? '16px' : '24px',
+                        borderRadius: isMobile ? '8px' : '12px',
+                        marginBottom: isMobile ? '12px' : '20px',
                         textAlign: 'center'
                     }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>
+                        <div style={{ fontSize: isMobile ? '1.5rem' : '2rem', marginBottom: isMobile ? '8px' : '10px' }}>
                             {'\u2714'}
                         </div>
-                        <h3 style={{ color: '#81b64c', margin: '0 0 10px 0' }}>
-                            {language === 'en' ? 'Lesson Complete!' : 'Leksjon fullført!'}
+                        <h3 style={{ color: '#81b64c', margin: isMobile ? '0 0 8px 0' : '0 0 10px 0', fontSize: isMobile ? '1.1rem' : '1.17rem' }}>
+                            {language === 'en' ? 'Complete!' : 'Fullført!'}
                         </h3>
-                        <p style={{ color: '#888', margin: 0 }}>
+                        <p style={{ color: '#888', margin: 0, fontSize: isMobile ? '0.85rem' : '1rem' }}>
                             {language === 'en'
                                 ? 'You have completed this lesson.'
                                 : 'Du har fullført denne leksjonen.'}
@@ -481,7 +503,7 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                 {/* Navigation */}
                 <div style={{
                     display: 'flex',
-                    gap: '12px',
+                    gap: isMobile ? '10px' : '12px',
                     justifyContent: 'center',
                     flexWrap: 'wrap'
                 }}>
@@ -492,18 +514,19 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                                 background: '#81b64c',
                                 border: 'none',
                                 color: 'white',
-                                padding: '14px 28px',
+                                padding: isMobile ? '12px 20px' : '14px 28px',
                                 borderRadius: '8px',
                                 cursor: 'pointer',
                                 fontFamily: 'inherit',
-                                fontSize: '1.1rem',
+                                fontSize: isMobile ? '0.95rem' : '1.1rem',
                                 fontWeight: 600,
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '8px'
+                                gap: '8px',
+                                minHeight: '44px'
                             }}
                         >
-                            {language === 'en' ? 'Next Lesson' : 'Neste leksjon'}
+                            {language === 'en' ? 'Next' : 'Neste'}
                             <span>&rarr;</span>
                         </button>
                     )}
@@ -513,11 +536,12 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                             background: 'var(--bg-secondary)',
                             border: '1px solid #444',
                             color: 'white',
-                            padding: '14px 28px',
+                            padding: isMobile ? '12px 20px' : '14px 28px',
                             borderRadius: '8px',
                             cursor: 'pointer',
                             fontFamily: 'inherit',
-                            fontSize: '1rem'
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            minHeight: '44px'
                         }}
                     >
                         {language === 'en' ? 'All Lessons' : 'Alle leksjoner'}
@@ -529,16 +553,16 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
 
     // Overview View
     return (
-        <div className="app-container">
+        <div className="app-container" style={{ padding: isMobile ? '12px' : undefined }}>
             {/* Header */}
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>
+            <div style={{ marginBottom: isMobile ? '12px' : '20px', textAlign: 'center' }}>
+                <h1 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 700 }}>
                     {language === 'en' ? 'Learn Chess' : 'Lær Sjakk'}
                 </h1>
-                <p style={{ color: '#888', marginTop: '10px' }}>
+                <p style={{ color: '#888', marginTop: isMobile ? '6px' : '10px', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                     {language === 'en'
-                        ? 'Master chess from the basics to advanced tactics'
-                        : 'Mestre sjakk fra det grunnleggende til avansert taktikk'}
+                        ? 'Master chess basics to advanced tactics'
+                        : 'Mestre sjakk fra grunnleggende til avansert'}
                 </p>
 
                 {/* Progress */}
@@ -547,19 +571,20 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                     justifyContent: 'center',
                     alignItems: 'center',
                     gap: '15px',
-                    marginTop: '15px'
+                    marginTop: isMobile ? '10px' : '15px'
                 }}>
                     <div style={{
                         background: 'var(--bg-secondary)',
-                        padding: '8px 16px',
-                        borderRadius: '6px'
+                        padding: isMobile ? '6px 12px' : '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: isMobile ? '0.85rem' : '1rem'
                     }}>
                         <span style={{ color: '#81b64c', fontWeight: 600 }}>
                             {getCompletedCount()}
                         </span>
                         <span style={{ color: '#888' }}> / {getTotalLessons()} </span>
                         <span style={{ color: '#888' }}>
-                            {language === 'en' ? 'completed' : 'fullført'}
+                            {language === 'en' ? 'done' : 'ferdig'}
                         </span>
                     </div>
                 </div>
@@ -572,24 +597,26 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                     background: '#e74c3c',
                     border: 'none',
                     color: 'white',
-                    padding: '10px 20px',
+                    padding: isMobile ? '10px 16px' : '10px 20px',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    marginBottom: '20px'
+                    marginBottom: isMobile ? '12px' : '20px',
+                    fontSize: isMobile ? '0.9rem' : '1rem',
+                    minHeight: '44px'
                 }}
             >
-                {language === 'en' ? 'Back to Menu' : 'Tilbake til meny'}
+                {language === 'en' ? 'Back' : 'Tilbake'}
             </button>
 
             {/* Levels */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '10px' : '16px' }}>
                 {levels.map((level) => (
                     <div
                         key={level.level}
                         style={{
                             background: 'var(--bg-secondary)',
-                            borderRadius: '12px',
+                            borderRadius: isMobile ? '8px' : '12px',
                             overflow: 'hidden'
                         }}
                     >
@@ -600,48 +627,58 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                                 width: '100%',
                                 background: 'rgba(0,0,0,0.2)',
                                 border: 'none',
-                                padding: '16px 20px',
+                                padding: isMobile ? '12px 14px' : '16px 20px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '12px',
+                                gap: isMobile ? '8px' : '12px',
                                 color: 'white',
-                                fontFamily: 'inherit'
+                                fontFamily: 'inherit',
+                                minHeight: isMobile ? '48px' : 'auto'
                             }}
                         >
                             <span style={{
                                 transform: expandedLevels.has(level.level) ? 'rotate(90deg)' : 'rotate(0)',
-                                transition: 'transform 0.2s'
+                                transition: 'transform 0.2s',
+                                fontSize: isMobile ? '0.8rem' : '1rem'
                             }}>
                                 {'\u25B6'}
                             </span>
                             <span style={{
                                 background: LEVEL_COLORS[level.level] || '#666',
                                 color: 'white',
-                                padding: '4px 12px',
+                                padding: isMobile ? '3px 8px' : '4px 12px',
                                 borderRadius: '4px',
-                                fontSize: '0.85rem',
+                                fontSize: isMobile ? '0.7rem' : '0.85rem',
                                 fontWeight: 600
                             }}>
-                                Level {level.level}
+                                L{level.level}
                             </span>
-                            <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                            <span style={{
+                                fontWeight: 600,
+                                fontSize: isMobile ? '0.9rem' : '1.1rem',
+                                flex: 1,
+                                textAlign: 'left',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
                                 {level.name[language]}
                             </span>
-                            <span style={{ color: '#888', marginLeft: 'auto', fontSize: '0.9rem' }}>
+                            <span style={{ color: '#888', fontSize: isMobile ? '0.75rem' : '0.9rem' }}>
                                 {level.estimatedTime}
                             </span>
                         </button>
 
                         {/* Level Content (Modules) */}
                         {expandedLevels.has(level.level) && (
-                            <div style={{ padding: '0 16px 16px' }}>
-                                <p style={{ color: '#888', margin: '12px 0', fontSize: '0.95rem' }}>
+                            <div style={{ padding: isMobile ? '0 12px 12px' : '0 16px 16px' }}>
+                                <p style={{ color: '#888', margin: isMobile ? '10px 0' : '12px 0', fontSize: isMobile ? '0.8rem' : '0.95rem' }}>
                                     {level.description[language]}
                                 </p>
 
                                 {level.modules.map((mod) => (
-                                    <div key={mod.id} style={{ marginTop: '12px' }}>
+                                    <div key={mod.id} style={{ marginTop: isMobile ? '10px' : '12px' }}>
                                         {/* Module Header */}
                                         <button
                                             onClick={() => toggleModule(mod.id)}
@@ -649,43 +686,43 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                                                 width: '100%',
                                                 background: 'rgba(255,255,255,0.05)',
                                                 border: '1px solid #333',
-                                                borderRadius: '8px',
-                                                padding: '12px 16px',
+                                                borderRadius: isMobile ? '6px' : '8px',
+                                                padding: isMobile ? '10px 12px' : '12px 16px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '10px',
+                                                gap: isMobile ? '8px' : '10px',
                                                 color: 'white',
-                                                fontFamily: 'inherit'
+                                                fontFamily: 'inherit',
+                                                minHeight: isMobile ? '44px' : 'auto'
                                             }}
                                         >
                                             <span style={{
                                                 transform: expandedModules.has(mod.id) ? 'rotate(90deg)' : 'rotate(0)',
                                                 transition: 'transform 0.2s',
-                                                fontSize: '0.8rem'
+                                                fontSize: isMobile ? '0.7rem' : '0.8rem'
                                             }}>
                                                 {'\u25B6'}
                                             </span>
-                                            <span style={{ fontWeight: 500 }}>
+                                            <span style={{ fontWeight: 500, fontSize: isMobile ? '0.85rem' : '1rem', flex: 1, textAlign: 'left' }}>
                                                 {mod.name[language]}
                                             </span>
                                             <span style={{
                                                 color: '#888',
-                                                marginLeft: 'auto',
-                                                fontSize: '0.85rem'
+                                                fontSize: isMobile ? '0.7rem' : '0.85rem'
                                             }}>
-                                                {mod.lessonCount} {language === 'en' ? 'lessons' : 'leksjoner'}
+                                                {mod.lessonCount}
                                             </span>
                                         </button>
 
                                         {/* Lessons List */}
                                         {expandedModules.has(mod.id) && (
                                             <div style={{
-                                                marginTop: '8px',
-                                                marginLeft: '20px',
+                                                marginTop: isMobile ? '6px' : '8px',
+                                                marginLeft: isMobile ? '12px' : '20px',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                gap: '6px'
+                                                gap: isMobile ? '4px' : '6px'
                                             }}>
                                                 {mod.lessons.map((lesson) => {
                                                     const isCompleted = completedLessons.has(lesson.id);
@@ -701,39 +738,48 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                                                                     ? '1px solid rgba(129, 182, 76, 0.3)'
                                                                     : '1px solid #2a2a2a',
                                                                 borderRadius: '6px',
-                                                                padding: '10px 14px',
+                                                                padding: isMobile ? '10px 12px' : '10px 14px',
                                                                 cursor: 'pointer',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
-                                                                gap: '10px',
+                                                                gap: isMobile ? '8px' : '10px',
                                                                 color: 'white',
                                                                 fontFamily: 'inherit',
-                                                                textAlign: 'left'
+                                                                textAlign: 'left',
+                                                                minHeight: isMobile ? '44px' : 'auto'
                                                             }}
                                                         >
                                                             {isCompleted ? (
-                                                                <span style={{ color: '#81b64c' }}>{'\u2714'}</span>
+                                                                <span style={{ color: '#81b64c', fontSize: isMobile ? '0.9rem' : '1rem' }}>{'\u2714'}</span>
                                                             ) : (
                                                                 <span style={{
-                                                                    width: '16px',
-                                                                    height: '16px',
+                                                                    width: isMobile ? '14px' : '16px',
+                                                                    height: isMobile ? '14px' : '16px',
                                                                     border: '2px solid #444',
-                                                                    borderRadius: '50%'
+                                                                    borderRadius: '50%',
+                                                                    flexShrink: 0
                                                                 }} />
                                                             )}
                                                             {lesson.piece && (
-                                                                <span style={{ fontSize: '1.2rem' }}>
+                                                                <span style={{ fontSize: isMobile ? '1rem' : '1.2rem' }}>
                                                                     {PIECE_ICONS[lesson.piece] || ''}
                                                                 </span>
                                                             )}
-                                                            <span style={{ flex: 1 }}>
+                                                            <span style={{
+                                                                flex: 1,
+                                                                fontSize: isMobile ? '0.85rem' : '1rem',
+                                                                whiteSpace: 'nowrap',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis'
+                                                            }}>
                                                                 {lesson.title[language]}
                                                             </span>
                                                             <span style={{
                                                                 color: '#666',
-                                                                fontSize: '0.85rem'
+                                                                fontSize: isMobile ? '0.7rem' : '0.85rem',
+                                                                flexShrink: 0
                                                             }}>
-                                                                {lesson.duration} min
+                                                                {lesson.duration}m
                                                             </span>
                                                         </button>
                                                     );
@@ -751,7 +797,7 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
             {/* Start Learning CTA */}
             {getCompletedCount() === 0 && levels.length > 0 && (
                 <div style={{
-                    marginTop: '30px',
+                    marginTop: isMobile ? '20px' : '30px',
                     textAlign: 'center'
                 }}>
                     <button
@@ -760,12 +806,13 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                             background: '#81b64c',
                             border: 'none',
                             color: 'white',
-                            padding: '16px 32px',
+                            padding: isMobile ? '14px 24px' : '16px 32px',
                             borderRadius: '8px',
                             cursor: 'pointer',
                             fontFamily: 'inherit',
-                            fontSize: '1.2rem',
-                            fontWeight: 600
+                            fontSize: isMobile ? '1rem' : '1.2rem',
+                            fontWeight: 600,
+                            minHeight: '44px'
                         }}
                     >
                         {language === 'en' ? 'Start Learning!' : 'Begynn å lære!'}
