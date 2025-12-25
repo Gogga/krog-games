@@ -8,7 +8,7 @@
 
 **What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
 
-**Documentation:** `docs/FEATURES.md` - Complete feature list. `docs/ROADMAP.md` - Development roadmap. `docs/FAQ.md` - Comprehensive FAQ.
+**Documentation:** `docs/FEATURES.md` - Complete feature list. `docs/ROADMAP.md` - Development roadmap. `docs/FAQ.md` - Comprehensive FAQ. `docs/UI-CONTENT-GUIDE.md` - Bilingual UI microcopy reference.
 
 **Spec Files:** `krog/PHASE1-7.md` - Complete specifications.
 
@@ -197,6 +197,9 @@
 - [x] Sound toggle with persistence
 - [x] Back to Lobby button in game view (bilingual EN/NO)
 - [x] Collapsible panels for Tournaments, Leagues, Clubs, Friends
+- [x] FAQ Modal accessible from lobby menu and game settings
+- [x] Bilingual FAQ content (EN/NO) with 6 categories
+- [x] Collapsible FAQ categories and items
 
 ---
 
@@ -223,6 +226,7 @@ chess-project/
 │   │   │   ├── DailyPuzzle.tsx  # Daily puzzle with KROG explanations
 │   │   │   ├── MoveExplanationModal.tsx # Explain This Move modal
 │   │   │   ├── KrogLeaderboard.tsx # KROG gamification leaderboard
+│   │   │   ├── FAQModal.tsx     # Help/FAQ modal with bilingual content
 │   │   │   ├── OpeningExplorer.tsx # Opening tree browser
 │   │   │   ├── LessonsMode.tsx  # Interactive lessons with quizzes
 │   │   │   ├── AuthModal.tsx    # Login/Register modal
