@@ -133,6 +133,7 @@
 - [x] Score and Buchholz tracking
 - [x] Tournament game rooms
 - [x] Result recording
+- [x] Collapsible panel with toggle button
 
 ### Leagues (Phase 6 - COMPLETE)
 - [x] Create leagues (individual, round-robin/swiss)
@@ -143,6 +144,7 @@
 - [x] Fixture generation with home/away
 - [x] League match rooms
 - [x] Season support
+- [x] Collapsible panel with toggle button
 
 ### Daily Puzzle
 - [x] One puzzle per day (resets at midnight UTC)
@@ -193,6 +195,8 @@
 - [x] Sound effects (11 sounds: move, capture, check, castle, promote, gameStart, gameEnd, illegal, drawOffer, notify, timeout)
 - [x] Web Audio API sound generation (no external files)
 - [x] Sound toggle with persistence
+- [x] Back to Lobby button in game view (bilingual EN/NO)
+- [x] Collapsible panels for Tournaments, Leagues, Clubs, Friends
 
 ---
 
