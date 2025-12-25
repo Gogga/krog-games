@@ -91,9 +91,10 @@ export function useResponsiveBoard(): BoardDimensions {
 
   const calculateBoardSize = useCallback((): number => {
     if (isMobile) {
-      // Mobile: constrain between 280px and 480px, accounting for padding
-      const maxMobileSize = Math.min(screenWidth - 16, 480);
-      return Math.max(280, maxMobileSize);
+      // Mobile: account for padding, margins, and container constraints
+      // Use 90% of screen width or max 480px, whichever is smaller
+      const availableWidth = screenWidth * 0.9;
+      return Math.min(Math.max(availableWidth, 280), 480);
     } else if (isTablet) {
       // Tablet: 400px - 520px based on screen width
       const tabletSize = Math.min(520, Math.max(400, screenWidth * 0.5));
