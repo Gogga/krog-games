@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Socket } from 'socket.io-client';
 
+// Hook to detect mobile viewport
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
 interface MatchmakingPanelProps {
   socket: Socket | null;
   onMatchFound: (data: { roomCode: string; color: 'white' | 'black'; opponent: { username: string; rating: number }; timeControl: string }) => void;
@@ -23,6 +36,7 @@ const TIME_CONTROLS: TimeControlOption[] = [
 
 export function MatchmakingPanel({ socket, onMatchFound }: MatchmakingPanelProps) {
   const { user, token } = useAuth();
+  const isMobile = useIsMobile();
   const [isSearching, setIsSearching] = useState(false);
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>('blitz');
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
@@ -108,36 +122,38 @@ export function MatchmakingPanel({ socket, onMatchFound }: MatchmakingPanelProps
   return (
     <div style={{
       backgroundColor: '#2a2a2a',
-      borderRadius: '8px',
-      padding: '16px',
-      marginBottom: '16px'
+      borderRadius: isMobile ? '12px' : '8px',
+      padding: isMobile ? '12px' : '16px',
+      marginBottom: isMobile ? '12px' : '16px'
     }}>
-      <h3 style={{ color: '#fff', margin: '0 0 12px 0', fontSize: '16px' }}>
+      <h3 style={{ color: '#fff', margin: '0 0 12px 0', fontSize: isMobile ? '15px' : '16px' }}>
         Find a Match
       </h3>
 
       {!isSearching ? (
         <>
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ color: '#888', fontSize: '12px', marginBottom: '8px' }}>Time Control</div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ color: '#888', fontSize: isMobile ? '11px' : '12px', marginBottom: '8px' }}>Time Control</div>
+            <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px' }}>
               {TIME_CONTROLS.map(tc => (
                 <button
                   key={tc.id}
                   onClick={() => setSelectedTimeControl(tc.id)}
                   style={{
                     flex: 1,
-                    padding: '10px',
+                    padding: isMobile ? '12px 8px' : '10px',
+                    minHeight: isMobile ? '54px' : 'auto',
                     backgroundColor: selectedTimeControl === tc.id ? '#4CAF50' : '#1a1a1a',
                     border: selectedTimeControl === tc.id ? '2px solid #4CAF50' : '2px solid #444',
-                    borderRadius: '6px',
+                    borderRadius: isMobile ? '8px' : '6px',
                     color: '#fff',
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{tc.label}</div>
-                  <div style={{ fontSize: '11px', color: selectedTimeControl === tc.id ? '#fff' : '#888' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: isMobile ? '13px' : '14px' }}>{tc.label}</div>
+                  <div style={{ fontSize: isMobile ? '10px' : '11px', color: selectedTimeControl === tc.id ? '#fff' : '#888' }}>
                     {tc.description}
                   </div>
                 </button>
@@ -149,63 +165,68 @@ export function MatchmakingPanel({ socket, onMatchFound }: MatchmakingPanelProps
             onClick={handleStartSearch}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: isMobile ? '14px' : '12px',
+              minHeight: isMobile ? '48px' : 'auto',
               backgroundColor: '#4CAF50',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: isMobile ? '8px' : '6px',
               color: '#fff',
-              fontSize: '16px',
+              fontSize: isMobile ? '15px' : '16px',
               fontWeight: 'bold',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent'
             }}
           >
             Find Opponent
           </button>
 
-          <div style={{ color: '#888', fontSize: '12px', textAlign: 'center', marginTop: '8px' }}>
+          <div style={{ color: '#888', fontSize: isMobile ? '11px' : '12px', textAlign: 'center', marginTop: '8px' }}>
             Your rating: {user.rating}
           </div>
         </>
       ) : (
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', padding: isMobile ? '8px 0' : '0' }}>
           <div style={{
-            width: '60px',
-            height: '60px',
-            border: '4px solid #333',
-            borderTop: '4px solid #4CAF50',
+            width: isMobile ? '50px' : '60px',
+            height: isMobile ? '50px' : '60px',
+            border: isMobile ? '3px solid #333' : '4px solid #333',
+            borderTop: isMobile ? '3px solid #4CAF50' : '4px solid #4CAF50',
             borderRadius: '50%',
-            margin: '0 auto 16px',
+            margin: isMobile ? '0 auto 12px' : '0 auto 16px',
             animation: 'spin 1s linear infinite'
           }} />
 
-          <div style={{ color: '#fff', fontSize: '16px', marginBottom: '4px' }}>
+          <div style={{ color: '#fff', fontSize: isMobile ? '14px' : '16px', marginBottom: '4px' }}>
             Searching for opponent...
           </div>
 
-          <div style={{ color: '#888', fontSize: '14px', marginBottom: '4px' }}>
+          <div style={{ color: '#888', fontSize: isMobile ? '13px' : '14px', marginBottom: '4px' }}>
             {formatTime(searchTime)}
           </div>
 
           {queuePosition !== null && (
-            <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px' }}>
+            <div style={{ color: '#888', fontSize: isMobile ? '11px' : '12px', marginBottom: isMobile ? '10px' : '12px' }}>
               Queue position: {queuePosition}
             </div>
           )}
 
-          <div style={{ color: '#888', fontSize: '12px', marginBottom: '12px' }}>
-            {TIME_CONTROLS.find(tc => tc.id === selectedTimeControl)?.label} | Rating: {user.rating} (+/- 200)
+          <div style={{ color: '#888', fontSize: isMobile ? '11px' : '12px', marginBottom: isMobile ? '10px' : '12px' }}>
+            {TIME_CONTROLS.find(tc => tc.id === selectedTimeControl)?.label} | Rating: {user.rating} (±200)
           </div>
 
           <button
             onClick={handleCancelSearch}
             style={{
-              padding: '10px 24px',
+              padding: isMobile ? '12px 28px' : '10px 24px',
+              minHeight: isMobile ? '44px' : 'auto',
               backgroundColor: '#f44336',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: isMobile ? '8px' : '6px',
               color: '#fff',
-              fontSize: '14px',
-              cursor: 'pointer'
+              fontSize: isMobile ? '14px' : '14px',
+              fontWeight: isMobile ? '500' : 'normal',
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent'
             }}
           >
             Cancel
