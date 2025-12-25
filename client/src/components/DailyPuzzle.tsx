@@ -4,6 +4,19 @@ import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
 import ChessBoard from './ChessBoard';
 
+// Hook to detect mobile screen
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
 interface KROGExplanation {
     formula: string;
     explanation: {
@@ -138,6 +151,7 @@ const DailyPuzzle: React.FC<DailyPuzzleProps> = ({ socket, language, user: _user
     const [countdown, setCountdown] = useState(getTimeUntilMidnightUTC());
     const [shareMessage, setShareMessage] = useState<string | null>(null);
     const [moveHistory, setMoveHistory] = useState<{ correct: boolean }[]>([]);
+    const isMobile = useIsMobile();
 
     const gameRef = useRef<Chess>(game);
     gameRef.current = game;
@@ -301,9 +315,9 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
 
     if (status === 'loading' || !dailyData) {
         return (
-            <div className="app-container">
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <h2>{language === 'en' ? 'Loading daily puzzle...' : 'Laster daglig oppgave...'}</h2>
+            <div className="app-container" style={{ padding: isMobile ? '16px' : undefined }}>
+                <div style={{ textAlign: 'center', padding: isMobile ? '30px 16px' : '40px' }}>
+                    <h2 style={{ fontSize: isMobile ? '1.2rem' : undefined }}>{language === 'en' ? 'Loading daily puzzle...' : 'Laster daglig oppgave...'}</h2>
                 </div>
             </div>
         );
@@ -312,39 +326,39 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
     const fideRule = getFIDERule(dailyData.puzzle.themes);
 
     return (
-        <div className="app-container">
+        <div className="app-container" style={{ padding: isMobile ? '12px' : undefined }}>
             {/* Header */}
-            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 700 }}>
+            <div style={{ marginBottom: isMobile ? '16px' : '20px', textAlign: 'center' }}>
+                <h1 style={{ margin: 0, fontSize: isMobile ? '1.6rem' : '2.5rem', fontWeight: 700 }}>
                     {language === 'en' ? 'Daily Puzzle' : 'Daglig Oppgave'}
                 </h1>
                 <div style={{
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    gap: '15px',
-                    marginTop: '10px',
+                    gap: isMobile ? '8px' : '15px',
+                    marginTop: isMobile ? '8px' : '10px',
                     flexWrap: 'wrap'
                 }}>
                     <span style={{
                         background: '#4a90d9',
                         color: 'white',
-                        padding: '6px 12px',
+                        padding: isMobile ? '4px 10px' : '6px 12px',
                         borderRadius: '6px',
-                        fontSize: '0.9rem',
+                        fontSize: isMobile ? '0.8rem' : '0.9rem',
                         fontWeight: 600
                     }}>
                         #{dailyData.puzzleNumber}
                     </span>
                     <span style={{
                         background: 'var(--bg-secondary)',
-                        padding: '6px 12px',
+                        padding: isMobile ? '4px 10px' : '6px 12px',
                         borderRadius: '6px',
-                        fontSize: '0.9rem'
+                        fontSize: isMobile ? '0.8rem' : '0.9rem'
                     }}>
                         {new Date(dailyData.date).toLocaleDateString(language === 'en' ? 'en-US' : 'nb-NO', {
-                            weekday: 'long',
-                            month: 'long',
+                            weekday: isMobile ? 'short' : 'long',
+                            month: isMobile ? 'short' : 'long',
                             day: 'numeric'
                         })}
                     </span>
@@ -352,12 +366,12 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
                         <span style={{
                             background: '#f39c12',
                             color: 'white',
-                            padding: '6px 12px',
+                            padding: isMobile ? '4px 10px' : '6px 12px',
                             borderRadius: '6px',
-                            fontSize: '0.9rem',
+                            fontSize: isMobile ? '0.8rem' : '0.9rem',
                             fontWeight: 600
                         }}>
-                            🔥 {streak.current} {language === 'en' ? 'day streak' : 'dagers rekke'}
+                            🔥 {streak.current} {isMobile ? '' : (language === 'en' ? 'day streak' : 'dagers rekke')}
                         </span>
                     )}
                 </div>
@@ -366,8 +380,8 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
             {/* Board */}
             <div style={{
                 background: 'var(--bg-secondary)',
-                padding: '20px',
-                borderRadius: '12px',
+                padding: isMobile ? '12px' : '20px',
+                borderRadius: isMobile ? '8px' : '12px',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
                 <ChessBoard
@@ -380,8 +394,8 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
 
             {/* Status message */}
             <div style={{
-                marginTop: '20px',
-                padding: '16px',
+                marginTop: isMobile ? '16px' : '20px',
+                padding: isMobile ? '12px' : '16px',
                 borderRadius: '8px',
                 textAlign: 'center',
                 background: status === 'solved' || status === 'already_completed' ? 'rgba(129, 182, 76, 0.2)' :
@@ -394,7 +408,7 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
                        '1px solid #333'
             }}>
                 <div style={{
-                    fontSize: '1.2rem',
+                    fontSize: isMobile ? '1rem' : '1.2rem',
                     fontWeight: 600,
                     color: status === 'solved' || status === 'correct' || status === 'already_completed' ? '#81b64c' :
                           status === 'incorrect' ? '#e74c3c' : 'white'
@@ -402,12 +416,12 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
                     {message}
                 </div>
                 {hint && (
-                    <div style={{ color: '#888', marginTop: '8px', fontSize: '0.9rem' }}>
+                    <div style={{ color: '#888', marginTop: '8px', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
                         {hint}
                     </div>
                 )}
                 {(status === 'solved' || status === 'already_completed') && dailyData.completion && (
-                    <div style={{ color: '#888', marginTop: '8px', fontSize: '0.9rem' }}>
+                    <div style={{ color: '#888', marginTop: '8px', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
                         ⏱️ {formatTime(dailyData.completion.timeSpentMs || 0)} |
                         {dailyData.completion.attempts} {language === 'en' ? 'attempts' : 'forsok'}
                     </div>
@@ -417,30 +431,32 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
             {/* KROG Explanation Panel */}
             {(status === 'solved' || status === 'already_completed') && (
                 <div style={{
-                    marginTop: '20px',
+                    marginTop: isMobile ? '16px' : '20px',
                     background: 'var(--bg-secondary)',
-                    borderRadius: '12px',
+                    borderRadius: isMobile ? '8px' : '12px',
                     overflow: 'hidden',
                     border: '2px solid #81b64c'
                 }}>
                     {/* KROG Formula */}
                     {solvedKrog && (
-                        <div style={{ padding: '16px', borderBottom: '1px solid #333' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '10px', color: '#81b64c' }}>
+                        <div style={{ padding: isMobile ? '12px' : '16px', borderBottom: '1px solid #333' }}>
+                            <div style={{ fontWeight: 600, marginBottom: isMobile ? '8px' : '10px', color: '#81b64c', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                                 KROG Formula
                             </div>
                             <div style={{
                                 fontFamily: 'monospace',
-                                fontSize: '0.95rem',
+                                fontSize: isMobile ? '0.8rem' : '0.95rem',
                                 color: '#81b64c',
                                 background: 'rgba(0,0,0,0.3)',
-                                padding: '10px 14px',
+                                padding: isMobile ? '8px 10px' : '10px 14px',
                                 borderRadius: '6px',
-                                marginBottom: '10px'
+                                marginBottom: isMobile ? '8px' : '10px',
+                                overflowX: 'auto',
+                                wordBreak: 'break-word'
                             }}>
                                 {solvedKrog.formula}
                             </div>
-                            <div style={{ color: '#ccc' }}>
+                            <div style={{ color: '#ccc', fontSize: isMobile ? '0.85rem' : '1rem', lineHeight: 1.5 }}>
                                 {solvedKrog.explanation[language]}
                             </div>
                         </div>
@@ -448,42 +464,42 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
 
                     {/* R-Type */}
                     {solvedKrog?.rtype && (
-                        <div style={{ padding: '16px', borderBottom: '1px solid #333' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '8px', color: '#9b59b6' }}>
+                        <div style={{ padding: isMobile ? '12px' : '16px', borderBottom: '1px solid #333' }}>
+                            <div style={{ fontWeight: 600, marginBottom: '8px', color: '#9b59b6', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                                 {language === 'en' ? 'Rule Type' : 'Regeltype'}: {solvedKrog.rtype.replace('_', ' ')}
                             </div>
                         </div>
                     )}
 
                     {/* FIDE Rules */}
-                    <div style={{ padding: '16px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '10px', color: '#4a90d9' }}>
+                    <div style={{ padding: isMobile ? '12px' : '16px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: isMobile ? '8px' : '10px', color: '#4a90d9', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                             FIDE {language === 'en' ? 'Rules' : 'Regler'}
                         </div>
                         <div style={{
                             background: 'rgba(0,0,0,0.2)',
                             borderRadius: '8px',
-                            padding: '12px',
+                            padding: isMobile ? '10px' : '12px',
                             marginBottom: '8px'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🇳🇴</span>
-                                <span style={{ fontWeight: 600, color: '#4a90d9' }}>{fideRule.norwegian.section}</span>
+                                <span style={{ fontSize: isMobile ? '1rem' : '1.2rem' }}>🇳🇴</span>
+                                <span style={{ fontWeight: 600, color: '#4a90d9', fontSize: isMobile ? '0.85rem' : '1rem' }}>{fideRule.norwegian.section}</span>
                             </div>
-                            <div style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                            <div style={{ color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.9rem', lineHeight: 1.5 }}>
                                 {fideRule.norwegian.text}
                             </div>
                         </div>
                         <div style={{
                             background: 'rgba(0,0,0,0.2)',
                             borderRadius: '8px',
-                            padding: '12px'
+                            padding: isMobile ? '10px' : '12px'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🇬🇧</span>
-                                <span style={{ fontWeight: 600, color: '#4a90d9' }}>{fideRule.english.section}</span>
+                                <span style={{ fontSize: isMobile ? '1rem' : '1.2rem' }}>🇬🇧</span>
+                                <span style={{ fontWeight: 600, color: '#4a90d9', fontSize: isMobile ? '0.85rem' : '1rem' }}>{fideRule.english.section}</span>
                             </div>
-                            <div style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                            <div style={{ color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.9rem', lineHeight: 1.5 }}>
                                 {fideRule.english.text}
                             </div>
                         </div>
@@ -493,7 +509,7 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
 
             {/* Controls */}
             <div style={{
-                marginTop: '20px',
+                marginTop: isMobile ? '16px' : '20px',
                 display: 'flex',
                 gap: '10px',
                 justifyContent: 'center',
@@ -506,12 +522,13 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
                             background: '#f39c12',
                             border: 'none',
                             color: 'white',
-                            padding: '10px 20px',
+                            padding: isMobile ? '10px 16px' : '10px 20px',
                             borderRadius: '6px',
                             cursor: 'pointer',
                             fontFamily: 'inherit',
-                            fontSize: '1rem',
-                            fontWeight: 600
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            fontWeight: 600,
+                            minHeight: '44px'
                         }}
                     >
                         {language === 'en' ? 'Retry' : 'Prov igjen'}
@@ -525,12 +542,13 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
                             background: '#81b64c',
                             border: 'none',
                             color: 'white',
-                            padding: '10px 20px',
+                            padding: isMobile ? '10px 16px' : '10px 20px',
                             borderRadius: '6px',
                             cursor: 'pointer',
                             fontFamily: 'inherit',
-                            fontSize: '1rem',
-                            fontWeight: 600
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            fontWeight: 600,
+                            minHeight: '44px'
                         }}
                     >
                         {shareMessage || (language === 'en' ? 'Share Result' : 'Del resultat')}
@@ -541,16 +559,16 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
             {/* Countdown to next puzzle */}
             {(status === 'solved' || status === 'already_completed') && (
                 <div style={{
-                    marginTop: '20px',
+                    marginTop: isMobile ? '16px' : '20px',
                     textAlign: 'center',
-                    padding: '16px',
+                    padding: isMobile ? '12px' : '16px',
                     background: 'var(--bg-secondary)',
                     borderRadius: '8px'
                 }}>
-                    <div style={{ color: '#888', marginBottom: '8px' }}>
+                    <div style={{ color: '#888', marginBottom: '8px', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                         {language === 'en' ? 'Next puzzle in' : 'Neste oppgave om'}
                     </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 600, fontFamily: 'monospace' }}>
                         {countdown.hours.toString().padStart(2, '0')}:
                         {countdown.minutes.toString().padStart(2, '0')}:
                         {countdown.seconds.toString().padStart(2, '0')}
@@ -560,59 +578,60 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
 
             {/* Stats */}
             <div style={{
-                marginTop: '20px',
+                marginTop: isMobile ? '16px' : '20px',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '10px'
+                gap: isMobile ? '8px' : '10px'
             }}>
                 <div style={{
                     background: 'var(--bg-secondary)',
-                    padding: '16px',
+                    padding: isMobile ? '12px 8px' : '16px',
                     borderRadius: '8px',
                     textAlign: 'center'
                 }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>🔥 {streak.current}</div>
-                    <div style={{ color: '#888', fontSize: '0.85rem' }}>
-                        {language === 'en' ? 'Current Streak' : 'Navaerende rekke'}
+                    <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 700 }}>🔥 {streak.current}</div>
+                    <div style={{ color: '#888', fontSize: isMobile ? '0.7rem' : '0.85rem' }}>
+                        {isMobile ? (language === 'en' ? 'Streak' : 'Rekke') : (language === 'en' ? 'Current Streak' : 'Navaerende rekke')}
                     </div>
                 </div>
                 <div style={{
                     background: 'var(--bg-secondary)',
-                    padding: '16px',
+                    padding: isMobile ? '12px 8px' : '16px',
                     borderRadius: '8px',
                     textAlign: 'center'
                 }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>🏆 {streak.longest}</div>
-                    <div style={{ color: '#888', fontSize: '0.85rem' }}>
-                        {language === 'en' ? 'Best Streak' : 'Beste rekke'}
+                    <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 700 }}>🏆 {streak.longest}</div>
+                    <div style={{ color: '#888', fontSize: isMobile ? '0.7rem' : '0.85rem' }}>
+                        {isMobile ? (language === 'en' ? 'Best' : 'Beste') : (language === 'en' ? 'Best Streak' : 'Beste rekke')}
                     </div>
                 </div>
                 <div style={{
                     background: 'var(--bg-secondary)',
-                    padding: '16px',
+                    padding: isMobile ? '12px 8px' : '16px',
                     borderRadius: '8px',
                     textAlign: 'center'
                 }}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>✅ {streak.total}</div>
-                    <div style={{ color: '#888', fontSize: '0.85rem' }}>
-                        {language === 'en' ? 'Total Solved' : 'Totalt lost'}
+                    <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 700 }}>✅ {streak.total}</div>
+                    <div style={{ color: '#888', fontSize: isMobile ? '0.7rem' : '0.85rem' }}>
+                        {isMobile ? (language === 'en' ? 'Total' : 'Totalt') : (language === 'en' ? 'Total Solved' : 'Totalt lost')}
                     </div>
                 </div>
             </div>
 
             {/* Exit button */}
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div style={{ marginTop: isMobile ? '16px' : '20px', textAlign: 'center' }}>
                 <button
                     onClick={onExit}
                     style={{
                         background: '#e74c3c',
                         border: 'none',
                         color: 'white',
-                        padding: '10px 30px',
+                        padding: isMobile ? '10px 24px' : '10px 30px',
                         borderRadius: '6px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '1rem'
+                        fontSize: isMobile ? '0.9rem' : '1rem',
+                        minHeight: '44px'
                     }}
                 >
                     {language === 'en' ? 'Exit' : 'Avslutt'}
