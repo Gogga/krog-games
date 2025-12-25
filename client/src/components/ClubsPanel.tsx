@@ -2,6 +2,19 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
 
+// Hook to detect mobile viewport
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
 interface Club {
   id: string;
   name: string;
@@ -53,6 +66,7 @@ interface ClubsPanelProps {
 }
 
 export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelProps) {
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [myClubs, setMyClubs] = useState<Club[]>([]);
@@ -377,43 +391,62 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
             background: isOpen ? '#8e44ad' : 'transparent',
             border: '1px solid #444',
             color: 'white',
-            padding: '8px 16px',
+            padding: isMobile ? '10px 12px' : '8px 16px',
             borderRadius: '6px',
             cursor: 'pointer',
             fontFamily: 'inherit',
-            fontSize: '0.9rem',
+            fontSize: isMobile ? '0.85rem' : '0.9rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: isMobile ? '6px' : '8px',
+            minHeight: isMobile ? '44px' : 'auto'
           }}
         >
           <span>{selectedClub.logo_emoji}</span>
-          {selectedClub.name}
+          {isMobile ? '' : selectedClub.name}
         </button>
+
+        {/* Mobile overlay backdrop */}
+        {isOpen && isMobile && (
+          <div
+            onClick={() => setIsOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 99
+            }}
+          />
+        )}
 
         {isOpen && (
           <div style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            width: '380px',
-            maxHeight: '500px',
+            position: isMobile ? 'fixed' : 'absolute',
+            top: isMobile ? 'auto' : '100%',
+            bottom: isMobile ? 0 : 'auto',
+            left: isMobile ? 0 : 'auto',
+            right: isMobile ? 0 : 0,
+            width: isMobile ? '100%' : '380px',
+            maxHeight: isMobile ? '75vh' : '500px',
             background: 'var(--bg-secondary)',
-            border: '1px solid #444',
-            borderRadius: '8px',
+            border: isMobile ? 'none' : '1px solid #444',
+            borderRadius: isMobile ? '16px 16px 0 0' : '8px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
             zIndex: 100,
-            marginTop: '8px',
+            marginTop: isMobile ? 0 : '8px',
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Header */}
             <div style={{
-              padding: '12px',
+              padding: isMobile ? '14px 16px' : '12px',
               borderBottom: '1px solid #444',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px'
+              gap: isMobile ? '14px' : '12px'
             }}>
               <button
                 onClick={handleBackToList}
@@ -422,16 +455,21 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                   border: 'none',
                   color: '#888',
                   cursor: 'pointer',
-                  fontSize: '1.2rem',
-                  padding: '4px'
+                  fontSize: isMobile ? '1.4rem' : '1.2rem',
+                  padding: isMobile ? '8px' : '4px',
+                  minWidth: isMobile ? '44px' : 'auto',
+                  minHeight: isMobile ? '44px' : 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 ←
               </button>
-              <span style={{ fontSize: '1.5rem' }}>{selectedClub.logo_emoji}</span>
-              <div>
-                <div style={{ fontWeight: 600 }}>{selectedClub.name}</div>
-                <div style={{ fontSize: '0.8rem', color: '#888' }}>
+              <span style={{ fontSize: isMobile ? '1.75rem' : '1.5rem' }}>{selectedClub.logo_emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: isMobile ? '1rem' : '1rem' }}>{selectedClub.name}</div>
+                <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
                   {clubMembers.length} {language === 'en' ? 'members' : 'medlemmer'}
                 </div>
               </div>
@@ -439,15 +477,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                 <button
                   onClick={showChat ? handleCloseChat : handleOpenChat}
                   style={{
-                    marginLeft: 'auto',
-                    padding: '6px 12px',
+                    padding: isMobile ? '10px 16px' : '6px 12px',
                     background: showChat ? '#e74c3c' : '#3498db',
                     border: 'none',
                     borderRadius: '4px',
                     color: 'white',
                     cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    fontFamily: 'inherit'
+                    fontSize: isMobile ? '1rem' : '0.8rem',
+                    fontFamily: 'inherit',
+                    minHeight: isMobile ? '44px' : 'auto'
                   }}
                 >
                   {showChat ? '✕' : '💬'}
@@ -463,35 +501,36 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                   <div style={{
                     flex: 1,
                     overflowY: 'auto',
-                    padding: '12px',
+                    padding: isMobile ? '16px' : '12px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px'
+                    gap: isMobile ? '10px' : '8px',
+                    WebkitOverflowScrolling: 'touch'
                   }}>
                     {messages.length === 0 ? (
-                      <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
-                        {language === 'en' ? 'No messages yet. Start the conversation!' : 'Ingen meldinger enda. Start samtalen!'}
+                      <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
+                        {language === 'en' ? 'No messages yet' : 'Ingen meldinger enda'}
                       </div>
                     ) : (
                       messages.map(msg => (
                         <div key={msg.id} style={{
                           background: 'var(--bg-primary)',
-                          padding: '8px 12px',
+                          padding: isMobile ? '10px 14px' : '8px 12px',
                           borderRadius: '6px'
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 600, color: '#3498db' }}>{msg.username}</span>
-                            <span style={{ fontSize: '0.7rem', color: '#666' }}>
+                            <span style={{ fontWeight: 600, color: '#3498db', fontSize: isMobile ? '0.9rem' : '1rem' }}>{msg.username}</span>
+                            <span style={{ fontSize: isMobile ? '0.65rem' : '0.7rem', color: '#666' }}>
                               {new Date(msg.created_at).toLocaleTimeString()}
                             </span>
                           </div>
-                          <div style={{ wordBreak: 'break-word' }}>{msg.message}</div>
+                          <div style={{ wordBreak: 'break-word', fontSize: isMobile ? '0.9rem' : '1rem' }}>{msg.message}</div>
                         </div>
                       ))
                     )}
                     <div ref={messagesEndRef} />
                   </div>
-                  <div style={{ padding: '12px', borderTop: '1px solid #444', display: 'flex', gap: '8px' }}>
+                  <div style={{ padding: isMobile ? '12px 16px 16px' : '12px', borderTop: '1px solid #444', display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
                       value={newMessage}
@@ -500,26 +539,29 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       placeholder={language === 'en' ? 'Type a message...' : 'Skriv en melding...'}
                       style={{
                         flex: 1,
-                        padding: '10px 12px',
+                        padding: isMobile ? '12px 14px' : '10px 12px',
                         borderRadius: '6px',
                         border: '1px solid #444',
                         background: 'var(--bg-primary)',
                         color: 'white',
                         fontFamily: 'inherit',
-                        fontSize: '0.9rem'
+                        fontSize: isMobile ? '1rem' : '0.9rem',
+                        minHeight: isMobile ? '44px' : 'auto'
                       }}
                     />
                     <button
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim()}
                       style={{
-                        padding: '10px 16px',
+                        padding: isMobile ? '12px 18px' : '10px 16px',
                         background: newMessage.trim() ? '#3498db' : '#555',
                         border: 'none',
                         borderRadius: '6px',
                         color: 'white',
                         cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
-                        fontFamily: 'inherit'
+                        fontFamily: 'inherit',
+                        minHeight: isMobile ? '44px' : 'auto',
+                        fontSize: isMobile ? '1.1rem' : '1rem'
                       }}
                     >
                       ↑
@@ -528,13 +570,13 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                 </>
               ) : (
                 // Members view
-                <div style={{ overflowY: 'auto', padding: '12px' }}>
+                <div style={{ overflowY: 'auto', padding: isMobile ? '16px' : '12px', WebkitOverflowScrolling: 'touch' }}>
                   {selectedClub.description && (
-                    <div style={{ marginBottom: '16px', color: '#888', fontSize: '0.9rem' }}>
+                    <div style={{ marginBottom: isMobile ? '12px' : '16px', color: '#888', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
                       {selectedClub.description}
                     </div>
                   )}
-                  <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '8px' }}>
+                  <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888', marginBottom: '8px' }}>
                     {language === 'en' ? 'Members' : 'Medlemmer'}
                   </div>
                   {clubMembers.map(member => (
@@ -544,32 +586,33 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '10px',
+                        padding: isMobile ? '12px' : '10px',
                         background: 'var(--bg-primary)',
                         borderRadius: '6px',
-                        marginBottom: '6px'
+                        marginBottom: isMobile ? '8px' : '6px'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '10px', flex: 1, minWidth: 0 }}>
                         <div style={{
-                          width: '8px',
-                          height: '8px',
+                          width: isMobile ? '10px' : '8px',
+                          height: isMobile ? '10px' : '8px',
                           borderRadius: '50%',
-                          background: member.online ? '#2ecc71' : '#666'
+                          background: member.online ? '#2ecc71' : '#666',
+                          flexShrink: 0
                         }} />
-                        <div>
-                          <div style={{ fontWeight: 600 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1rem' }}>
                             {member.username}
                             {member.role === 'owner' && <span style={{ marginLeft: '6px', color: '#f1c40f' }}>👑</span>}
                             {member.role === 'admin' && <span style={{ marginLeft: '6px', color: '#9b59b6' }}>⭐</span>}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                          <div style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: '#888' }}>
                             {member.online ? (language === 'en' ? 'Online' : 'Tilkoblet') : (language === 'en' ? 'Offline' : 'Frakoblet')}
                             {member.rating ? ` • ${member.rating}` : ''}
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                         {/* Challenge button for online members (not yourself) */}
                         {onChallengeMember && member.online && user?.id && member.user_id !== user.id && (
                           <button
@@ -580,17 +623,18 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                               }
                             }}
                             style={{
-                              padding: '6px 10px',
+                              padding: isMobile ? '10px 14px' : '6px 10px',
                               background: '#81b64c',
                               border: 'none',
                               borderRadius: '4px',
                               color: 'white',
                               cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              fontFamily: 'inherit'
+                              fontSize: isMobile ? '0.8rem' : '0.75rem',
+                              fontFamily: 'inherit',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           >
-                            {language === 'en' ? 'Challenge' : 'Utfordre'}
+                            {isMobile ? '⚔️' : (language === 'en' ? 'Challenge' : 'Utfordre')}
                           </button>
                         )}
                         {/* Owner can promote/demote members (not themselves) */}
@@ -603,14 +647,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                                   socket.emit('update_member_role', { clubId: selectedClub?.id, targetUserId: member.user_id, newRole: 'admin' });
                                 }}
                                 style={{
-                                  padding: '4px 8px',
+                                  padding: isMobile ? '10px 12px' : '4px 8px',
                                   background: '#9b59b6',
                                   border: 'none',
                                   borderRadius: '4px',
                                   color: 'white',
                                   cursor: 'pointer',
-                                  fontSize: '0.7rem',
-                                  fontFamily: 'inherit'
+                                  fontSize: isMobile ? '0.85rem' : '0.7rem',
+                                  fontFamily: 'inherit',
+                                  minHeight: isMobile ? '44px' : 'auto'
                                 }}
                                 title={language === 'en' ? 'Promote to Admin' : 'Forfrem til admin'}
                               >
@@ -623,14 +668,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                                   socket.emit('update_member_role', { clubId: selectedClub?.id, targetUserId: member.user_id, newRole: 'member' });
                                 }}
                                 style={{
-                                  padding: '4px 8px',
+                                  padding: isMobile ? '10px 12px' : '4px 8px',
                                   background: '#e67e22',
                                   border: 'none',
                                   borderRadius: '4px',
                                   color: 'white',
                                   cursor: 'pointer',
-                                  fontSize: '0.7rem',
-                                  fontFamily: 'inherit'
+                                  fontSize: isMobile ? '0.85rem' : '0.7rem',
+                                  fontFamily: 'inherit',
+                                  minHeight: isMobile ? '44px' : 'auto'
                                 }}
                                 title={language === 'en' ? 'Demote to Member' : 'Degrader til medlem'}
                               >
@@ -649,23 +695,24 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       onClick={() => setShowInviteModal(true)}
                       style={{
                         width: '100%',
-                        marginTop: '16px',
-                        padding: '10px',
+                        marginTop: isMobile ? '12px' : '16px',
+                        padding: isMobile ? '14px' : '10px',
                         background: '#8e44ad',
                         border: 'none',
                         borderRadius: '6px',
                         color: 'white',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '0.9rem',
+                        fontSize: isMobile ? '0.95rem' : '0.9rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px'
+                        gap: '8px',
+                        minHeight: isMobile ? '48px' : 'auto'
                       }}
                     >
                       <span>+</span>
-                      {language === 'en' ? 'Invite Members' : 'Inviter medlemmer'}
+                      {language === 'en' ? 'Invite' : 'Inviter'}
                     </button>
                   )}
 
@@ -679,22 +726,22 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       bottom: 0,
                       background: 'rgba(0,0,0,0.7)',
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: isMobile ? 'flex-end' : 'center',
                       justifyContent: 'center',
                       zIndex: 1000
                     }}>
                       <div style={{
                         background: 'var(--bg-secondary)',
-                        borderRadius: '12px',
-                        padding: '20px',
-                        width: '320px',
-                        maxHeight: '400px',
+                        borderRadius: isMobile ? '16px 16px 0 0' : '12px',
+                        padding: isMobile ? '16px' : '20px',
+                        width: isMobile ? '100%' : '320px',
+                        maxHeight: isMobile ? '70vh' : '400px',
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                          <h3 style={{ margin: 0 }}>{language === 'en' ? 'Invite Members' : 'Inviter medlemmer'}</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '16px' }}>
+                          <h3 style={{ margin: 0, fontSize: isMobile ? '1.1rem' : '1.17rem' }}>{language === 'en' ? 'Invite' : 'Inviter'}</h3>
                           <button
                             onClick={() => {
                               setShowInviteModal(false);
@@ -705,14 +752,17 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                               background: 'transparent',
                               border: 'none',
                               color: '#888',
-                              fontSize: '1.2rem',
-                              cursor: 'pointer'
+                              fontSize: isMobile ? '1.5rem' : '1.2rem',
+                              cursor: 'pointer',
+                              padding: isMobile ? '8px' : '0',
+                              minWidth: isMobile ? '44px' : 'auto',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           >
                             ✕
                           </button>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: isMobile ? '16px' : '12px' }}>
                           <input
                             type="text"
                             value={inviteSearchQuery}
@@ -721,37 +771,39 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                             placeholder={language === 'en' ? 'Search username...' : 'Sok brukernavn...'}
                             style={{
                               flex: 1,
-                              padding: '10px 12px',
+                              padding: isMobile ? '12px 14px' : '10px 12px',
                               borderRadius: '6px',
                               border: '1px solid #444',
                               background: 'var(--bg-primary)',
                               color: 'white',
                               fontFamily: 'inherit',
-                              fontSize: '0.9rem'
+                              fontSize: isMobile ? '1rem' : '0.9rem',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           />
                           <button
                             onClick={handleSearchUsersToInvite}
                             disabled={inviteSearchQuery.trim().length < 2}
                             style={{
-                              padding: '10px 16px',
+                              padding: isMobile ? '12px 18px' : '10px 16px',
                               background: inviteSearchQuery.trim().length >= 2 ? '#8e44ad' : '#555',
                               border: 'none',
                               borderRadius: '6px',
                               color: 'white',
                               cursor: inviteSearchQuery.trim().length >= 2 ? 'pointer' : 'not-allowed',
-                              fontFamily: 'inherit'
+                              fontFamily: 'inherit',
+                              minHeight: isMobile ? '44px' : 'auto'
                             }}
                           >
                             🔍
                           </button>
                         </div>
-                        <div style={{ overflowY: 'auto', flex: 1 }}>
+                        <div style={{ overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}>
                           {inviteSearchResults.length === 0 ? (
-                            <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                            <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                               {inviteSearchQuery.length >= 2
                                 ? (language === 'en' ? 'No users found' : 'Ingen brukere funnet')
-                                : (language === 'en' ? 'Search for users to invite' : 'Sok etter brukere a invitere')}
+                                : (language === 'en' ? 'Search for users' : 'Sok etter brukere')}
                             </div>
                           ) : (
                             inviteSearchResults
@@ -763,27 +815,28 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    padding: '10px',
+                                    padding: isMobile ? '12px' : '10px',
                                     background: 'var(--bg-primary)',
                                     borderRadius: '6px',
-                                    marginBottom: '8px'
+                                    marginBottom: isMobile ? '10px' : '8px'
                                   }}
                                 >
                                   <div>
-                                    <div style={{ fontWeight: 600 }}>{user.username}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#888' }}>{user.rating} rating</div>
+                                    <div style={{ fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1rem' }}>{user.username}</div>
+                                    <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>{user.rating}</div>
                                   </div>
                                   <button
                                     onClick={() => handleInviteUser(user.id)}
                                     style={{
-                                      padding: '6px 12px',
+                                      padding: isMobile ? '10px 16px' : '6px 12px',
                                       background: '#27ae60',
                                       border: 'none',
                                       borderRadius: '4px',
                                       color: 'white',
                                       cursor: 'pointer',
-                                      fontSize: '0.8rem',
-                                      fontFamily: 'inherit'
+                                      fontSize: isMobile ? '0.85rem' : '0.8rem',
+                                      fontFamily: 'inherit',
+                                      minHeight: isMobile ? '44px' : 'auto'
                                     }}
                                   >
                                     {language === 'en' ? 'Invite' : 'Inviter'}
@@ -801,18 +854,19 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       onClick={() => handleLeaveClub(selectedClub.id)}
                       style={{
                         width: '100%',
-                        marginTop: '16px',
-                        padding: '10px',
+                        marginTop: isMobile ? '12px' : '16px',
+                        padding: isMobile ? '14px' : '10px',
                         background: 'transparent',
                         border: '1px solid #e74c3c',
                         borderRadius: '6px',
                         color: '#e74c3c',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '0.9rem'
+                        fontSize: isMobile ? '0.95rem' : '0.9rem',
+                        minHeight: isMobile ? '48px' : 'auto'
                       }}
                     >
-                      {language === 'en' ? 'Leave Club' : 'Forlat klubb'}
+                      {language === 'en' ? 'Leave' : 'Forlat'}
                     </button>
                   )}
 
@@ -821,18 +875,19 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       onClick={() => handleJoinClub(selectedClub.id)}
                       style={{
                         width: '100%',
-                        marginTop: '16px',
-                        padding: '10px',
+                        marginTop: isMobile ? '12px' : '16px',
+                        padding: isMobile ? '14px' : '10px',
                         background: '#27ae60',
                         border: 'none',
                         borderRadius: '6px',
                         color: 'white',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        fontSize: '0.9rem'
+                        fontSize: isMobile ? '0.95rem' : '0.9rem',
+                        minHeight: isMobile ? '48px' : 'auto'
                       }}
                     >
-                      {language === 'en' ? 'Join Club' : 'Bli med i klubb'}
+                      {language === 'en' ? 'Join' : 'Bli med'}
                     </button>
                   )}
                 </div>
@@ -852,18 +907,19 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
           background: isOpen ? '#8e44ad' : 'transparent',
           border: '1px solid #444',
           color: 'white',
-          padding: '8px 16px',
+          padding: isMobile ? '10px 12px' : '8px 16px',
           borderRadius: '6px',
           cursor: 'pointer',
           fontFamily: 'inherit',
-          fontSize: '0.9rem',
+          fontSize: isMobile ? '0.85rem' : '0.9rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: isMobile ? '6px' : '8px',
+          minHeight: isMobile ? '44px' : 'auto'
         }}
       >
-        <span style={{ fontSize: '1rem' }}>♔</span>
-        {language === 'en' ? 'Clubs' : 'Klubber'}
+        <span style={{ fontSize: isMobile ? '1.1rem' : '1rem' }}>♔</span>
+        {isMobile ? '' : (language === 'en' ? 'Clubs' : 'Klubber')}
         {invitations.length > 0 && (
           <span style={{
             background: '#e74c3c',
@@ -881,21 +937,72 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
         )}
       </button>
 
+      {/* Mobile overlay backdrop */}
+      {isOpen && isMobile && (
+        <div
+          onClick={() => setIsOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 99
+          }}
+        />
+      )}
+
       {isOpen && (
         <div style={{
-          position: 'absolute',
-          top: '100%',
-          right: 0,
-          width: '360px',
-          maxHeight: '480px',
+          position: isMobile ? 'fixed' : 'absolute',
+          top: isMobile ? 'auto' : '100%',
+          bottom: isMobile ? 0 : 'auto',
+          left: isMobile ? 0 : 'auto',
+          right: isMobile ? 0 : 0,
+          width: isMobile ? '100%' : '360px',
+          maxHeight: isMobile ? '75vh' : '480px',
           background: 'var(--bg-secondary)',
-          border: '1px solid #444',
-          borderRadius: '8px',
+          border: isMobile ? 'none' : '1px solid #444',
+          borderRadius: isMobile ? '16px 16px 0 0' : '8px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           zIndex: 100,
-          marginTop: '8px',
+          marginTop: isMobile ? 0 : '8px',
           overflow: 'hidden'
         }}>
+          {/* Mobile header with close button */}
+          {isMobile && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderBottom: '1px solid #333'
+            }}>
+              <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                {language === 'en' ? 'Clubs' : 'Klubber'}
+              </span>
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#888',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
           {/* Tabs */}
           <div style={{
             display: 'flex',
@@ -912,18 +1019,19 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                 onClick={() => setActiveTab(tab.key as typeof activeTab)}
                 style={{
                   flex: tab.key === 'invites' ? 0 : 1,
-                  padding: tab.key === 'invites' ? '12px 16px' : '12px 8px',
+                  padding: tab.key === 'invites' ? (isMobile ? '14px 18px' : '12px 16px') : (isMobile ? '14px 8px' : '12px 8px'),
                   background: activeTab === tab.key ? 'var(--bg-primary)' : 'transparent',
                   border: 'none',
                   borderBottom: activeTab === tab.key ? '2px solid #8e44ad' : '2px solid transparent',
                   color: activeTab === tab.key ? 'white' : '#888',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
-                  fontSize: '0.85rem',
+                  fontSize: isMobile ? '0.9rem' : '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  minHeight: isMobile ? '48px' : 'auto'
                 }}
               >
                 {tab.label}
@@ -944,15 +1052,16 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
 
           {/* Content */}
           <div style={{
-            maxHeight: '380px',
+            maxHeight: isMobile ? 'calc(75vh - 120px)' : '380px',
             overflowY: 'auto',
-            padding: '12px'
+            padding: isMobile ? '16px' : '12px',
+            WebkitOverflowScrolling: 'touch'
           }}>
             {/* My Clubs Tab */}
             {activeTab === 'my-clubs' && (
               <>
                 {myClubs.length === 0 ? (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                     {language === 'en' ? 'You are not in any clubs yet.' : 'Du er ikke med i noen klubber enda.'}
                   </div>
                 ) : (
@@ -963,25 +1072,26 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         background: 'var(--bg-primary)',
                         borderRadius: '8px',
-                        marginBottom: '8px',
+                        marginBottom: isMobile ? '10px' : '8px',
                         cursor: 'pointer',
-                        transition: 'background 0.2s'
+                        transition: 'background 0.2s',
+                        minHeight: isMobile ? '60px' : 'auto'
                       }}
                     >
-                      <span style={{ fontSize: '1.5rem', marginRight: '12px' }}>{club.logo_emoji}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{club.name}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      <span style={{ fontSize: isMobile ? '1.75rem' : '1.5rem', marginRight: isMobile ? '14px' : '12px' }}>{club.logo_emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: isMobile ? '1rem' : '1rem' }}>{club.name}</div>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
                           {club.member_count} {language === 'en' ? 'members' : 'medlemmer'}
                           {club.role && ` • ${club.role === 'owner' ? (language === 'en' ? 'Owner' : 'Eier') :
                                             club.role === 'admin' ? 'Admin' :
                                             (language === 'en' ? 'Member' : 'Medlem')}`}
                         </div>
                       </div>
-                      <span style={{ color: '#888' }}>→</span>
+                      <span style={{ color: '#888', fontSize: isMobile ? '1.2rem' : '1rem' }}>→</span>
                     </div>
                   ))
                 )}
@@ -991,7 +1101,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
             {/* Browse Tab */}
             {activeTab === 'browse' && (
               <>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: isMobile ? '16px' : '12px' }}>
                   <input
                     type="text"
                     value={searchQuery}
@@ -1000,26 +1110,28 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                     placeholder={language === 'en' ? 'Search clubs...' : 'Sok etter klubber...'}
                     style={{
                       flex: 1,
-                      padding: '10px 12px',
+                      padding: isMobile ? '12px 14px' : '10px 12px',
                       borderRadius: '6px',
                       border: '1px solid #444',
                       background: 'var(--bg-primary)',
                       color: 'white',
                       fontFamily: 'inherit',
-                      fontSize: '0.9rem'
+                      fontSize: isMobile ? '1rem' : '0.9rem',
+                      minHeight: isMobile ? '44px' : 'auto'
                     }}
                   />
                   <button
                     onClick={handleSearch}
                     disabled={searchQuery.trim().length < 2}
                     style={{
-                      padding: '10px 16px',
+                      padding: isMobile ? '12px 18px' : '10px 16px',
                       background: searchQuery.trim().length >= 2 ? '#8e44ad' : '#555',
                       border: 'none',
                       borderRadius: '6px',
                       color: 'white',
                       cursor: searchQuery.trim().length >= 2 ? 'pointer' : 'not-allowed',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      minHeight: isMobile ? '44px' : 'auto'
                     }}
                   >
                     🔍
@@ -1033,30 +1145,32 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         background: 'var(--bg-primary)',
                         borderRadius: '8px',
-                        marginBottom: '8px'
+                        marginBottom: isMobile ? '10px' : '8px',
+                        minHeight: isMobile ? '60px' : 'auto'
                       }}
                     >
-                      <span style={{ fontSize: '1.5rem', marginRight: '12px' }}>{club.logo_emoji}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{club.name}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                      <span style={{ fontSize: isMobile ? '1.75rem' : '1.5rem', marginRight: isMobile ? '14px' : '12px' }}>{club.logo_emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: isMobile ? '1rem' : '1rem' }}>{club.name}</div>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
                           {club.member_count} {language === 'en' ? 'members' : 'medlemmer'}
                         </div>
                       </div>
                       <button
                         onClick={() => handleViewClub(club)}
                         style={{
-                          padding: '6px 12px',
+                          padding: isMobile ? '10px 16px' : '6px 12px',
                           background: '#8e44ad',
                           border: 'none',
                           borderRadius: '4px',
                           color: 'white',
                           cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          fontFamily: 'inherit'
+                          fontSize: isMobile ? '0.85rem' : '0.8rem',
+                          fontFamily: 'inherit',
+                          minHeight: isMobile ? '44px' : 'auto'
                         }}
                       >
                         {language === 'en' ? 'View' : 'Se'}
@@ -1065,7 +1179,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                   ))
                 ) : (
                   <>
-                    <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '8px' }}>
+                    <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888', marginBottom: '8px' }}>
                       {language === 'en' ? 'Popular Clubs' : 'Populaere klubber'}
                     </div>
                     {publicClubs.map(club => (
@@ -1074,30 +1188,32 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          padding: '12px',
+                          padding: isMobile ? '14px' : '12px',
                           background: 'var(--bg-primary)',
                           borderRadius: '8px',
-                          marginBottom: '8px'
+                          marginBottom: isMobile ? '10px' : '8px',
+                          minHeight: isMobile ? '60px' : 'auto'
                         }}
                       >
-                        <span style={{ fontSize: '1.5rem', marginRight: '12px' }}>{club.logo_emoji}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600 }}>{club.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#888' }}>
+                        <span style={{ fontSize: isMobile ? '1.75rem' : '1.5rem', marginRight: isMobile ? '14px' : '12px' }}>{club.logo_emoji}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: isMobile ? '1rem' : '1rem' }}>{club.name}</div>
+                          <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888' }}>
                             {club.member_count} {language === 'en' ? 'members' : 'medlemmer'}
                           </div>
                         </div>
                         <button
                           onClick={() => handleViewClub(club)}
                           style={{
-                            padding: '6px 12px',
+                            padding: isMobile ? '10px 16px' : '6px 12px',
                             background: '#8e44ad',
                             border: 'none',
                             borderRadius: '4px',
                             color: 'white',
                             cursor: 'pointer',
-                            fontSize: '0.8rem',
-                            fontFamily: 'inherit'
+                            fontSize: isMobile ? '0.85rem' : '0.8rem',
+                            fontFamily: 'inherit',
+                            minHeight: isMobile ? '44px' : 'auto'
                           }}
                         >
                           {language === 'en' ? 'View' : 'Se'}
@@ -1112,8 +1228,8 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
             {/* Create Tab */}
             {activeTab === 'create' && (
               <div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: '#888' }}>
+                <div style={{ marginBottom: isMobile ? '20px' : '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#888' }}>
                     {language === 'en' ? 'Club Name' : 'Klubbnavn'}
                   </label>
                   <input
@@ -1123,20 +1239,21 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                     placeholder={language === 'en' ? 'Enter club name...' : 'Skriv klubbnavn...'}
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
+                      padding: isMobile ? '12px 14px' : '10px 12px',
                       borderRadius: '6px',
                       border: '1px solid #444',
                       background: 'var(--bg-primary)',
                       color: 'white',
                       fontFamily: 'inherit',
-                      fontSize: '0.9rem',
-                      boxSizing: 'border-box'
+                      fontSize: isMobile ? '1rem' : '0.9rem',
+                      boxSizing: 'border-box',
+                      minHeight: isMobile ? '44px' : 'auto'
                     }}
                   />
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: '#888' }}>
+                <div style={{ marginBottom: isMobile ? '20px' : '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#888' }}>
                     {language === 'en' ? 'Description (optional)' : 'Beskrivelse (valgfritt)'}
                   </label>
                   <textarea
@@ -1145,33 +1262,33 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                     placeholder={language === 'en' ? 'Describe your club...' : 'Beskriv klubben din...'}
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
+                      padding: isMobile ? '12px 14px' : '10px 12px',
                       borderRadius: '6px',
                       border: '1px solid #444',
                       background: 'var(--bg-primary)',
                       color: 'white',
                       fontFamily: 'inherit',
-                      fontSize: '0.9rem',
+                      fontSize: isMobile ? '1rem' : '0.9rem',
                       resize: 'vertical',
-                      minHeight: '60px',
+                      minHeight: isMobile ? '80px' : '60px',
                       boxSizing: 'border-box'
                     }}
                   />
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: '#888' }}>
+                <div style={{ marginBottom: isMobile ? '20px' : '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: isMobile ? '0.85rem' : '0.9rem', color: '#888' }}>
                     {language === 'en' ? 'Logo' : 'Logo'}
                   </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '10px' : '8px' }}>
                     {emojiOptions.map(emoji => (
                       <button
                         key={emoji}
                         onClick={() => setNewClubEmoji(emoji)}
                         style={{
-                          width: '40px',
-                          height: '40px',
-                          fontSize: '1.2rem',
+                          width: isMobile ? '48px' : '40px',
+                          height: isMobile ? '48px' : '40px',
+                          fontSize: isMobile ? '1.4rem' : '1.2rem',
                           background: newClubEmoji === emoji ? '#8e44ad' : 'var(--bg-primary)',
                           border: newClubEmoji === emoji ? '2px solid #9b59b6' : '1px solid #444',
                           borderRadius: '6px',
@@ -1184,27 +1301,28 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: isMobile ? '20px' : '16px' }}>
                   <label style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer'
+                    gap: isMobile ? '12px' : '10px',
+                    cursor: 'pointer',
+                    minHeight: isMobile ? '44px' : 'auto'
                   }}>
                     <input
                       type="checkbox"
                       checked={newClubPublic}
                       onChange={(e) => setNewClubPublic(e.target.checked)}
-                      style={{ width: '18px', height: '18px' }}
+                      style={{ width: isMobile ? '22px' : '18px', height: isMobile ? '22px' : '18px' }}
                     />
-                    <span style={{ fontSize: '0.9rem' }}>
+                    <span style={{ fontSize: isMobile ? '0.95rem' : '0.9rem' }}>
                       {language === 'en' ? 'Public club (anyone can join)' : 'Offentlig klubb (alle kan bli med)'}
                     </span>
                   </label>
                 </div>
 
                 {createError && (
-                  <div style={{ color: '#e74c3c', fontSize: '0.85rem', marginBottom: '12px' }}>
+                  <div style={{ color: '#e74c3c', fontSize: isMobile ? '0.85rem' : '0.85rem', marginBottom: '12px' }}>
                     {createError}
                   </div>
                 )}
@@ -1214,15 +1332,16 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                   disabled={newClubName.trim().length < 3}
                   style={{
                     width: '100%',
-                    padding: '12px',
+                    padding: isMobile ? '14px' : '12px',
                     background: newClubName.trim().length >= 3 ? '#8e44ad' : '#555',
                     border: 'none',
                     borderRadius: '6px',
                     color: 'white',
                     cursor: newClubName.trim().length >= 3 ? 'pointer' : 'not-allowed',
                     fontFamily: 'inherit',
-                    fontSize: '1rem',
-                    fontWeight: 600
+                    fontSize: isMobile ? '1.05rem' : '1rem',
+                    fontWeight: 600,
+                    minHeight: isMobile ? '48px' : 'auto'
                   }}
                 >
                   {language === 'en' ? 'Create Club' : 'Opprett klubb'}
@@ -1234,7 +1353,7 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
             {activeTab === 'invites' && (
               <>
                 {invitations.length === 0 ? (
-                  <div style={{ color: '#888', textAlign: 'center', padding: '20px' }}>
+                  <div style={{ color: '#888', textAlign: 'center', padding: '20px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
                     {language === 'en' ? 'No pending invitations' : 'Ingen ventende invitasjoner'}
                   </div>
                 ) : (
@@ -1242,15 +1361,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                     <div
                       key={inv.id}
                       style={{
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         background: 'var(--bg-primary)',
                         borderRadius: '8px',
-                        marginBottom: '8px',
+                        marginBottom: isMobile ? '10px' : '8px',
                         border: '1px solid #8e44ad'
                       }}
                     >
-                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>{inv.club_name}</div>
-                      <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '10px' }}>
+                      <div style={{ fontWeight: 600, marginBottom: '4px', fontSize: isMobile ? '1rem' : '1rem' }}>{inv.club_name}</div>
+                      <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#888', marginBottom: isMobile ? '12px' : '10px' }}>
                         {language === 'en' ? 'Invited by' : 'Invitert av'} {inv.inviter_username}
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -1258,13 +1377,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                           onClick={() => handleAcceptInvitation(inv.id)}
                           style={{
                             flex: 1,
-                            padding: '8px',
+                            padding: isMobile ? '12px' : '8px',
                             background: '#27ae60',
                             border: 'none',
                             borderRadius: '4px',
                             color: 'white',
                             cursor: 'pointer',
-                            fontFamily: 'inherit'
+                            fontFamily: 'inherit',
+                            fontSize: isMobile ? '0.95rem' : '1rem',
+                            minHeight: isMobile ? '44px' : 'auto'
                           }}
                         >
                           {language === 'en' ? 'Accept' : 'Godta'}
@@ -1273,13 +1394,15 @@ export function ClubsPanel({ socket, language, onChallengeMember }: ClubsPanelPr
                           onClick={() => handleDeclineInvitation(inv.id)}
                           style={{
                             flex: 1,
-                            padding: '8px',
+                            padding: isMobile ? '12px' : '8px',
                             background: 'transparent',
                             border: '1px solid #666',
                             borderRadius: '4px',
                             color: '#888',
                             cursor: 'pointer',
-                            fontFamily: 'inherit'
+                            fontFamily: 'inherit',
+                            fontSize: isMobile ? '0.95rem' : '1rem',
+                            minHeight: isMobile ? '44px' : 'auto'
                           }}
                         >
                           {language === 'en' ? 'Decline' : 'Avslå'}
