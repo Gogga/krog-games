@@ -4,9 +4,9 @@
 
 **Current State:** Production-ready multiplayer chess platform with complete feature set including user accounts, ELO rating, matchmaking, chess variants, AI opponent, KROG rule explanations, educational content, full social features, clubs, tournaments, and leagues.
 
-**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, "Explain This Move" button with shareable KROG explanations, KROG Leaderboard with gamification badges, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation.
+**What's Implemented:** All of Phase 1-7 (except Phase 4 AI Training). Room system, clocks, user accounts, ELO rating, matchmaking, Chess960/3-Check/KotH variants, AI opponent (3 levels), KROG engine (36 operators), move explanations, "Explain This Move" button with shareable KROG explanations, KROG Leaderboard with gamification badges, puzzles (30+), daily puzzle with KROG explanations, openings (62+), lessons (20+), PGN export/import, 8 board themes, 2 piece sets, sound effects, friends system, direct challenges, game chat, clubs with chat, tournaments (Swiss/Round-Robin), leagues with divisions/promotion/relegation, **full mobile responsiveness** with touch support and Learn Mode bottom sheet.
 
-**What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode, mobile responsiveness.
+**What's Next:** Phase 4 AI Training (HRM - Human Reasoning Model), game analysis mode.
 
 **Documentation:** `docs/FEATURES.md` - Complete feature list. `docs/ROADMAP.md` - Development roadmap. `docs/FAQ.md` - Comprehensive FAQ. `docs/UI-CONTENT-GUIDE.md` - Bilingual UI microcopy reference.
 
@@ -201,6 +201,25 @@
 - [x] Bilingual FAQ content (EN/NO) with 6 categories
 - [x] Collapsible FAQ categories and items
 
+### Mobile Responsiveness (COMPLETE)
+- [x] Centralized responsive system with `useMediaQuery` hook
+- [x] Breakpoints: Mobile (<768px), Tablet (768-1023px), Desktop (1024px+)
+- [x] Touch detection via `ontouchstart` / `maxTouchPoints` (works on iPad Pro)
+- [x] Responsive board sizing (280-480px mobile, 400-520px tablet, 480-600px desktop)
+- [x] Mobile bottom navigation bar (Home, Play, Daily, KROG, You)
+- [x] Touch-based piece selection (tap to select, tap to move)
+- [x] Legal move indicators (green dots for empty squares, rings for captures)
+- [x] Invalid move flash feedback (red flash animation)
+- [x] Check indicator (pulsing red border on king)
+- [x] Prevents accidental zoom (touch-action: manipulation)
+- [x] Learn Mode bottom sheet for touch devices:
+  - Shows KROG explanation before move executes
+  - R-Type badge, formula, explanation, conditions, FIDE reference
+  - "Play Move" button to execute, "Cancel" to dismiss
+  - Works on phones, tablets, and iPad Pro
+- [x] Bottom sheet accounts for mobile nav bar (64px offset)
+- [x] Safe area padding for notched devices
+
 ---
 
 ## Project Structure
@@ -221,7 +240,8 @@ chess-project/
 │   │   ├── contexts/
 │   │   │   └── AuthContext.tsx  # Auth state management
 │   │   ├── components/
-│   │   │   ├── ChessBoard.tsx   # Board with drag-drop, learn mode, themes
+│   │   │   ├── ChessBoard.tsx   # Board with drag-drop, touch, learn mode, themes
+│   │   │   ├── MobileNav.tsx    # Mobile bottom navigation bar
 │   │   │   ├── PuzzleMode.tsx   # Tactical puzzles
 │   │   │   ├── DailyPuzzle.tsx  # Daily puzzle with KROG explanations
 │   │   │   ├── MoveExplanationModal.tsx # Explain This Move modal
@@ -236,6 +256,8 @@ chess-project/
 │   │   │   ├── ClubsPanel.tsx   # Club management, search, chat
 │   │   │   ├── TournamentPanel.tsx # Tournament creation/management
 │   │   │   └── LeaguePanel.tsx  # League management, standings, fixtures
+│   │   ├── hooks/
+│   │   │   └── useMediaQuery.ts # Responsive breakpoints, touch detection, board sizing
 │   │   └── utils/
 │   │       └── sounds.ts        # Web Audio API sound effects
 ├── server/                      # Express + Socket.IO + chess.js
@@ -581,7 +603,7 @@ Open 2+ browser tabs to http://localhost:5173
 ### Future Enhancements
 - [ ] Game analysis mode
 - [ ] Opening repertoire builder
-- [ ] Mobile responsive UI
+- [x] Mobile responsive UI (COMPLETE)
 - [ ] Arena tournaments
 - [ ] Team battles
 - [ ] Puzzle rush mode
@@ -610,7 +632,7 @@ Open 2+ browser tabs to http://localhost:5173
 - AI opponent with three difficulty levels
 - Bilingual support (EN/NO)
 - KROG engine with 36 operators, 15 R-types
-- Learn mode with hover explanations
+- Learn mode with hover explanations (desktop) and bottom sheet (touch devices)
 - Comprehensive move explanations
 - Polished UI with board/piece themes and sound feedback
 - Friends list with direct challenges
@@ -622,6 +644,7 @@ Open 2+ browser tabs to http://localhost:5173
 - Explain This Move button with shareable KROG explanations
 - KROG Leaderboard with gamification badges
 - PGN import/export
+- Full mobile responsiveness with touch support for phones, tablets, and iPad Pro
 
 ---
 
