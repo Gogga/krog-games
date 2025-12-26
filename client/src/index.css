@@ -916,6 +916,194 @@ label {
 }
 
 /* ================================
+   PWA STYLES
+   ================================ */
+
+/* Update Banner */
+.update-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-primary);
+  color: var(--color-bg-primary);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  max-width: 90%;
+  animation: slide-up 0.3s ease;
+}
+
+.update-banner p {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.update-banner button {
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  min-height: 36px;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.update-banner button:first-of-type {
+  background-color: var(--color-bg-primary);
+  color: var(--color-primary);
+}
+
+.update-banner button:last-of-type {
+  background-color: transparent;
+  color: var(--color-bg-primary);
+  border: 1px solid var(--color-bg-primary);
+}
+
+/* Install Prompt */
+.install-prompt {
+  position: fixed;
+  bottom: 80px;
+  left: var(--space-lg);
+  right: var(--space-lg);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-toast);
+  animation: slide-up 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .install-prompt {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    max-width: 400px;
+    bottom: var(--space-2xl);
+  }
+}
+
+.install-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  text-align: center;
+}
+
+.install-icon {
+  display: flex;
+  justify-content: center;
+}
+
+.install-text h3 {
+  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-primary);
+}
+
+.install-text p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+.install-actions {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.install-actions button {
+  flex: 1;
+  min-height: var(--touch-target-comfortable);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.install-actions .btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-bg-primary);
+  border: none;
+}
+
+.install-actions .btn-primary:active {
+  transform: scale(0.98);
+}
+
+.install-actions .btn-secondary {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-primary);
+}
+
+.install-actions .btn-secondary:active {
+  background-color: var(--color-bg-tertiary);
+}
+
+/* Offline Indicator */
+.offline-indicator {
+  position: fixed;
+  top: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-warning);
+  color: var(--color-bg-primary);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  z-index: var(--z-toast);
+  animation: slide-down 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Standalone mode adjustments (when installed as PWA) */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Hide install prompt when already installed */
+  .install-prompt {
+    display: none !important;
+  }
+}
+
+/* iOS standalone mode */
+@media (display-mode: standalone) and (max-width: 767px) {
+  .mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ================================
    ACCESSIBILITY
    ================================ */
 

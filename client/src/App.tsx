@@ -25,6 +25,8 @@ const ClubsPanel = lazy(() => import('./components/ClubsPanel').then(m => ({ def
 const TournamentPanel = lazy(() => import('./components/TournamentPanel').then(m => ({ default: m.TournamentPanel })));
 const LeaguePanel = lazy(() => import('./components/LeaguePanel').then(m => ({ default: m.LeaguePanel })));
 const GestureHelp = lazy(() => import('./components/GestureHelp'));
+const InstallPrompt = lazy(() => import('./components/InstallPrompt').then(m => ({ default: m.InstallPrompt })));
+const OfflineIndicator = lazy(() => import('./components/InstallPrompt').then(m => ({ default: m.OfflineIndicator })));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -3753,11 +3755,15 @@ function App() {
   );
 }
 
-// Wrap App in AuthProvider
+// Wrap App in AuthProvider with PWA components
 function AppWithAuth() {
   return (
     <AuthProvider>
       <App />
+      <Suspense fallback={null}>
+        <InstallPrompt language="en" delayMs={15000} />
+        <OfflineIndicator language="en" />
+      </Suspense>
     </AuthProvider>
   );
 }

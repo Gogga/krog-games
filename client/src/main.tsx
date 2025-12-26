@@ -2,9 +2,17 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { logPerformanceMetrics } from './utils/performance'
+import { registerServiceWorker, setupInstallPrompt, setupOnlineStatus } from './utils/pwa'
 
 // Log performance metrics in development
 logPerformanceMetrics()
+
+// Initialize PWA features in production
+if (import.meta.env.PROD) {
+  registerServiceWorker()
+  setupInstallPrompt()
+  setupOnlineStatus()
+}
 
 // Hide splash screen after React mounts
 const hideSplashScreen = () => {
