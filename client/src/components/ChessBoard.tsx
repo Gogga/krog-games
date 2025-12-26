@@ -219,7 +219,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     theme = BOARD_THEMES[0],
     pieceTheme = PIECE_THEMES[0]
 }) => {
-    const { isMobile, boardSize } = useResponsiveBoard();
+    const { isMobile, isTablet, boardSize } = useResponsiveBoard();
+    const isTouchDevice = isMobile || isTablet;
     const squareSize = boardSize / 8;
 
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -286,9 +287,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             // Only update if this response matches our pending request
             if (pendingRequestRef.current === explanation.to) {
                 setHoverExplanation(explanation);
-                // For mobile, update the bottom sheet with the explanation (use ref to avoid stale closure)
+                // For touch devices, update the bottom sheet with the explanation (use ref to avoid stale closure)
                 const currentSheet = mobileLearnSheetRef.current;
-                if (isMobile && currentSheet && currentSheet.to === explanation.to) {
+                if (isTouchDevice && currentSheet && currentSheet.to === explanation.to) {
                     setMobileLearnSheet(prev => prev ? { ...prev, explanation } : null);
                 }
             }
@@ -299,7 +300,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         return () => {
             socket.off('potential_move_explanation', handlePotentialMoveExplanation);
         };
-    }, [socket, isMobile]);
+    }, [socket, isTouchDevice]);
 
     // Request explanation when hovering over a valid move square in Learn Mode
     const handleSquareHover = (square: Square, event: React.MouseEvent) => {
@@ -399,9 +400,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             const validMove = moves.find(m => m.to === sq);
 
             if (validMove) {
-                // Valid move - check if this should trigger the mobile Learn Mode sheet
-                if (isMobile && learnMode && socket && roomCode) {
-                    // Show the mobile Learn Mode bottom sheet instead of executing immediately
+                // Valid move - check if this should trigger the touch device Learn Mode sheet
+                if (isTouchDevice && learnMode && socket && roomCode) {
+                    // Show the Learn Mode bottom sheet instead of executing immediately
                     const willPromote = isPromotion(selectedSquare, sq);
                     pendingRequestRef.current = sq;
                     setMobileLearnSheet({
@@ -779,8 +780,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             )}
         </div>
 
-            {/* Learn Mode Tooltip - Hidden on mobile since hover doesn't work well */}
-            {learnMode && hoverExplanation && tooltipPosition && !isMobile && (
+            {/* Learn Mode Tooltip - Only on desktop (hover doesn't work on touch devices) */}
+            {learnMode && hoverExplanation && tooltipPosition && !isTouchDevice && (
                 <div
                     style={{
                         position: 'fixed',
@@ -928,8 +929,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 </div>
             )}
 
-            {/* Mobile Learn Mode Bottom Sheet */}
-            {isMobile && mobileLearnSheet && (
+            {/* Touch Device Learn Mode Bottom Sheet */}
+            {isTouchDevice && mobileLearnSheet && (
                 <div
                     style={{
                         position: 'fixed',
