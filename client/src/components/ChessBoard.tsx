@@ -238,6 +238,10 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         isPromotion: boolean;
     } | null>(null);
 
+    // Ref to track mobileLearnSheet for socket callbacks (avoids stale closure)
+    const mobileLearnSheetRef = useRef(mobileLearnSheet);
+    mobileLearnSheetRef.current = mobileLearnSheet;
+
     // Track which square we're currently requesting an explanation for
     const pendingRequestRef = useRef<string | null>(null);
 
@@ -282,8 +286,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             // Only update if this response matches our pending request
             if (pendingRequestRef.current === explanation.to) {
                 setHoverExplanation(explanation);
-                // For mobile, update the bottom sheet with the explanation
-                if (isMobile && mobileLearnSheet && mobileLearnSheet.to === explanation.to) {
+                // For mobile, update the bottom sheet with the explanation (use ref to avoid stale closure)
+                const currentSheet = mobileLearnSheetRef.current;
+                if (isMobile && currentSheet && currentSheet.to === explanation.to) {
                     setMobileLearnSheet(prev => prev ? { ...prev, explanation } : null);
                 }
             }
@@ -294,7 +299,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         return () => {
             socket.off('potential_move_explanation', handlePotentialMoveExplanation);
         };
-    }, [socket, isMobile, mobileLearnSheet]);
+    }, [socket, isMobile]);
 
     // Request explanation when hovering over a valid move square in Learn Mode
     const handleSquareHover = (square: Square, event: React.MouseEvent) => {
@@ -319,7 +324,10 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Only clear hover state when leaving the board entirely
     const handleBoardLeave = useCallback(() => {
-        pendingRequestRef.current = null;
+        // Don't clear pendingRequestRef if mobile Learn sheet is open (waiting for explanation)
+        if (!mobileLearnSheetRef.current) {
+            pendingRequestRef.current = null;
+        }
         setHoveredSquare(null);
         setHoverExplanation(null);
         setTooltipPosition(null);
@@ -520,6 +528,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         onTouchEnd={(e) => {
                             // Handle touch as click on mobile
                             e.preventDefault();
+                            e.stopPropagation(); // Prevent board's onTouchEnd from firing
                             handleSquareClick(square);
                         }}
                         onMouseEnter={(e) => handleSquareHover(square as Square, e)}
@@ -624,7 +633,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 onTouchEnd={(e) => {
                                     // Handle touch on piece - pass to parent square handler
                                     e.preventDefault();
-                                    e.stopPropagation();
+                                    e.stopPropagation(); // Prevent board's onTouchEnd from firing
                                     handleSquareClick(square);
                                 }}
                                 onDragStart={(e) => {
