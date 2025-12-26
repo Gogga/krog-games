@@ -1088,7 +1088,7 @@ function App() {
         </div>
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
-        <div style={{ marginBottom: isMobile ? '16px' : '20px', textAlign: 'center' }}>
+        <div style={{ marginTop: isMobile ? '16px' : '24px', marginBottom: isMobile ? '16px' : '20px', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? '10px' : '15px' }}>
             <img
               src="/logo.png"
