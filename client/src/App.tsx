@@ -1089,7 +1089,18 @@ function App() {
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
         <div style={{ marginBottom: isMobile ? '16px' : '20px', textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? '10px' : '15px' }}>
+            <img
+              src="/logo.png"
+              alt="KROG Chess"
+              style={{
+                width: isMobile ? '48px' : '64px',
+                height: isMobile ? '48px' : '64px',
+                borderRadius: '12px'
+              }}
+            />
+            <h1 style={{ margin: 0, fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
+          </div>
           <div style={{ color: isConnected ? '#81b64c' : 'red', marginTop: '5px', fontSize: isMobile ? '0.85rem' : '1rem' }}>
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
@@ -1846,7 +1857,18 @@ function App() {
             {isMobile ? (language === 'en' ? 'Back' : 'Tilbake') : (language === 'en' ? 'Back to Lobby' : 'Tilbake til lobbyen')}
           </button>
         </div>
-        <h1 style={{ margin: 0, fontSize: isMobile ? '1.6rem' : '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? '8px' : '12px' }}>
+          <img
+            src="/logo.png"
+            alt="KROG Chess"
+            style={{
+              width: isMobile ? '36px' : '48px',
+              height: isMobile ? '36px' : '48px',
+              borderRadius: '10px'
+            }}
+          />
+          <h1 style={{ margin: 0, fontSize: isMobile ? '1.6rem' : '2.5rem', fontWeight: 700 }}>KROG Chess</h1>
+        </div>
         <div style={{
           display: 'flex',
           justifyContent: 'center',
