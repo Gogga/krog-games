@@ -4,6 +4,7 @@ import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
 import ChessBoard from './ChessBoard';
 import { useIsMobile } from '../hooks/useMediaQuery';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface KROGExplanation {
     formula: string;
@@ -143,6 +144,21 @@ const DailyPuzzle: React.FC<DailyPuzzleProps> = ({ socket, language, user: _user
 
     const gameRef = useRef<Chess>(game);
     gameRef.current = game;
+
+    // Pull-to-refresh for mobile
+    const handleRefresh = useCallback(async () => {
+        // Re-request the daily puzzle
+        return new Promise<void>((resolve) => {
+            socket.emit('get_daily_puzzle');
+            // Wait a bit for the response
+            setTimeout(resolve, 500);
+        });
+    }, [socket]);
+
+    const { containerRef, isRefreshing, pullProgress, pullDistance } = usePullToRefresh({
+        onRefresh: handleRefresh,
+        threshold: 80,
+    });
 
     const playerColor = game.turn() === 'w' ? 'white' : 'black';
 
@@ -314,7 +330,34 @@ ${language === 'en' ? 'Play at' : 'Spill pa'}: krogchess.com`;
     const fideRule = getFIDERule(dailyData.puzzle.themes);
 
     return (
-        <div className="app-container" style={{ padding: isMobile ? '12px' : undefined }}>
+        <div
+            ref={containerRef}
+            className="app-container pull-to-refresh-container"
+            style={{ padding: isMobile ? '12px' : undefined }}
+        >
+            {/* Pull-to-refresh indicator */}
+            {isMobile && (
+                <div
+                    className={`pull-to-refresh-indicator ${pullProgress >= 1 ? 'ready' : ''}`}
+                    style={{
+                        transform: `translateY(${pullDistance}px)`,
+                        opacity: pullProgress,
+                    }}
+                >
+                    {isRefreshing ? (
+                        <div className="spinner spinner-sm" />
+                    ) : (
+                        <>
+                            <span className="pull-arrow">{pullProgress >= 1 ? '↑' : '↓'}</span>
+                            <span>{pullProgress >= 1
+                                ? (language === 'en' ? 'Release to refresh' : 'Slipp for a oppdatere')
+                                : (language === 'en' ? 'Pull to refresh' : 'Dra for a oppdatere')
+                            }</span>
+                        </>
+                    )}
+                </div>
+            )}
+
             {/* Header */}
             <div style={{ marginBottom: isMobile ? '16px' : '20px', textAlign: 'center' }}>
                 <h1 style={{ margin: 0, fontSize: isMobile ? '1.6rem' : '2.5rem', fontWeight: 700 }}>

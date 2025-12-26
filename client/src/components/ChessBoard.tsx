@@ -3,6 +3,7 @@ import { Chess } from 'chess.js';
 import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
 import { useResponsiveBoard } from '../hooks/useMediaQuery';
+import { useBoardFlipGesture } from '../hooks/useGestures';
 
 interface PotentialMoveExplanation {
     from: string;
@@ -188,6 +189,13 @@ export const PIECE_THEMES: PieceTheme[] = [
     },
 ];
 
+interface PieceInfo {
+    type: string;
+    color: 'w' | 'b';
+    square: Square;
+    imageUrl: string;
+}
+
 interface ChessBoardProps {
     game: Chess;
     onMove: (move: { from: string; to: string; promotion?: string }) => void;
@@ -198,6 +206,7 @@ interface ChessBoardProps {
     language?: 'en' | 'no';
     theme?: BoardTheme;
     pieceTheme?: PieceTheme;
+    onFlipBoard?: () => void;
 }
 
 const PROMOTION_PIECES = ['q', 'r', 'b', 'n'] as const;
@@ -217,7 +226,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     socket,
     language = 'en',
     theme = BOARD_THEMES[0],
-    pieceTheme = PIECE_THEMES[0]
+    pieceTheme = PIECE_THEMES[0],
+    onFlipBoard
 }) => {
     const { isMobile, isTouchDevice, boardSize } = useResponsiveBoard();
     const squareSize = boardSize / 8;
@@ -226,6 +236,16 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     const [optionSquares, setOptionSquares] = useState<Square[]>([]);
     const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
     const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
+    const [pieceInfoModal, setPieceInfoModal] = useState<PieceInfo | null>(null);
+    const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressSquare = useRef<Square | null>(null);
+
+    // Two-finger rotate gesture to flip board
+    const flipGestureBind = useBoardFlipGesture(() => {
+        if (onFlipBoard) {
+            onFlipBoard();
+        }
+    }, 30);
     const [hoverExplanation, setHoverExplanation] = useState<PotentialMoveExplanation | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
     const [invalidSquare, setInvalidSquare] = useState<Square | null>(null);
@@ -482,6 +502,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     return (
         <div style={{ position: 'relative' }}>
         <div
+            {...(isTouchDevice ? flipGestureBind() : {})}
             onMouseLeave={handleBoardLeave}
             onTouchEnd={isMobile ? handleBoardLeave : undefined}
             style={{
@@ -493,7 +514,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 borderRadius: isMobile ? '6px' : '4px',
                 overflow: 'hidden',
                 position: 'relative',
-                touchAction: 'manipulation'
+                touchAction: isTouchDevice ? 'none' : 'manipulation'
             }}
         >
             {board.map((square, index) => {
@@ -530,12 +551,43 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         onTouchStart={(e) => {
                             // Prevent double-tap zoom but allow touch to proceed
                             e.stopPropagation();
+                            // Start long press timer for piece info
+                            const sq = square as Square;
+                            longPressSquare.current = sq;
+                            longPressTimeout.current = setTimeout(() => {
+                                const piece = game.get(sq);
+                                if (piece) {
+                                    setPieceInfoModal({
+                                        type: piece.type,
+                                        color: piece.color as 'w' | 'b',
+                                        square: sq,
+                                        imageUrl: pieceTheme.pieces[piece.color][piece.type],
+                                    });
+                                }
+                            }, 500);
                         }}
                         onTouchEnd={(e) => {
+                            // Clear long press timer
+                            if (longPressTimeout.current) {
+                                clearTimeout(longPressTimeout.current);
+                                longPressTimeout.current = null;
+                            }
+                            // Don't handle click if piece info modal is showing
+                            if (pieceInfoModal) {
+                                e.preventDefault();
+                                return;
+                            }
                             // Handle touch as click on mobile
                             e.preventDefault();
                             e.stopPropagation(); // Prevent board's onTouchEnd from firing
                             handleSquareClick(square);
+                        }}
+                        onTouchMove={() => {
+                            // Cancel long press if user moves finger
+                            if (longPressTimeout.current) {
+                                clearTimeout(longPressTimeout.current);
+                                longPressTimeout.current = null;
+                            }
                         }}
                         onMouseEnter={(e) => handleSquareHover(square as Square, e)}
                         onDragOver={(e) => e.preventDefault()}
@@ -1213,6 +1265,49 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 <span>Play Move</span>
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Piece Info Modal (Long Press) */}
+            {pieceInfoModal && (
+                <div
+                    className="piece-info-modal"
+                    onClick={() => setPieceInfoModal(null)}
+                >
+                    <div
+                        className="piece-info-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3>{language === 'en' ? 'Piece Information' : 'Brikkeinformasjon'}</h3>
+                        <img
+                            src={pieceInfoModal.imageUrl}
+                            alt={pieceInfoModal.type}
+                            className="piece-image"
+                            style={{ width: 80, height: 80 }}
+                        />
+                        <p>
+                            <strong>{language === 'en' ? 'Type' : 'Type'}:</strong>{' '}
+                            {pieceInfoModal.type === 'p' ? (language === 'en' ? 'Pawn' : 'Bonde') :
+                             pieceInfoModal.type === 'n' ? (language === 'en' ? 'Knight' : 'Springer') :
+                             pieceInfoModal.type === 'b' ? (language === 'en' ? 'Bishop' : 'Loper') :
+                             pieceInfoModal.type === 'r' ? (language === 'en' ? 'Rook' : 'Tarn') :
+                             pieceInfoModal.type === 'q' ? (language === 'en' ? 'Queen' : 'Dronning') :
+                             (language === 'en' ? 'King' : 'Konge')}
+                        </p>
+                        <p>
+                            <strong>{language === 'en' ? 'Color' : 'Farge'}:</strong>{' '}
+                            {pieceInfoModal.color === 'w'
+                                ? (language === 'en' ? 'White' : 'Hvit')
+                                : (language === 'en' ? 'Black' : 'Svart')}
+                        </p>
+                        <p>
+                            <strong>{language === 'en' ? 'Square' : 'Rute'}:</strong>{' '}
+                            {pieceInfoModal.square.toUpperCase()}
+                        </p>
+                        <button onClick={() => setPieceInfoModal(null)}>
+                            {language === 'en' ? 'Close' : 'Lukk'}
+                        </button>
                     </div>
                 </div>
             )}

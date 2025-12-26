@@ -24,6 +24,7 @@ const FriendsPanel = lazy(() => import('./components/FriendsPanel').then(m => ({
 const ClubsPanel = lazy(() => import('./components/ClubsPanel').then(m => ({ default: m.ClubsPanel })));
 const TournamentPanel = lazy(() => import('./components/TournamentPanel').then(m => ({ default: m.TournamentPanel })));
 const LeaguePanel = lazy(() => import('./components/LeaguePanel').then(m => ({ default: m.LeaguePanel })));
+const GestureHelp = lazy(() => import('./components/GestureHelp'));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -3735,6 +3736,13 @@ function App() {
           language={language}
         />
       </Suspense>
+
+      {/* Gesture Help Overlay (Mobile only, first visit) */}
+      {isMobile && (
+        <Suspense fallback={null}>
+          <GestureHelp />
+        </Suspense>
+      )}
 
       {/* Mobile Navigation */}
       <MobileNav
