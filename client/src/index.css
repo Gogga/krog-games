@@ -28,7 +28,7 @@
   /* Text Colors */
   --color-text-primary: #ffffff;
   --color-text-secondary: #cccccc;
-  --color-text-tertiary: #888888;
+  --color-text-tertiary: #999999;
   --color-text-disabled: #666666;
 
   /* Legacy Text (for compatibility) */
@@ -1868,13 +1868,13 @@ label {
 
 .time-desc {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   display: block;
   margin-top: var(--space-xs);
 }
 
 .time-control.active .time-desc {
-  color: var(--color-bg-secondary);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Desktop - hide mobile lobby */

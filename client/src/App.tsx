@@ -1082,7 +1082,7 @@ function App() {
   // Lobby view (no room joined)
   if (!roomCode) {
     return (
-      <div className="app-container" style={{ padding: isMobile ? '8px' : undefined }}>
+      <main className="app-container" role="main" style={{ padding: isMobile ? '8px' : undefined }}>
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
@@ -1139,7 +1139,7 @@ function App() {
               <div className="lobby-card" style={{ borderColor: '#3498db', borderWidth: '2px' }}>
                 <div className="lobby-card-header">
                   <span className="lobby-card-icon">⚔️</span>
-                  <h3>{language === 'en' ? 'Incoming Challenges' : 'Utfordringer'}</h3>
+                  <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Incoming Challenges' : 'Utfordringer'}</h2>
                 </div>
                 {incomingChallenges.map(challenge => (
                   <div key={challenge.challengeId} style={{ marginBottom: '12px' }}>
@@ -1172,7 +1172,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">⚡</span>
-                <h3>{language === 'en' ? 'Quick Play' : 'Hurtigspill'}</h3>
+                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Quick Play' : 'Hurtigspill'}</h2>
               </div>
 
               {/* Time Control Selector */}
@@ -1205,7 +1205,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">👥</span>
-                <h3>{language === 'en' ? 'Play with Friend' : 'Spill med venn'}</h3>
+                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Play with Friend' : 'Spill med venn'}</h2>
               </div>
 
               {/* Variant Selector */}
@@ -1253,7 +1253,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">📅</span>
-                <h3>{language === 'en' ? 'Daily Puzzle' : 'Dagens oppgave'}</h3>
+                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Daily Puzzle' : 'Dagens oppgave'}</h2>
               </div>
               <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '12px' }}>
                 {language === 'en' ? 'Solve today\'s challenge!' : 'Løs dagens utfordring!'}
@@ -1272,7 +1272,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">📚</span>
-                <h3>{language === 'en' ? 'Practice & Learn' : 'Øv og lær'}</h3>
+                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Practice & Learn' : 'Øv og lær'}</h2>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1359,7 +1359,7 @@ function App() {
                 >
                   <div className="lobby-card-header">
                     <span className="lobby-card-icon">🤖</span>
-                    <h3>{language === 'en' ? 'Play vs Computer' : 'Spill mot datamaskin'}</h3>
+                    <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Play vs Computer' : 'Spill mot datamaskin'}</h2>
                   </div>
 
                   {/* Difficulty */}
@@ -2046,9 +2046,9 @@ function App() {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '1.3rem' }}>
+                <h2 style={{ margin: '0 0 16px 0', fontSize: '1.3rem' }}>
                   {language === 'en' ? 'Import PGN' : 'Importer PGN'}
-                </h3>
+                </h2>
                 <textarea
                   value={pgnInput}
                   onChange={(e) => {
@@ -2139,7 +2139,7 @@ function App() {
             language={language}
           />
         </Suspense>
-      </div>
+      </main>
     );
   }
 
@@ -2149,7 +2149,7 @@ function App() {
      (game.turn() === 'b' && playerColor === 'black'));
 
   return (
-    <div className="app-container">
+    <main className="app-container" role="main">
       <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
@@ -3751,7 +3751,7 @@ function App() {
         activeTab={mobileNavTab}
         onTabChange={handleMobileNavChange}
       />
-    </div>
+    </main>
   );
 }
 
