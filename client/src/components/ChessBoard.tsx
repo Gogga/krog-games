@@ -228,6 +228,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
     const [hoverExplanation, setHoverExplanation] = useState<PotentialMoveExplanation | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
+    const [invalidSquare, setInvalidSquare] = useState<Square | null>(null);
 
     // Track which square we're currently requesting an explanation for
     const pendingRequestRef = useRef<string | null>(null);
@@ -347,6 +348,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         setOptionSquares([]);
     };
 
+    // Flash invalid move feedback
+    const flashInvalidMove = useCallback((square: Square) => {
+        setInvalidSquare(square);
+        setTimeout(() => setInvalidSquare(null), 300);
+    }, []);
+
     const handleSquareClick = (square: string) => {
         const sq = square as Square;
 
@@ -381,9 +388,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                     executeMove(selectedSquare, sq);
                 }
             } else {
-                // Invalid move - still send to server to get KROG explanation
-                // Only if user is attempting to move to a different square
+                // Invalid move - flash feedback and send to server for KROG explanation
                 if (selectedSquare !== sq) {
+                    flashInvalidMove(sq);
                     onMove({ from: selectedSquare, to: sq });
                 }
                 setSelectedSquare(null);
@@ -429,11 +436,30 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 const lastMove = game.history({ verbose: true }).pop();
                 const isLastMove = lastMove && (lastMove.from === square || lastMove.to === square);
                 const isHovered = hoveredSquare === square;
+                const isInvalid = invalidSquare === square;
+                const isInCheck = piece?.type === 'k' && game.isCheck() && piece.color === game.turn();
+
+                // Build class names for CSS-based styling
+                const squareClasses = [
+                    'chess-square',
+                    isDark ? 'dark' : 'light',
+                    isSelected && 'selected',
+                    isOption && 'legal-move',
+                    isLastMove && 'last-move',
+                    isInvalid && 'invalid',
+                    isInCheck && 'in-check',
+                    piece && 'has-piece'
+                ].filter(Boolean).join(' ');
 
                 return (
                     <div
                         key={square}
+                        className={squareClasses}
                         onClick={() => handleSquareClick(square)}
+                        onTouchEnd={(e) => {
+                            // Prevent double-tap zoom on mobile
+                            e.preventDefault();
+                        }}
                         onMouseEnter={(e) => handleSquareHover(square as Square, e)}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
@@ -457,7 +483,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                         executeMove(fromSquare, square as Square);
                                     }
                                 } else {
-                                    // Invalid move - send to server to get KROG explanation
+                                    // Invalid move - flash feedback and send to server
+                                    flashInvalidMove(square as Square);
                                     onMove({ from: fromSquare, to: square });
                                     setSelectedSquare(null);
                                     setOptionSquares([]);
@@ -465,42 +492,62 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                             }
                         }}
                         style={{
-                            backgroundColor: isSelected
-                                ? 'rgba(255, 255, 0, 0.8)'
-                                : isHovered && learnMode
-                                    ? 'rgba(155, 89, 182, 0.6)'
-                                    : isLastMove
-                                        ? 'rgba(255, 255, 0, 0.5)'
-                                        : color,
+                            backgroundColor: isInvalid
+                                ? 'rgba(255, 0, 0, 0.5)'
+                                : isSelected
+                                    ? 'rgba(129, 182, 76, 0.7)'
+                                    : isHovered && learnMode
+                                        ? 'rgba(155, 89, 182, 0.6)'
+                                        : isLastMove
+                                            ? 'rgba(181, 136, 99, 0.5)'
+                                            : color,
                             position: 'relative',
                             cursor: 'pointer',
                             display: 'flex',
+                            boxShadow: isSelected
+                                ? 'inset 0 0 0 3px #81b64c'
+                                : isInCheck
+                                    ? 'inset 0 0 0 3px rgba(255, 0, 0, 0.8)'
+                                    : 'none',
+                            transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
+                            touchAction: 'manipulation',
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            WebkitTapHighlightColor: 'transparent',
                             justifyContent: 'center',
                             alignItems: 'center'
                         }}
                     >
-                        {/* Helper dot for valid moves */}
+                        {/* Legal move dot (empty squares) */}
                         {isOption && !piece && (
-                            <div style={{
-                                width: `${squareSize * 0.28}px`,
-                                height: `${squareSize * 0.28}px`,
-                                borderRadius: '50%',
-                                backgroundColor: 'rgba(0,0,0,0.2)',
-                                zIndex: 1
-                            }} />
+                            <div
+                                className="legal-move-dot"
+                                style={{
+                                    width: `${squareSize * 0.28}px`,
+                                    height: `${squareSize * 0.28}px`,
+                                    borderRadius: '50%',
+                                    backgroundColor: 'rgba(129, 182, 76, 0.6)',
+                                    zIndex: 1,
+                                    pointerEvents: 'none'
+                                }}
+                            />
                         )}
 
-                        {/* Capture ring */}
+                        {/* Capture ring (squares with opponent pieces) */}
                         {isOption && piece && (
-                            <div style={{
-                                position: 'absolute',
-                                width: '100%',
-                                height: '100%',
-                                border: `${isMobile ? 3 : 4}px solid rgba(0,0,0,0.2)`,
-                                borderRadius: '50%',
-                                boxSizing: 'border-box',
-                                zIndex: 1
-                            }} />
+                            <div
+                                className="legal-move-ring"
+                                style={{
+                                    position: 'absolute',
+                                    width: '100%',
+                                    height: '100%',
+                                    border: `${isMobile ? 3 : 4}px solid rgba(129, 182, 76, 0.7)`,
+                                    borderRadius: '50%',
+                                    boxSizing: 'border-box',
+                                    zIndex: 1,
+                                    pointerEvents: 'none'
+                                }}
+                            />
                         )}
 
                         {piece && (
