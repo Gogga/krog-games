@@ -11,6 +11,7 @@ interface MediaQueryResult {
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
+  isTouchDevice: boolean;
   screenWidth: number;
 }
 
@@ -25,10 +26,16 @@ interface MediaQueryResult {
 export function useMediaQuery(): MediaQueryResult {
   const getScreenState = useCallback((): MediaQueryResult => {
     const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    // Detect touch capability (works for iPads, tablets, touch laptops)
+    const isTouchDevice = typeof window !== 'undefined' && (
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0
+    );
     return {
       isMobile: width <= MOBILE_MAX,
       isTablet: width > MOBILE_MAX && width <= TABLET_MAX,
       isDesktop: width > TABLET_MAX,
+      isTouchDevice,
       screenWidth: width,
     };
   }, []);
@@ -74,6 +81,7 @@ interface BoardDimensions {
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
+  isTouchDevice: boolean;
   boardSize: number;
   screenWidth: number;
 }
@@ -87,7 +95,7 @@ interface BoardDimensions {
  * - Desktop: 480px - 600px
  */
 export function useResponsiveBoard(): BoardDimensions {
-  const { isMobile, isTablet, isDesktop, screenWidth } = useMediaQuery();
+  const { isMobile, isTablet, isDesktop, isTouchDevice, screenWidth } = useMediaQuery();
 
   const calculateBoardSize = useCallback((): number => {
     if (isMobile) {
@@ -109,6 +117,7 @@ export function useResponsiveBoard(): BoardDimensions {
     isMobile,
     isTablet,
     isDesktop,
+    isTouchDevice,
     boardSize: calculateBoardSize(),
     screenWidth,
   };

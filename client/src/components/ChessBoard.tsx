@@ -219,8 +219,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     theme = BOARD_THEMES[0],
     pieceTheme = PIECE_THEMES[0]
 }) => {
-    const { isMobile, isTablet, boardSize } = useResponsiveBoard();
-    const isTouchDevice = isMobile || isTablet;
+    const { isMobile, isTouchDevice, boardSize } = useResponsiveBoard();
     const squareSize = boardSize / 8;
 
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
