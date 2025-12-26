@@ -936,7 +936,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         top: 0,
                         left: 0,
                         right: 0,
-                        bottom: 0,
+                        bottom: isMobile ? '64px' : 0, // Account for mobile nav bar
                         backgroundColor: 'rgba(0, 0, 0, 0.6)',
                         zIndex: 1000,
                         display: 'flex',
@@ -948,7 +948,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         className="bottom-sheet"
                         style={{
                             width: '100%',
-                            maxHeight: '80vh',
+                            maxHeight: isMobile ? '70vh' : '80vh', // Smaller on mobile to ensure buttons visible
                             backgroundColor: '#1a1a2e',
                             borderRadius: '20px 20px 0 0',
                             overflow: 'hidden',
@@ -1156,13 +1156,15 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                             )}
                         </div>
 
-                        {/* Action buttons */}
+                        {/* Action buttons - always visible at bottom */}
                         <div style={{
-                            padding: '16px',
-                            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+                            padding: '12px 16px',
+                            paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
                             borderTop: '1px solid #333',
                             display: 'flex',
-                            gap: '12px'
+                            gap: '12px',
+                            flexShrink: 0, // Prevent buttons from shrinking
+                            backgroundColor: '#1a1a2e' // Ensure solid background
                         }}>
                             <button
                                 onClick={closeMobileLearnSheet}
