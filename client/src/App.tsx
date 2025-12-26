@@ -1,27 +1,39 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
 import { useMediaQuery } from './hooks/useMediaQuery';
-import PuzzleMode from './components/PuzzleMode';
-import DailyPuzzle from './components/DailyPuzzle';
-import OpeningExplorer from './components/OpeningExplorer';
-import LessonsMode from './components/LessonsMode';
 import { ChessSounds, resumeAudio } from './utils/sounds';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthModal } from './components/AuthModal';
 import { UserPanel } from './components/UserPanel';
 import { MatchmakingPanel } from './components/MatchmakingPanel';
-import { FriendsPanel } from './components/FriendsPanel';
-import { ClubsPanel } from './components/ClubsPanel';
-import { TournamentPanel } from './components/TournamentPanel';
-import { LeaguePanel } from './components/LeaguePanel';
 import MoveExplanationModal from './components/MoveExplanationModal';
-import KrogLeaderboard from './components/KrogLeaderboard';
-import FAQModal from './components/FAQModal';
 import { MobileNav } from './components/MobileNav';
 import { getStoredToken } from './api/auth';
 import './index.css';
+
+// Lazy load heavy components for better initial load performance
+const PuzzleMode = lazy(() => import('./components/PuzzleMode'));
+const DailyPuzzle = lazy(() => import('./components/DailyPuzzle'));
+const OpeningExplorer = lazy(() => import('./components/OpeningExplorer'));
+const LessonsMode = lazy(() => import('./components/LessonsMode'));
+const KrogLeaderboard = lazy(() => import('./components/KrogLeaderboard'));
+const FAQModal = lazy(() => import('./components/FAQModal'));
+const FriendsPanel = lazy(() => import('./components/FriendsPanel').then(m => ({ default: m.FriendsPanel })));
+const ClubsPanel = lazy(() => import('./components/ClubsPanel').then(m => ({ default: m.ClubsPanel })));
+const TournamentPanel = lazy(() => import('./components/TournamentPanel').then(m => ({ default: m.TournamentPanel })));
+const LeaguePanel = lazy(() => import('./components/LeaguePanel').then(m => ({ default: m.LeaguePanel })));
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="loading-fallback">
+      <div className="spinner"></div>
+      <p>Loading...</p>
+    </div>
+  );
+}
 
 // Initialize socket outside component to prevent multiple connections
 const socket = io('http://localhost:3000');
@@ -1014,45 +1026,53 @@ function App() {
   // Puzzle Mode view
   if (puzzleMode) {
     return (
-      <PuzzleMode
-        socket={socket}
-        language={language}
-        onExit={() => setPuzzleMode(false)}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <PuzzleMode
+          socket={socket}
+          language={language}
+          onExit={() => setPuzzleMode(false)}
+        />
+      </Suspense>
     );
   }
 
   // Daily Puzzle view
   if (dailyPuzzleMode) {
     return (
-      <DailyPuzzle
-        socket={socket}
-        language={language}
-        user={null}
-        onExit={() => setDailyPuzzleMode(false)}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <DailyPuzzle
+          socket={socket}
+          language={language}
+          user={null}
+          onExit={() => setDailyPuzzleMode(false)}
+        />
+      </Suspense>
     );
   }
 
   // Opening Explorer view
   if (openingExplorer) {
     return (
-      <OpeningExplorer
-        socket={socket}
-        language={language}
-        onExit={() => setOpeningExplorer(false)}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <OpeningExplorer
+          socket={socket}
+          language={language}
+          onExit={() => setOpeningExplorer(false)}
+        />
+      </Suspense>
     );
   }
 
   // Lessons view
   if (lessonsMode) {
     return (
-      <LessonsMode
-        socket={socket}
-        language={language}
-        onExit={() => setLessonsMode(false)}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <LessonsMode
+          socket={socket}
+          language={language}
+          onExit={() => setLessonsMode(false)}
+        />
+      </Suspense>
     );
   }
 
@@ -1074,16 +1094,18 @@ function App() {
             flexWrap: isMobile ? 'wrap' : 'nowrap',
             justifyContent: isMobile ? 'center' : 'flex-end'
           }}>
-            <TournamentPanel socket={socket} language={language} onJoinTournamentGame={(roomCode) => {
-              socket.emit('join_tournament_game', { roomCode });
-              setRoomCode(roomCode);
-            }} />
-            <LeaguePanel socket={socket} language={language} onJoinLeagueMatch={(roomCode) => {
-              socket.emit('join_league_match', { roomCode });
-              setRoomCode(roomCode);
-            }} />
-            <ClubsPanel socket={socket} language={language} onChallengeMember={challengeFriend} />
-            <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
+            <Suspense fallback={null}>
+              <TournamentPanel socket={socket} language={language} onJoinTournamentGame={(roomCode) => {
+                socket.emit('join_tournament_game', { roomCode });
+                setRoomCode(roomCode);
+              }} />
+              <LeaguePanel socket={socket} language={language} onJoinLeagueMatch={(roomCode) => {
+                socket.emit('join_league_match', { roomCode });
+                setRoomCode(roomCode);
+              }} />
+              <ClubsPanel socket={socket} language={language} onChallengeMember={challengeFriend} />
+              <FriendsPanel socket={socket} language={language} onChallengeFriend={challengeFriend} />
+            </Suspense>
           </div>
         </div>
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
@@ -2097,19 +2119,23 @@ function App() {
         </div>
 
         {/* KROG Leaderboard - Lobby */}
-        <KrogLeaderboard
-          isOpen={showKrogLeaderboard}
-          onClose={() => setShowKrogLeaderboard(false)}
-          socket={socket}
-          language={language}
-        />
+        <Suspense fallback={null}>
+          <KrogLeaderboard
+            isOpen={showKrogLeaderboard}
+            onClose={() => setShowKrogLeaderboard(false)}
+            socket={socket}
+            language={language}
+          />
+        </Suspense>
 
         {/* FAQ Modal - Lobby */}
-        <FAQModal
-          isOpen={showFAQ}
-          onClose={() => setShowFAQ(false)}
-          language={language}
-        />
+        <Suspense fallback={null}>
+          <FAQModal
+            isOpen={showFAQ}
+            onClose={() => setShowFAQ(false)}
+            language={language}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -3692,19 +3718,23 @@ function App() {
       />
 
       {/* KROG Leaderboard */}
-      <KrogLeaderboard
-        isOpen={showKrogLeaderboard}
-        onClose={() => setShowKrogLeaderboard(false)}
-        socket={socket}
-        language={language}
-      />
+      <Suspense fallback={null}>
+        <KrogLeaderboard
+          isOpen={showKrogLeaderboard}
+          onClose={() => setShowKrogLeaderboard(false)}
+          socket={socket}
+          language={language}
+        />
+      </Suspense>
 
       {/* FAQ Modal */}
-      <FAQModal
-        isOpen={showFAQ}
-        onClose={() => setShowFAQ(false)}
-        language={language}
-      />
+      <Suspense fallback={null}>
+        <FAQModal
+          isOpen={showFAQ}
+          onClose={() => setShowFAQ(false)}
+          language={language}
+        />
+      </Suspense>
 
       {/* Mobile Navigation */}
       <MobileNav

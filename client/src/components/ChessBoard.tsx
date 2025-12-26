@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { Chess } from 'chess.js';
 import type { Square } from 'chess.js';
 import type { Socket } from 'socket.io-client';
@@ -249,19 +249,23 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     const prevFenRef = useRef<string>(game.fen());
     const currentFen = useMemo(() => game.fen(), [game]);
 
-    // Calculate board squares based on orientation
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+    // File labels for board coordinates
+    const files = useMemo(() => ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], []);
 
-    const board = [];
-    const rankIter = orientation === 'white' ? [...ranks].reverse() : ranks;
-    const fileIter = orientation === 'white' ? files : [...files].reverse();
+    // Calculate board squares based on orientation - memoized
+    const board = useMemo(() => {
+        const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
+        const result: string[] = [];
+        const rankIter = orientation === 'white' ? [...ranks].reverse() : ranks;
+        const fileIter = orientation === 'white' ? files : [...files].reverse();
 
-    for (const rank of rankIter) {
-        for (const file of fileIter) {
-            board.push(file + rank);
+        for (const rank of rankIter) {
+            for (const file of fileIter) {
+                result.push(file + rank);
+            }
         }
-    }
+        return result;
+    }, [orientation, files]);
 
     useEffect(() => {
         // Only clear selection when the actual position changes (FEN), not on every game object change
@@ -333,26 +337,29 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         setTooltipPosition(null);
     }, []);
 
-    const getPieceImage = (piece: { type: string; color: string } | null) => {
+    const getPieceImage = useCallback((piece: { type: string; color: string } | null) => {
         if (!piece) return undefined;
         return pieceTheme.pieces[piece.color][piece.type];
-    };
+    }, [pieceTheme]);
 
-    // Check if a move is a pawn promotion
-    const isPromotion = (from: Square, to: Square): boolean => {
+    // Memoize last move to avoid recalculating on every square render
+    const lastMove = useMemo(() => game.history({ verbose: true }).pop(), [currentFen]);
+
+    // Check if a move is a pawn promotion - memoized
+    const isPromotion = useCallback((from: Square, to: Square): boolean => {
         const piece = game.get(from);
         if (!piece || piece.type !== 'p') return false;
         const toRank = to[1];
         return (piece.color === 'w' && toRank === '8') || (piece.color === 'b' && toRank === '1');
-    };
+    }, [game]);
 
-    // Handle the actual move (with or without promotion)
-    const executeMove = (from: Square, to: Square, promotion?: string) => {
+    // Handle the actual move (with or without promotion) - memoized
+    const executeMove = useCallback((from: Square, to: Square, promotion?: string) => {
         onMove({ from, to, promotion });
         setSelectedSquare(null);
         setOptionSquares([]);
         setPendingPromotion(null);
-    };
+    }, [onMove]);
 
     // Handle promotion piece selection
     const handlePromotionSelect = (piece: string) => {
@@ -498,7 +505,6 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 const piece = game.get(square as Square);
                 const isSelected = selectedSquare === square;
                 const isOption = optionSquares.includes(square as Square);
-                const lastMove = game.history({ verbose: true }).pop();
                 const isLastMove = lastMove && (lastMove.from === square || lastMove.to === square);
                 const isHovered = hoveredSquare === square;
                 const isInvalid = invalidSquare === square;
@@ -1214,4 +1220,26 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     );
 };
 
-export default ChessBoard;
+// Custom comparison function for React.memo
+// Only re-render when actual game state or visual props change
+function arePropsEqual(prevProps: ChessBoardProps, nextProps: ChessBoardProps): boolean {
+    // Compare game by FEN (actual position) rather than object reference
+    if (prevProps.game.fen() !== nextProps.game.fen()) return false;
+
+    // Compare primitive props
+    if (prevProps.orientation !== nextProps.orientation) return false;
+    if (prevProps.learnMode !== nextProps.learnMode) return false;
+    if (prevProps.roomCode !== nextProps.roomCode) return false;
+    if (prevProps.language !== nextProps.language) return false;
+
+    // Compare theme by name (assumes themes are static objects)
+    if (prevProps.theme?.name !== nextProps.theme?.name) return false;
+    if (prevProps.pieceTheme?.name !== nextProps.pieceTheme?.name) return false;
+
+    // Socket reference doesn't need comparison - it's stable
+    // onMove callback doesn't need comparison - parent should memoize it
+
+    return true;
+}
+
+export default memo(ChessBoard, arePropsEqual);
