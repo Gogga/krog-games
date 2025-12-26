@@ -230,6 +230,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
     const [invalidSquare, setInvalidSquare] = useState<Square | null>(null);
 
+    // Mobile Learn Mode bottom sheet state
+    const [mobileLearnSheet, setMobileLearnSheet] = useState<{
+        from: Square;
+        to: Square;
+        explanation: PotentialMoveExplanation | null;
+        isPromotion: boolean;
+    } | null>(null);
+
     // Track which square we're currently requesting an explanation for
     const pendingRequestRef = useRef<string | null>(null);
 
@@ -274,6 +282,10 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             // Only update if this response matches our pending request
             if (pendingRequestRef.current === explanation.to) {
                 setHoverExplanation(explanation);
+                // For mobile, update the bottom sheet with the explanation
+                if (isMobile && mobileLearnSheet && mobileLearnSheet.to === explanation.to) {
+                    setMobileLearnSheet(prev => prev ? { ...prev, explanation } : null);
+                }
             }
         };
 
@@ -282,7 +294,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         return () => {
             socket.off('potential_move_explanation', handlePotentialMoveExplanation);
         };
-    }, [socket]);
+    }, [socket, isMobile, mobileLearnSheet]);
 
     // Request explanation when hovering over a valid move square in Learn Mode
     const handleSquareHover = (square: Square, event: React.MouseEvent) => {
@@ -360,6 +372,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         // If promotion modal is open, ignore clicks on board
         if (pendingPromotion) return;
 
+        // If mobile learn sheet is open, ignore clicks on board
+        if (mobileLearnSheet) return;
+
         // If we already selected a square
         if (selectedSquare) {
             // Check if clicked on another of own pieces first
@@ -376,8 +391,25 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
             const validMove = moves.find(m => m.to === sq);
 
             if (validMove) {
-                // Valid move - check if promotion
-                if (isPromotion(selectedSquare, sq)) {
+                // Valid move - check if this should trigger the mobile Learn Mode sheet
+                if (isMobile && learnMode && socket && roomCode) {
+                    // Show the mobile Learn Mode bottom sheet instead of executing immediately
+                    const willPromote = isPromotion(selectedSquare, sq);
+                    pendingRequestRef.current = sq;
+                    setMobileLearnSheet({
+                        from: selectedSquare,
+                        to: sq,
+                        explanation: null,
+                        isPromotion: willPromote
+                    });
+                    // Request the explanation
+                    socket.emit('explain_potential_move', {
+                        roomId: roomCode,
+                        from: selectedSquare,
+                        to: sq
+                    });
+                } else if (isPromotion(selectedSquare, sq)) {
+                    // Desktop or Learn Mode off - check if promotion
                     const piece = game.get(selectedSquare);
                     setPendingPromotion({
                         from: selectedSquare,
@@ -405,6 +437,31 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 setOptionSquares(moves.map(m => m.to as Square));
             }
         }
+    };
+
+    // Handle playing the move from mobile Learn Mode sheet
+    const handleMobileLearnSheetPlay = (promotionPiece?: string) => {
+        if (!mobileLearnSheet) return;
+
+        if (mobileLearnSheet.isPromotion && !promotionPiece) {
+            // Show promotion picker
+            const piece = game.get(mobileLearnSheet.from);
+            setPendingPromotion({
+                from: mobileLearnSheet.from,
+                to: mobileLearnSheet.to,
+                color: piece!.color as 'w' | 'b'
+            });
+            setMobileLearnSheet(null);
+        } else {
+            executeMove(mobileLearnSheet.from, mobileLearnSheet.to, promotionPiece);
+            setMobileLearnSheet(null);
+        }
+    };
+
+    // Close mobile Learn Mode sheet
+    const closeMobileLearnSheet = () => {
+        setMobileLearnSheet(null);
+        // Keep the piece selected so user can try another square
     };
 
     return (
@@ -858,6 +915,287 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                             FIDE {hoverExplanation.fide.article}
                         </span>
                         {hoverExplanation.fide[language]}
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile Learn Mode Bottom Sheet */}
+            {isMobile && mobileLearnSheet && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        zIndex: 1000,
+                        display: 'flex',
+                        alignItems: 'flex-end'
+                    }}
+                    onClick={closeMobileLearnSheet}
+                >
+                    <div
+                        className="bottom-sheet"
+                        style={{
+                            width: '100%',
+                            maxHeight: '80vh',
+                            backgroundColor: '#1a1a2e',
+                            borderRadius: '20px 20px 0 0',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Handle bar */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            padding: '12px'
+                        }}>
+                            <div style={{
+                                width: '40px',
+                                height: '4px',
+                                backgroundColor: '#444',
+                                borderRadius: '2px'
+                            }} />
+                        </div>
+
+                        {/* Header */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0 16px 12px',
+                            borderBottom: '1px solid #333'
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                <span style={{
+                                    fontSize: '1.1rem',
+                                    color: '#9b59b6',
+                                    fontWeight: 600
+                                }}>
+                                    KROG Learn
+                                </span>
+                                <span style={{
+                                    background: '#9b59b6',
+                                    color: 'white',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    fontSize: '0.95rem'
+                                }}>
+                                    {mobileLearnSheet.from} → {mobileLearnSheet.to}
+                                </span>
+                            </div>
+                            <button
+                                onClick={closeMobileLearnSheet}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#888',
+                                    fontSize: '1.3rem',
+                                    padding: '8px',
+                                    cursor: 'pointer',
+                                    minWidth: '44px',
+                                    minHeight: '44px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Content - scrollable */}
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            padding: '16px',
+                            WebkitOverflowScrolling: 'touch'
+                        }}>
+                            {mobileLearnSheet.explanation ? (
+                                <>
+                                    {/* R-Type Badge */}
+                                    {mobileLearnSheet.explanation.krog.rType && (
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <div style={{
+                                                display: 'inline-block',
+                                                backgroundColor: 'rgba(155, 89, 182, 0.15)',
+                                                color: '#9b59b6',
+                                                padding: '6px 12px',
+                                                borderRadius: '6px',
+                                                fontWeight: 500,
+                                                fontSize: '0.9rem'
+                                            }}>
+                                                {mobileLearnSheet.explanation.krog.rType.replace(/_/g, ' ')}
+                                            </div>
+                                            {mobileLearnSheet.explanation.krog.rTypeDescription && (
+                                                <div style={{
+                                                    color: '#bb8fce',
+                                                    marginTop: '8px',
+                                                    fontSize: '0.85rem',
+                                                    lineHeight: 1.4
+                                                }}>
+                                                    {mobileLearnSheet.explanation.krog.rTypeDescription[language]}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* KROG Formula */}
+                                    <div style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.85rem',
+                                        color: '#81b64c',
+                                        backgroundColor: 'rgba(129, 182, 76, 0.1)',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(129, 182, 76, 0.2)',
+                                        marginBottom: '12px',
+                                        wordBreak: 'break-word'
+                                    }}>
+                                        {mobileLearnSheet.explanation.krog.formula}
+                                    </div>
+
+                                    {/* Explanation */}
+                                    <div style={{
+                                        color: '#ddd',
+                                        fontSize: '0.9rem',
+                                        marginBottom: '12px',
+                                        lineHeight: 1.5
+                                    }}>
+                                        {mobileLearnSheet.explanation.explanation[language]}
+                                    </div>
+
+                                    {/* Conditions */}
+                                    {mobileLearnSheet.explanation.conditions && mobileLearnSheet.explanation.conditions.length > 0 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: '6px',
+                                            marginBottom: '12px'
+                                        }}>
+                                            {mobileLearnSheet.explanation.conditions.map((cond, i) => (
+                                                <span
+                                                    key={i}
+                                                    style={{
+                                                        background: cond.met ? 'rgba(129, 182, 76, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                                                        border: `1px solid ${cond.met ? '#81b64c' : '#e74c3c'}`,
+                                                        color: cond.met ? '#81b64c' : '#e74c3c',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.75rem',
+                                                        fontFamily: 'monospace'
+                                                    }}
+                                                >
+                                                    {cond.met ? '✓' : '✗'} {cond.name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* FIDE Reference */}
+                                    <div style={{
+                                        background: 'rgba(74, 144, 217, 0.1)',
+                                        border: '1px solid rgba(74, 144, 217, 0.3)',
+                                        borderRadius: '8px',
+                                        padding: '10px 12px',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <span style={{
+                                            color: '#4a90d9',
+                                            fontWeight: 600,
+                                            fontSize: '0.85rem'
+                                        }}>
+                                            FIDE §{mobileLearnSheet.explanation.fide.article}
+                                        </span>
+                                        <div style={{
+                                            color: '#aaa',
+                                            fontSize: '0.85rem',
+                                            marginTop: '4px',
+                                            lineHeight: 1.4
+                                        }}>
+                                            {mobileLearnSheet.explanation.fide[language]}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    padding: '40px'
+                                }}>
+                                    <div className="spin" style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        border: '3px solid #333',
+                                        borderTopColor: '#9b59b6',
+                                        borderRadius: '50%'
+                                    }} />
+                                    <span style={{ color: '#888', marginLeft: '12px' }}>
+                                        Loading explanation...
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div style={{
+                            padding: '16px',
+                            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+                            borderTop: '1px solid #333',
+                            display: 'flex',
+                            gap: '12px'
+                        }}>
+                            <button
+                                onClick={closeMobileLearnSheet}
+                                style={{
+                                    flex: 1,
+                                    padding: '14px',
+                                    backgroundColor: '#333',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    fontSize: '1rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    minHeight: '48px'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleMobileLearnSheetPlay()}
+                                disabled={!mobileLearnSheet.explanation}
+                                style={{
+                                    flex: 2,
+                                    padding: '14px',
+                                    backgroundColor: mobileLearnSheet.explanation ? '#81b64c' : '#555',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    fontSize: '1rem',
+                                    fontWeight: 600,
+                                    cursor: mobileLearnSheet.explanation ? 'pointer' : 'not-allowed',
+                                    minHeight: '48px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <span>♟️</span>
+                                <span>Play Move</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
