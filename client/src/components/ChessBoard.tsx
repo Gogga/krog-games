@@ -456,9 +456,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         key={square}
                         className={squareClasses}
                         onClick={() => handleSquareClick(square)}
+                        onTouchStart={(e) => {
+                            // Prevent double-tap zoom but allow touch to proceed
+                            e.stopPropagation();
+                        }}
                         onTouchEnd={(e) => {
-                            // Prevent double-tap zoom on mobile
+                            // Handle touch as click on mobile
                             e.preventDefault();
+                            handleSquareClick(square);
                         }}
                         onMouseEnter={(e) => handleSquareHover(square as Square, e)}
                         onDragOver={(e) => e.preventDefault()}
@@ -554,14 +559,20 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                             <img
                                 src={getPieceImage(piece)}
                                 alt={`${piece.color}${piece.type} `}
-                                draggable={piece.color === game.turn()}
+                                draggable={!isMobile && piece.color === game.turn()}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleSquareClick(square);
                                 }}
+                                onTouchEnd={(e) => {
+                                    // Handle touch on piece - pass to parent square handler
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleSquareClick(square);
+                                }}
                                 onDragStart={(e) => {
-                                    // Only allow dragging own pieces
-                                    if (piece.color !== game.turn()) {
+                                    // Only allow dragging own pieces on desktop
+                                    if (isMobile || piece.color !== game.turn()) {
                                         e.preventDefault();
                                         return;
                                     }
@@ -573,7 +584,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                     height: '90%',
                                     zIndex: 2,
                                     userSelect: 'none',
-                                    cursor: piece.color === game.turn() ? 'grab' : 'default'
+                                    WebkitUserSelect: 'none',
+                                    pointerEvents: isMobile ? 'auto' : 'auto',
+                                    cursor: piece.color === game.turn() ? (isMobile ? 'pointer' : 'grab') : 'default'
                                 }}
                             />
                         )}
