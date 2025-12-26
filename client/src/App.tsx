@@ -1106,7 +1106,312 @@ function App() {
           </div>
         </div>
 
-        <div style={{
+        {/* Mobile Lobby - Card-based layout */}
+        {isMobile && (
+          <div className="mobile-lobby">
+            {/* Incoming Challenges - Show at top on mobile too */}
+            {incomingChallenges.length > 0 && (
+              <div className="lobby-card" style={{ borderColor: '#3498db', borderWidth: '2px' }}>
+                <div className="lobby-card-header">
+                  <span className="lobby-card-icon">⚔️</span>
+                  <h3>{language === 'en' ? 'Incoming Challenges' : 'Utfordringer'}</h3>
+                </div>
+                {incomingChallenges.map(challenge => (
+                  <div key={challenge.challengeId} style={{ marginBottom: '12px' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '4px' }}>{challenge.from.username}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#888', marginBottom: '8px' }}>
+                      {challenge.from.rating} • {challenge.timeControl} • {challenge.variant}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="btn-lobby btn-lobby-primary"
+                        onClick={() => acceptChallenge(challenge)}
+                        style={{ flex: 1, background: '#2ecc71' }}
+                      >
+                        {language === 'en' ? 'Accept' : 'Godta'}
+                      </button>
+                      <button
+                        className="btn-lobby btn-lobby-secondary"
+                        onClick={() => declineChallenge(challenge)}
+                        style={{ flex: 1 }}
+                      >
+                        {language === 'en' ? 'Decline' : 'Avvis'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Card 1: Quick Play */}
+            <div className="lobby-card">
+              <div className="lobby-card-header">
+                <span className="lobby-card-icon">⚡</span>
+                <h3>{language === 'en' ? 'Quick Play' : 'Hurtigspill'}</h3>
+              </div>
+
+              {/* Time Control Selector */}
+              <div className="time-control-selector">
+                {TIME_CONTROL_OPTIONS.slice(0, 3).map((option) => (
+                  <button
+                    key={option.type}
+                    className={`time-control ${selectedTimeControl === option.type ? 'active' : ''}`}
+                    onClick={() => setSelectedTimeControl(option.type)}
+                  >
+                    <span className="time-label">{option.label}</span>
+                    <span className="time-desc">{option.description}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Matchmaking integrated */}
+              <MatchmakingPanel socket={socket} onMatchFound={handleMatchFound} />
+
+              <button
+                className="btn-lobby btn-lobby-primary"
+                onClick={createRoom}
+                disabled={!isConnected}
+              >
+                {language === 'en' ? 'Create Game' : 'Opprett spill'}
+              </button>
+            </div>
+
+            {/* Card 2: Play with Friend */}
+            <div className="lobby-card">
+              <div className="lobby-card-header">
+                <span className="lobby-card-icon">👥</span>
+                <h3>{language === 'en' ? 'Play with Friend' : 'Spill med venn'}</h3>
+              </div>
+
+              {/* Variant Selector */}
+              <div className="variant-selector">
+                {VARIANT_OPTIONS.map((option) => (
+                  <button
+                    key={option.type}
+                    className={`variant-btn ${selectedVariant === option.type ? 'active' : ''}`}
+                    onClick={() => setSelectedVariant(option.type)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                className="btn-lobby btn-lobby-primary"
+                onClick={createRoom}
+                disabled={!isConnected}
+                style={{ marginBottom: '8px' }}
+              >
+                {language === 'en' ? 'Create Room' : 'Opprett rom'}
+              </button>
+
+              <div className="room-code-input">
+                <input
+                  type="text"
+                  value={joinCodeInput}
+                  onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && joinRoom()}
+                  placeholder={language === 'en' ? 'Room code' : 'Romkode'}
+                  maxLength={6}
+                />
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={joinRoom}
+                  disabled={!isConnected || !joinCodeInput}
+                >
+                  {language === 'en' ? 'Join' : 'Bli med'}
+                </button>
+              </div>
+            </div>
+
+            {/* Card 3: Daily Puzzle */}
+            <div className="lobby-card">
+              <div className="lobby-card-header">
+                <span className="lobby-card-icon">📅</span>
+                <h3>{language === 'en' ? 'Daily Puzzle' : 'Dagens oppgave'}</h3>
+              </div>
+              <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '12px' }}>
+                {language === 'en' ? 'Solve today\'s challenge!' : 'Løs dagens utfordring!'}
+              </p>
+              <button
+                className="btn-lobby btn-lobby-primary"
+                onClick={() => setDailyPuzzleMode(true)}
+                disabled={!isConnected}
+                style={{ background: '#f39c12' }}
+              >
+                {language === 'en' ? 'Solve Puzzle' : 'Løs oppgave'}
+              </button>
+            </div>
+
+            {/* Card 4: Practice & Learn */}
+            <div className="lobby-card">
+              <div className="lobby-card-header">
+                <span className="lobby-card-icon">📚</span>
+                <h3>{language === 'en' ? 'Practice & Learn' : 'Øv og lær'}</h3>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setShowComputerOptions(true)}
+                  style={{ background: '#3498db', borderColor: '#3498db' }}
+                >
+                  🤖 {language === 'en' ? 'vs Computer' : 'Mot datamaskin'}
+                </button>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setLessonsMode(true)}
+                  disabled={!isConnected}
+                  style={{ background: '#e67e22', borderColor: '#e67e22' }}
+                >
+                  🎓 {language === 'en' ? 'Lessons' : 'Leksjoner'}
+                </button>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setPuzzleMode(true)}
+                  disabled={!isConnected}
+                  style={{ background: '#9b59b6', borderColor: '#9b59b6' }}
+                >
+                  ♟ {language === 'en' ? 'Puzzles' : 'Oppgaver'}
+                </button>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setOpeningExplorer(true)}
+                  disabled={!isConnected}
+                  style={{ background: '#2ecc71', borderColor: '#2ecc71' }}
+                >
+                  📖 {language === 'en' ? 'Openings' : 'Åpninger'}
+                </button>
+              </div>
+
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setShowPGNImport(true)}
+                  style={{ flex: 1, background: '#1abc9c', borderColor: '#1abc9c' }}
+                >
+                  📋 PGN
+                </button>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setShowKrogLeaderboard(true)}
+                  style={{ flex: 1, background: 'linear-gradient(135deg, #81b64c 0%, #5d8c3a 100%)', borderColor: '#81b64c' }}
+                >
+                  🏆 KROG
+                </button>
+                <button
+                  className="btn-lobby btn-lobby-secondary"
+                  onClick={() => setShowFAQ(true)}
+                  style={{ flex: 1, background: 'linear-gradient(135deg, #6c5ce7 0%, #5541d7 100%)', borderColor: '#6c5ce7' }}
+                >
+                  ❓ {language === 'en' ? 'Help' : 'Hjelp'}
+                </button>
+              </div>
+            </div>
+
+            {/* Computer Options Modal for Mobile */}
+            {showComputerOptions && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 1000,
+                  padding: '16px'
+                }}
+                onClick={() => setShowComputerOptions(false)}
+              >
+                <div
+                  className="lobby-card"
+                  style={{ maxWidth: '400px', width: '100%', margin: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="lobby-card-header">
+                    <span className="lobby-card-icon">🤖</span>
+                    <h3>{language === 'en' ? 'Play vs Computer' : 'Spill mot datamaskin'}</h3>
+                  </div>
+
+                  {/* Difficulty */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ color: '#888', marginBottom: '8px', fontSize: '0.85rem' }}>
+                      {language === 'en' ? 'Difficulty' : 'Vanskelighetsgrad'}
+                    </div>
+                    <div className="time-control-selector">
+                      {DIFFICULTY_OPTIONS.map((option) => (
+                        <button
+                          key={option.type}
+                          className={`time-control ${selectedDifficulty === option.type ? 'active' : ''}`}
+                          onClick={() => setSelectedDifficulty(option.type)}
+                          style={{ borderColor: selectedDifficulty === option.type ? '#3498db' : undefined }}
+                        >
+                          <span className="time-label">{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Color Selection */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ color: '#888', marginBottom: '8px', fontSize: '0.85rem' }}>
+                      {language === 'en' ? 'Play as' : 'Spill som'}
+                    </div>
+                    <div className="time-control-selector">
+                      {[
+                        { value: 'white', label: '♔', desc: language === 'en' ? 'White' : 'Hvit' },
+                        { value: 'random', label: '🎲', desc: language === 'en' ? 'Random' : 'Tilfeldig' },
+                        { value: 'black', label: '♚', desc: language === 'en' ? 'Black' : 'Svart' }
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`time-control ${selectedPlayerColor === option.value ? 'active' : ''}`}
+                          onClick={() => setSelectedPlayerColor(option.value as 'white' | 'black' | 'random')}
+                          style={{ borderColor: selectedPlayerColor === option.value ? '#3498db' : undefined }}
+                        >
+                          <span className="time-label">{option.label}</span>
+                          <span className="time-desc">{option.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn-lobby btn-lobby-primary"
+                    onClick={() => {
+                      createComputerGame();
+                      setShowComputerOptions(false);
+                    }}
+                    disabled={!isConnected}
+                    style={{ background: '#2980b9' }}
+                  >
+                    {language === 'en' ? 'Start Game' : 'Start spill'}
+                  </button>
+                  <button
+                    className="btn-lobby btn-lobby-secondary"
+                    onClick={() => setShowComputerOptions(false)}
+                    style={{ marginTop: '8px' }}
+                  >
+                    {language === 'en' ? 'Cancel' : 'Avbryt'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div style={{ color: '#e74c3c', textAlign: 'center', padding: '12px' }}>
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Desktop Lobby - Original layout */}
+        <div className="desktop-lobby" style={{
           background: 'var(--bg-secondary)',
           padding: isMobile ? '16px' : '30px',
           borderRadius: isMobile ? '10px' : '12px',
