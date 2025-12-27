@@ -197,6 +197,7 @@ function App() {
   const [explainModalData, setExplainModalData] = useState<any | null>(null);
   const [language, setLanguage] = useState<Language>('en');
   const [showExplanation, setShowExplanation] = useState(true);
+  const [explanationCopied, setExplanationCopied] = useState(false);
   const [learnMode, setLearnMode] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<MoveSuggestion[]>([]);
@@ -508,6 +509,15 @@ function App() {
       setMoveExplanation(explanation);
       setIllegalMoveExplanation(null); // Clear any previous illegal move
       console.log('Move explanation:', explanation);
+
+      // Track view for KROG leaderboard (only for logged-in users)
+      if (explanation.krog) {
+        socket.emit('track_krog_view', {
+          rType: explanation.krog.rType,
+          operator: explanation.krog.operator,
+          moveSan: explanation.move
+        });
+      }
     }
 
     function onIllegalMove(explanation: IllegalMoveExplanation) {
@@ -3215,6 +3225,115 @@ function App() {
                     {moveExplanation.fide[language]}
                   </span>
                 </div>
+
+                {/* Share Button */}
+                <button
+                  onClick={async () => {
+                    const shareText = `KROG Chess - Move Explanation
+
+Move: ${moveExplanation.move} (${moveExplanation.from} → ${moveExplanation.to})
+Rule: ${moveExplanation.krog.rType || 'Standard'} - ${moveExplanation.krog.rTypeDescription?.[language] || ''}
+Formula: ${moveExplanation.krog.formula}
+${moveExplanation.explanation[language]}
+
+FIDE ${moveExplanation.fide.article}: ${moveExplanation.fide[language]}
+
+Learn more at KROG Chess!`;
+
+                    // Try Web Share API first (works better on mobile)
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: 'KROG Chess - Move Explanation',
+                          text: shareText
+                        });
+                        setExplanationCopied(true);
+                        setTimeout(() => setExplanationCopied(false), 2000);
+                      } catch (err) {
+                        // User cancelled or error - try clipboard fallback
+                        if ((err as Error).name !== 'AbortError') {
+                          fallbackCopy();
+                        }
+                      }
+                    } else {
+                      fallbackCopy();
+                    }
+
+                    function fallbackCopy() {
+                      // Fallback for desktop or if share fails
+                      if (navigator.clipboard?.writeText) {
+                        navigator.clipboard.writeText(shareText).then(() => {
+                          setExplanationCopied(true);
+                          setTimeout(() => setExplanationCopied(false), 2000);
+                        }).catch(() => {
+                          // Final fallback using textarea
+                          const textarea = document.createElement('textarea');
+                          textarea.value = shareText;
+                          textarea.style.position = 'fixed';
+                          textarea.style.opacity = '0';
+                          document.body.appendChild(textarea);
+                          textarea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textarea);
+                          setExplanationCopied(true);
+                          setTimeout(() => setExplanationCopied(false), 2000);
+                        });
+                      } else {
+                        // Final fallback using textarea
+                        const textarea = document.createElement('textarea');
+                        textarea.value = shareText;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        setExplanationCopied(true);
+                        setTimeout(() => setExplanationCopied(false), 2000);
+                      }
+                    }
+
+                    // Track share event
+                    if (user) {
+                      socket.emit('track_krog_share', {
+                        rType: moveExplanation.krog.rType,
+                        operator: moveExplanation.krog.operator,
+                        moveSan: moveExplanation.move
+                      });
+                    }
+                  }}
+                  style={{
+                    marginTop: '16px',
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: explanationCopied ? '#27ae60' : '#81b64c',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'background 0.2s',
+                    touchAction: 'manipulation'
+                  }}
+                >
+                  {explanationCopied ? (
+                    <>
+                      <span>✓</span>
+                      <span>{language === 'en' ? 'Copied!' : 'Kopiert!'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📋</span>
+                      <span>{language === 'en' ? 'Share Explanation' : 'Del forklaring'}</span>
+                    </>
+                  )}
+                </button>
               </div>
             ) : (
               <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>

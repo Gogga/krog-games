@@ -107,10 +107,27 @@ ${language === 'no' ? data.explanation.en : data.explanation.no}
 Learn chess with KROG formulas!`;
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(generateShareText());
-    setShowCopied(true);
-    setTimeout(() => setShowCopied(false), 2000);
+  const handleShare = async () => {
+    const shareText = generateShareText();
+
+    // Try Web Share API first (works better on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'KROG Chess - Move Explanation',
+          text: shareText
+        });
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
+      } catch (err) {
+        // User cancelled or error - try clipboard fallback
+        if ((err as Error).name !== 'AbortError') {
+          fallbackCopy(shareText);
+        }
+      }
+    } else {
+      fallbackCopy(shareText);
+    }
 
     // Track share event
     if (socket && data) {
@@ -119,6 +136,39 @@ Learn chess with KROG formulas!`;
         operator: data.krog.operator,
         moveSan: data.move
       });
+    }
+  };
+
+  const fallbackCopy = (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
+      }).catch(() => {
+        // Final fallback using textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
+      });
+    } else {
+      // Final fallback using textarea
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
     }
   };
 
@@ -378,7 +428,7 @@ Learn chess with KROG formulas!`;
         </div>
 
         {/* Share Button */}
-        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px' }}>
+        <div style={{ padding: isMobile ? '14px 16px 80px 16px' : '16px 20px' }}>
           <button
             onClick={handleShare}
             style={{
