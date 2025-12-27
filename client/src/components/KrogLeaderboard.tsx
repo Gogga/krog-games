@@ -21,14 +21,72 @@ interface KrogLeaderboardProps {
   currentUserId?: string;
 }
 
-// Badge definitions
+// Badge definitions with descriptions
 const BADGES = {
-  NOVICE: { views: 10, icon: '📚', en: 'KROG Novice', no: 'KROG Nybegynner' },
-  LEARNER: { views: 50, icon: '📖', en: 'KROG Learner', no: 'KROG Elev' },
-  EXPERT: { views: 200, icon: '🎓', en: 'KROG Expert', no: 'KROG Ekspert' },
-  MASTER: { rtypes: 15, icon: '🏅', en: 'KROG Master', no: 'KROG Mester' },
-  EDUCATOR: { shares: 50, icon: '📤', en: 'KROG Educator', no: 'KROG Lærer' },
-  AMBASSADOR: { shares: 200, icon: '🌟', en: 'KROG Ambassador', no: 'KROG Ambassadør' }
+  NOVICE: {
+    views: 10,
+    icon: '📚',
+    en: 'KROG Novice',
+    no: 'KROG Nybegynner',
+    descEn: 'View 10 move explanations',
+    descNo: 'Se 10 trekkforklaringer'
+  },
+  LEARNER: {
+    views: 50,
+    icon: '📖',
+    en: 'KROG Learner',
+    no: 'KROG Elev',
+    descEn: 'View 50 move explanations',
+    descNo: 'Se 50 trekkforklaringer'
+  },
+  EXPERT: {
+    views: 200,
+    icon: '🎓',
+    en: 'KROG Expert',
+    no: 'KROG Ekspert',
+    descEn: 'View 200 move explanations',
+    descNo: 'Se 200 trekkforklaringer'
+  },
+  MASTER: {
+    rtypes: 15,
+    icon: '🏅',
+    en: 'KROG Master',
+    no: 'KROG Mester',
+    descEn: 'Learn all 15 rule types',
+    descNo: 'Lær alle 15 regeltyper'
+  },
+  EDUCATOR: {
+    shares: 50,
+    icon: '📤',
+    en: 'KROG Educator',
+    no: 'KROG Lærer',
+    descEn: 'Share 50 explanations',
+    descNo: 'Del 50 forklaringer'
+  },
+  AMBASSADOR: {
+    shares: 200,
+    icon: '🌟',
+    en: 'KROG Ambassador',
+    no: 'KROG Ambassadør',
+    descEn: 'Share 200 explanations',
+    descNo: 'Del 200 forklaringer'
+  }
+};
+
+// Tab descriptions
+const TAB_DESCRIPTIONS = {
+  views: {
+    en: 'Move explanations you\'ve read. Each time you see a KROG formula for a move, it counts as a view.',
+    no: 'Trekkforklaringer du har lest. Hver gang du ser en KROG-formel for et trekk, teller det som en visning.'
+  },
+  shares: {
+    en: 'Explanations you\'ve shared with others. Spread knowledge of chess rules!',
+    no: 'Forklaringer du har delt med andre. Spre kunnskap om sjakkregler!'
+  },
+  rtypes: {
+    en: 'Unique rule types discovered. There are 15 R-types in KROG covering all chess rules.',
+    no: 'Unike regeltyper oppdaget. Det er 15 R-typer i KROG som dekker alle sjakkregler.'
+  }
 };
 
 function getBadges(stats: KrogStats, language: 'en' | 'no'): { icon: string; name: string }[] {
@@ -62,6 +120,7 @@ export default function KrogLeaderboard({ isOpen, onClose, socket, language, cur
   const [myStats, setMyStats] = useState<KrogStats | null>(null);
   const [myRank, setMyRank] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -153,216 +212,353 @@ export default function KrogLeaderboard({ isOpen, onClose, socket, language, cur
               KROG {language === 'en' ? 'Leaderboard' : 'Toppliste'}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#888',
-              fontSize: isMobile ? '1.3rem' : '1.5rem',
-              cursor: 'pointer',
-              padding: isMobile ? '8px' : '4px 8px',
-              borderRadius: '4px',
-              minWidth: '44px',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
-          {tabs.map((tab) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setShowHelp(!showHelp)}
               style={{
-                flex: 1,
-                padding: isMobile ? '10px 8px' : '12px',
-                backgroundColor: activeTab === tab.id ? '#333' : 'transparent',
-                color: activeTab === tab.id ? '#81b64c' : '#888',
+                background: showHelp ? 'rgba(129, 182, 76, 0.2)' : 'none',
                 border: 'none',
-                borderBottom: activeTab === tab.id ? '2px solid #81b64c' : '2px solid transparent',
+                color: showHelp ? '#81b64c' : '#888',
+                fontSize: isMobile ? '1.1rem' : '1.2rem',
                 cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: isMobile ? '0.85rem' : '0.9rem',
-                transition: 'all 0.2s',
-                minHeight: '44px'
+                padding: isMobile ? '8px' : '4px 8px',
+                borderRadius: '4px',
+                minWidth: '44px',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                touchAction: 'manipulation'
               }}
-              onMouseEnter={(e) => {
-                if (activeTab !== tab.id) e.currentTarget.style.color = '#aaa';
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== tab.id) e.currentTarget.style.color = '#888';
-              }}
+              title={language === 'en' ? 'Help' : 'Hjelp'}
             >
-              {tab[language]}
+              ?
             </button>
-          ))}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#888',
+                fontSize: isMobile ? '1.3rem' : '1.5rem',
+                cursor: 'pointer',
+                padding: isMobile ? '8px' : '4px 8px',
+                borderRadius: '4px',
+                minWidth: '44px',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                touchAction: 'manipulation'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#888'}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        {/* My Stats */}
-        {myStats && (
-          <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', borderBottom: '1px solid #333', backgroundColor: '#222' }}>
-            <div style={{ fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#888', marginBottom: isMobile ? '8px' : '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {language === 'en' ? 'Your Stats' : 'Din statistikk'}
-            </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, auto)',
-              gap: isMobile ? '8px' : '16px',
-              marginBottom: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>📖</span>
-                <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}>{isMobile ? '' : (language === 'en' ? 'Views: ' : 'Visninger: ')}<strong style={{ color: '#81b64c' }}>{myStats.explanations_viewed}</strong></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>📤</span>
-                <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}>{isMobile ? '' : (language === 'en' ? 'Shares: ' : 'Delinger: ')}<strong style={{ color: '#81b64c' }}>{myStats.explanations_shared}</strong></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>🎯</span>
-                <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}><strong style={{ color: '#9b59b6' }}>{myRtypeCount}/15</strong></span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>🏅</span>
-                <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}><strong style={{ color: '#f1c40f' }}>#{myRank || '-'}</strong></span>
-              </div>
-            </div>
-            {myBadges.length > 0 && (
-              <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px', flexWrap: 'wrap' }}>
-                {myBadges.map((badge, idx) => (
-                  <span
-                    key={idx}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      backgroundColor: 'rgba(129, 182, 76, 0.15)',
-                      color: '#81b64c',
-                      padding: isMobile ? '3px 8px' : '4px 10px',
-                      borderRadius: '12px',
-                      fontSize: isMobile ? '0.75rem' : '0.85rem'
-                    }}
-                  >
-                    <span>{badge.icon}</span>
-                    <span>{isMobile ? '' : badge.name}</span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Leaderboard List */}
+        {/* Scrollable Content Area */}
         <div style={{
           flex: 1,
           overflow: 'auto',
-          padding: isMobile ? '10px 12px' : '12px 20px',
           WebkitOverflowScrolling: 'touch'
         }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', color: '#888', padding: isMobile ? '30px' : '40px' }}>
-              {language === 'en' ? 'Loading...' : 'Laster...'}
-            </div>
-          ) : leaderboard.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#888', padding: isMobile ? '30px 16px' : '40px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
-              {language === 'en' ? 'No data yet. Start exploring KROG explanations!' : 'Ingen data ennå. Begynn å utforske KROG-forklaringer!'}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '6px' : '8px' }}>
-              {leaderboard.map((entry, idx) => {
-                const isCurrentUser = entry.user_id === currentUserId;
-                const rtypeCount = entry.unique_rtypes_seen ? entry.unique_rtypes_seen.split(',').filter(Boolean).length : 0;
-                const entryBadges = getBadges(entry, language);
+          {/* Help Section */}
+          {showHelp && (
+            <div style={{
+              padding: isMobile ? '12px 14px' : '16px 20px',
+              borderBottom: '1px solid #333',
+              backgroundColor: 'rgba(129, 182, 76, 0.05)'
+            }}>
+              {/* Intro */}
+              <div style={{
+                marginBottom: '16px',
+                padding: isMobile ? '10px 12px' : '12px 14px',
+                backgroundColor: 'rgba(129, 182, 76, 0.1)',
+                borderRadius: '8px',
+                borderLeft: '3px solid #81b64c'
+              }}>
+                <div style={{ color: '#81b64c', fontWeight: 600, marginBottom: '6px', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
+                  {language === 'en' ? 'Learn Chess Rules with KROG' : 'Lær sjakkregler med KROG'}
+                </div>
+                <div style={{ color: '#aaa', fontSize: isMobile ? '0.8rem' : '0.85rem', lineHeight: 1.5 }}>
+                  {language === 'en'
+                    ? 'The KROG leaderboard rewards curiosity! Explore move explanations to understand the mathematical formulas behind chess rules. Compete with others and earn badges as you master all 15 rule types.'
+                    : 'KROG-topplisten belønner nysgjerrighet! Utforsk trekkforklaringer for å forstå de matematiske formlene bak sjakkregler. Konkurrer med andre og tjen merker mens du mestrer alle 15 regeltyper.'}
+                </div>
+              </div>
 
-                return (
-                  <div
-                    key={entry.user_id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: isMobile ? '10px' : '12px',
-                      backgroundColor: isCurrentUser ? 'rgba(129, 182, 76, 0.1)' : '#252525',
-                      borderRadius: '8px',
-                      border: isCurrentUser ? '1px solid rgba(129, 182, 76, 0.3)' : '1px solid #333'
-                    }}
-                  >
-                    {/* Rank */}
-                    <div
-                      style={{
-                        width: isMobile ? '30px' : '36px',
-                        fontWeight: 700,
-                        fontSize: idx < 3 ? (isMobile ? '1rem' : '1.2rem') : (isMobile ? '0.85rem' : '1rem'),
-                        color: idx === 0 ? '#f1c40f' : idx === 1 ? '#bdc3c7' : idx === 2 ? '#cd7f32' : '#888',
-                        flexShrink: 0
-                      }}
-                    >
-                      {idx < 3 ? ['🥇', '🥈', '🥉'][idx] : `#${idx + 1}`}
-                    </div>
-
-                    {/* Username */}
-                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                      <div style={{
-                        color: isCurrentUser ? '#81b64c' : '#ddd',
-                        fontWeight: isCurrentUser ? 600 : 400,
-                        fontSize: isMobile ? '0.9rem' : '1rem',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        {entry.username || 'Unknown'}
-                        {isCurrentUser && <span style={{ marginLeft: '4px', fontSize: isMobile ? '0.7rem' : '0.8rem', color: '#888' }}>({language === 'en' ? 'you' : 'deg'})</span>}
-                      </div>
-                      {entryBadges.length > 0 && (
-                        <div style={{ marginTop: '3px' }}>
-                          {entryBadges.map((badge, bidx) => (
-                            <span key={bidx} style={{ marginRight: '4px', fontSize: isMobile ? '0.75rem' : '0.85rem' }} title={badge.name}>
-                              {badge.icon}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Stats based on active tab */}
-                    <div style={{ display: 'flex', gap: isMobile ? '8px' : '16px', alignItems: 'center', flexShrink: 0 }}>
-                      {activeTab === 'views' && (
-                        <div style={{ color: '#81b64c', fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1.1rem' }}>
-                          {entry.explanations_viewed}
-                        </div>
-                      )}
-                      {activeTab === 'shares' && (
-                        <div style={{ color: '#81b64c', fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1.1rem' }}>
-                          {entry.explanations_shared}
-                        </div>
-                      )}
-                      {activeTab === 'rtypes' && (
-                        <div style={{ color: '#9b59b6', fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1.1rem' }}>
-                          {rtypeCount}/15
-                        </div>
-                      )}
+              {/* What the stats mean */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ color: '#bbb', fontSize: isMobile ? '0.75rem' : '0.8rem', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px', fontWeight: 600 }}>
+                  {language === 'en' ? 'Stats Explained' : 'Statistikk forklart'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <span style={{ fontSize: '1rem' }}>📖</span>
+                    <div>
+                      <span style={{ color: '#81b64c', fontWeight: 600 }}>{language === 'en' ? 'Views' : 'Visninger'}</span>
+                      <span style={{ color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.85rem' }}> — {TAB_DESCRIPTIONS.views[language]}</span>
                     </div>
                   </div>
-                );
-              })}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <span style={{ fontSize: '1rem' }}>📤</span>
+                    <div>
+                      <span style={{ color: '#81b64c', fontWeight: 600 }}>{language === 'en' ? 'Shares' : 'Delinger'}</span>
+                      <span style={{ color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.85rem' }}> — {TAB_DESCRIPTIONS.shares[language]}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <span style={{ fontSize: '1rem' }}>🎯</span>
+                    <div>
+                      <span style={{ color: '#9b59b6', fontWeight: 600 }}>R-Types</span>
+                      <span style={{ color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.85rem' }}> — {TAB_DESCRIPTIONS.rtypes[language]}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Badge explanations */}
+              <div>
+                <div style={{ color: '#bbb', fontSize: isMobile ? '0.75rem' : '0.8rem', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px', fontWeight: 600 }}>
+                  {language === 'en' ? 'Badges' : 'Merker'}
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: '6px'
+                }}>
+                  {Object.values(BADGES).map((badge, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        backgroundColor: '#2a2a2a',
+                        borderRadius: '6px',
+                        border: '1px solid #333'
+                      }}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>{badge.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: '#fff', fontSize: isMobile ? '0.8rem' : '0.85rem', fontWeight: 600 }}>
+                          {badge[language]}
+                        </div>
+                        <div style={{ color: '#aaa', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
+                          {language === 'en' ? badge.descEn : badge.descNo}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Footer */}
-        <div style={{ padding: isMobile ? '10px 14px' : '12px 20px', borderTop: '1px solid #333', backgroundColor: '#222' }}>
-          <div style={{ textAlign: 'center', color: '#666', fontSize: isMobile ? '0.75rem' : '0.85rem' }}>
-            {language === 'en'
-              ? (isMobile ? 'Tap moves to learn KROG formulas' : 'Click moves in game history to learn KROG formulas')
-              : (isMobile ? 'Trykk på trekk for KROG-formler' : 'Klikk på trekk i spillhistorikken for å lære KROG-formler')}
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: 1,
+                  padding: isMobile ? '10px 8px' : '12px',
+                  backgroundColor: activeTab === tab.id ? '#333' : 'transparent',
+                  color: activeTab === tab.id ? '#81b64c' : '#888',
+                  border: 'none',
+                  borderBottom: activeTab === tab.id ? '2px solid #81b64c' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: isMobile ? '0.85rem' : '0.9rem',
+                  transition: 'all 0.2s',
+                  minHeight: '44px',
+                  touchAction: 'manipulation'
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab.id) e.currentTarget.style.color = '#aaa';
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab.id) e.currentTarget.style.color = '#888';
+                }}
+              >
+                {tab[language]}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Description */}
+          <div style={{
+            padding: isMobile ? '10px 14px' : '12px 20px',
+            backgroundColor: '#252525',
+            borderBottom: '1px solid #333'
+          }}>
+            <div style={{
+              color: '#ddd',
+              fontSize: isMobile ? '0.8rem' : '0.85rem',
+              textAlign: 'center',
+              lineHeight: 1.5
+            }}>
+              {TAB_DESCRIPTIONS[activeTab][language]}
+            </div>
+          </div>
+
+          {/* My Stats */}
+          {myStats && (
+            <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', borderBottom: '1px solid #333', backgroundColor: '#222' }}>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#bbb', marginBottom: isMobile ? '8px' : '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                {language === 'en' ? 'Your Stats' : 'Din statistikk'}
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, auto)',
+                gap: isMobile ? '8px' : '16px',
+                marginBottom: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>📖</span>
+                  <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}>{isMobile ? '' : (language === 'en' ? 'Views: ' : 'Visninger: ')}<strong style={{ color: '#81b64c' }}>{myStats.explanations_viewed}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>📤</span>
+                  <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}>{isMobile ? '' : (language === 'en' ? 'Shares: ' : 'Delinger: ')}<strong style={{ color: '#81b64c' }}>{myStats.explanations_shared}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>🎯</span>
+                  <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}><strong style={{ color: '#9b59b6' }}>{myRtypeCount}/15</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: isMobile ? '1rem' : '1.1rem' }}>🏅</span>
+                  <span style={{ color: '#ddd', fontSize: isMobile ? '0.85rem' : '1rem' }}><strong style={{ color: '#f1c40f' }}>#{myRank || '-'}</strong></span>
+                </div>
+              </div>
+              {myBadges.length > 0 && (
+                <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px', flexWrap: 'wrap' }}>
+                  {myBadges.map((badge, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: 'rgba(129, 182, 76, 0.15)',
+                        color: '#81b64c',
+                        padding: isMobile ? '3px 8px' : '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: isMobile ? '0.75rem' : '0.85rem'
+                      }}
+                    >
+                      <span>{badge.icon}</span>
+                      <span>{isMobile ? '' : badge.name}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Leaderboard List */}
+          <div style={{ padding: isMobile ? '10px 12px' : '12px 20px' }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', color: '#aaa', padding: isMobile ? '30px' : '40px' }}>
+                {language === 'en' ? 'Loading...' : 'Laster...'}
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#aaa', padding: isMobile ? '30px 16px' : '40px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
+                {language === 'en' ? 'No data yet. Start exploring KROG explanations!' : 'Ingen data ennå. Begynn å utforske KROG-forklaringer!'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '6px' : '8px' }}>
+                {leaderboard.map((entry, idx) => {
+                  const isCurrentUser = entry.user_id === currentUserId;
+                  const rtypeCount = entry.unique_rtypes_seen ? entry.unique_rtypes_seen.split(',').filter(Boolean).length : 0;
+                  const entryBadges = getBadges(entry, language);
+
+                  return (
+                    <div
+                      key={entry.user_id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: isMobile ? '10px' : '12px',
+                        backgroundColor: isCurrentUser ? 'rgba(129, 182, 76, 0.1)' : '#252525',
+                        borderRadius: '8px',
+                        border: isCurrentUser ? '1px solid rgba(129, 182, 76, 0.3)' : '1px solid #333'
+                      }}
+                    >
+                      {/* Rank */}
+                      <div
+                        style={{
+                          width: isMobile ? '30px' : '36px',
+                          fontWeight: 700,
+                          fontSize: idx < 3 ? (isMobile ? '1rem' : '1.2rem') : (isMobile ? '0.85rem' : '1rem'),
+                          color: idx === 0 ? '#f1c40f' : idx === 1 ? '#bdc3c7' : idx === 2 ? '#cd7f32' : '#888',
+                          flexShrink: 0
+                        }}
+                      >
+                        {idx < 3 ? ['🥇', '🥈', '🥉'][idx] : `#${idx + 1}`}
+                      </div>
+
+                      {/* Username */}
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                        <div style={{
+                          color: isCurrentUser ? '#81b64c' : '#ddd',
+                          fontWeight: isCurrentUser ? 600 : 400,
+                          fontSize: isMobile ? '0.9rem' : '1rem',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {entry.username || 'Unknown'}
+                          {isCurrentUser && <span style={{ marginLeft: '4px', fontSize: isMobile ? '0.7rem' : '0.8rem', color: '#aaa' }}>({language === 'en' ? 'you' : 'deg'})</span>}
+                        </div>
+                        {entryBadges.length > 0 && (
+                          <div style={{ marginTop: '3px' }}>
+                            {entryBadges.map((badge, bidx) => (
+                              <span key={bidx} style={{ marginRight: '4px', fontSize: isMobile ? '0.75rem' : '0.85rem' }} title={badge.name}>
+                                {badge.icon}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stats based on active tab */}
+                      <div style={{ display: 'flex', gap: isMobile ? '8px' : '16px', alignItems: 'center', flexShrink: 0 }}>
+                        {activeTab === 'views' && (
+                          <div style={{ color: '#81b64c', fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1.1rem' }}>
+                            {entry.explanations_viewed}
+                          </div>
+                        )}
+                        {activeTab === 'shares' && (
+                          <div style={{ color: '#81b64c', fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1.1rem' }}>
+                            {entry.explanations_shared}
+                          </div>
+                        )}
+                        {activeTab === 'rtypes' && (
+                          <div style={{ color: '#9b59b6', fontWeight: 600, fontSize: isMobile ? '0.95rem' : '1.1rem' }}>
+                            {rtypeCount}/15
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: isMobile ? '12px 14px 80px 14px' : '14px 20px', borderTop: '1px solid #333', backgroundColor: '#252525' }}>
+            <div style={{ textAlign: 'center', color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>
+              {language === 'en'
+                ? (isMobile ? 'Tap moves to learn KROG formulas' : 'Click moves in game history to learn KROG formulas')
+                : (isMobile ? 'Trykk på trekk for KROG-formler' : 'Klikk på trekk i spillhistorikken for å lære KROG-formler')}
+            </div>
           </div>
         </div>
       </div>
