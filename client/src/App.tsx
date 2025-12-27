@@ -3,7 +3,6 @@ import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
 import { useMediaQuery } from './hooks/useMediaQuery';
-import { useSwipeGestures } from './hooks/useGestures';
 import { ChessSounds, resumeAudio } from './utils/sounds';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthModal } from './components/AuthModal';
@@ -40,7 +39,12 @@ function LoadingFallback() {
 }
 
 // Initialize socket outside component to prevent multiple connections
-const socket = io('http://localhost:3000');
+// Connect to backend on same host (works for both localhost and network IP)
+const getSocketUrl = () => {
+  const host = window.location.hostname;
+  return `http://${host}:3000`;
+};
+const socket = io(getSocketUrl());
 
 type PlayerColor = 'white' | 'black' | 'spectator' | null;
 type TimeControlType = 'bullet' | 'blitz' | 'rapid' | 'unlimited';
@@ -178,64 +182,6 @@ function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [playerColor, setPlayerColor] = useState<PlayerColor>(null);
-  const [boardFlipped, setBoardFlipped] = useState(false);
-  const [viewingMoveIndex, setViewingMoveIndex] = useState<number | null>(null); // null = viewing current position
-
-  // Get total moves count for navigation
-  const totalMoves = game.history().length;
-
-  // Navigate to previous move (swipe right)
-  const goToPreviousMove = useCallback(() => {
-    if (totalMoves === 0) return;
-    setViewingMoveIndex(prev => {
-      if (prev === null) {
-        // Currently at live position, go to last move
-        return totalMoves - 1;
-      } else if (prev > 0) {
-        return prev - 1;
-      }
-      return prev; // Already at first move
-    });
-  }, [totalMoves]);
-
-  // Navigate to next move (swipe left)
-  const goToNextMove = useCallback(() => {
-    if (totalMoves === 0) return;
-    setViewingMoveIndex(prev => {
-      if (prev === null) return null; // Already at live position
-      if (prev >= totalMoves - 1) {
-        return null; // Go back to live position
-      }
-      return prev + 1;
-    });
-  }, [totalMoves]);
-
-  // Get game state at viewed move index
-  const getViewedGame = useCallback(() => {
-    if (viewingMoveIndex === null) return game;
-
-    // Create a new game and replay moves up to the viewed index
-    const viewedGame = new Chess();
-    const moves = game.history();
-    for (let i = 0; i <= viewingMoveIndex && i < moves.length; i++) {
-      viewedGame.move(moves[i]);
-    }
-    return viewedGame;
-  }, [game, viewingMoveIndex]);
-
-  // Swipe gesture bindings for move history navigation
-  const swipeBindings = useSwipeGestures({
-    onSwipeLeft: goToNextMove,  // Swipe left = forward in time (next move)
-    onSwipeRight: goToPreviousMove, // Swipe right = back in time (previous move)
-  }, 50);
-
-  // Reset viewing index when game changes (new moves made)
-  useEffect(() => {
-    if (viewingMoveIndex !== null && viewingMoveIndex >= totalMoves) {
-      setViewingMoveIndex(null);
-    }
-  }, [totalMoves, viewingMoveIndex]);
-
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlType>('rapid');
@@ -1141,7 +1087,7 @@ function App() {
   // Lobby view (no room joined)
   if (!roomCode) {
     return (
-      <main className="app-container" role="main" style={{ padding: isMobile ? '8px' : undefined }}>
+      <div className="app-container" style={{ padding: isMobile ? '8px' : undefined }}>
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
@@ -1198,7 +1144,7 @@ function App() {
               <div className="lobby-card" style={{ borderColor: '#3498db', borderWidth: '2px' }}>
                 <div className="lobby-card-header">
                   <span className="lobby-card-icon">⚔️</span>
-                  <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Incoming Challenges' : 'Utfordringer'}</h2>
+                  <h3>{language === 'en' ? 'Incoming Challenges' : 'Utfordringer'}</h3>
                 </div>
                 {incomingChallenges.map(challenge => (
                   <div key={challenge.challengeId} style={{ marginBottom: '12px' }}>
@@ -1231,7 +1177,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">⚡</span>
-                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Quick Play' : 'Hurtigspill'}</h2>
+                <h3>{language === 'en' ? 'Quick Play' : 'Hurtigspill'}</h3>
               </div>
 
               {/* Time Control Selector */}
@@ -1264,7 +1210,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">👥</span>
-                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Play with Friend' : 'Spill med venn'}</h2>
+                <h3>{language === 'en' ? 'Play with Friend' : 'Spill med venn'}</h3>
               </div>
 
               {/* Variant Selector */}
@@ -1312,7 +1258,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">📅</span>
-                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Daily Puzzle' : 'Dagens oppgave'}</h2>
+                <h3>{language === 'en' ? 'Daily Puzzle' : 'Dagens oppgave'}</h3>
               </div>
               <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '12px' }}>
                 {language === 'en' ? 'Solve today\'s challenge!' : 'Løs dagens utfordring!'}
@@ -1331,7 +1277,7 @@ function App() {
             <div className="lobby-card">
               <div className="lobby-card-header">
                 <span className="lobby-card-icon">📚</span>
-                <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Practice & Learn' : 'Øv og lær'}</h2>
+                <h3>{language === 'en' ? 'Practice & Learn' : 'Øv og lær'}</h3>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1409,16 +1355,20 @@ function App() {
                   zIndex: 1000,
                   padding: '16px'
                 }}
-                onClick={() => setShowComputerOptions(false)}
+                onClick={(e) => {
+                  // Only close if clicking the overlay itself, not children
+                  if (e.target === e.currentTarget) {
+                    setShowComputerOptions(false);
+                  }
+                }}
               >
                 <div
                   className="lobby-card"
                   style={{ maxWidth: '400px', width: '100%', margin: 0 }}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="lobby-card-header">
                     <span className="lobby-card-icon">🤖</span>
-                    <h2 style={{ fontSize: '1rem', margin: 0 }}>{language === 'en' ? 'Play vs Computer' : 'Spill mot datamaskin'}</h2>
+                    <h3>{language === 'en' ? 'Play vs Computer' : 'Spill mot datamaskin'}</h3>
                   </div>
 
                   {/* Difficulty */}
@@ -2105,9 +2055,9 @@ function App() {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h2 style={{ margin: '0 0 16px 0', fontSize: '1.3rem' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '1.3rem' }}>
                   {language === 'en' ? 'Import PGN' : 'Importer PGN'}
-                </h2>
+                </h3>
                 <textarea
                   value={pgnInput}
                   onChange={(e) => {
@@ -2198,7 +2148,7 @@ function App() {
             language={language}
           />
         </Suspense>
-      </main>
+      </div>
     );
   }
 
@@ -2208,7 +2158,7 @@ function App() {
      (game.turn() === 'b' && playerColor === 'black'));
 
   return (
-    <main className="app-container" role="main">
+    <div className="app-container">
       <UserPanel onOpenAuth={() => setShowAuthModal(true)} />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
@@ -2399,55 +2349,12 @@ function App() {
         )}
       </div>
 
-      <div
-        {...swipeBindings()}
-        style={{
-          background: 'var(--bg-secondary)',
-          padding: isMobile ? '10px' : '20px',
-          borderRadius: isMobile ? '10px' : '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          touchAction: 'pan-y', // Allow vertical scroll, capture horizontal for swipe
-          position: 'relative'
-        }}
-      >
-        {/* Move history viewing indicator */}
-        {viewingMoveIndex !== null && (
-          <div style={{
-            position: 'absolute',
-            top: isMobile ? '50px' : '60px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(74, 144, 217, 0.95)',
-            color: 'white',
-            padding: isMobile ? '6px 12px' : '8px 16px',
-            borderRadius: '20px',
-            fontSize: isMobile ? '0.75rem' : '0.85rem',
-            fontWeight: 600,
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-          }}>
-            <span>Move {viewingMoveIndex + 1} of {totalMoves}</span>
-            <button
-              onClick={() => setViewingMoveIndex(null)}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                color: 'white',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 600
-              }}
-            >
-              Live
-            </button>
-          </div>
-        )}
-
+      <div style={{
+        background: 'var(--bg-secondary)',
+        padding: isMobile ? '10px' : '20px',
+        borderRadius: isMobile ? '10px' : '12px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+      }}>
         {/* Opponent's clock (top) */}
         {timeControl && timeControl.type !== 'unlimited' && (
           <div style={{
@@ -2475,20 +2382,15 @@ function App() {
         )}
 
         <ChessBoard
-          game={viewingMoveIndex !== null ? getViewedGame() : game}
-          onMove={viewingMoveIndex !== null ? undefined : handleMove}
-          orientation={
-            boardFlipped
-              ? (playerColor === 'black' ? 'white' : 'black')
-              : (playerColor === 'black' ? 'black' : 'white')
-          }
+          game={game}
+          onMove={handleMove}
+          orientation={playerColor === 'black' ? 'black' : 'white'}
           learnMode={learnMode}
           roomCode={roomCode}
           socket={socket}
           language={language}
           theme={boardTheme}
           pieceTheme={pieceTheme}
-          onFlipBoard={() => setBoardFlipped(prev => !prev)}
         />
 
         {/* Player's clock (bottom) */}
@@ -3858,7 +3760,7 @@ function App() {
         activeTab={mobileNavTab}
         onTabChange={handleMobileNavChange}
       />
-    </main>
+    </div>
   );
 }
 

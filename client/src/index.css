@@ -28,7 +28,7 @@
   /* Text Colors */
   --color-text-primary: #ffffff;
   --color-text-secondary: #cccccc;
-  --color-text-tertiary: #999999;
+  --color-text-tertiary: #888888;
   --color-text-disabled: #666666;
 
   /* Legacy Text (for compatibility) */
@@ -200,22 +200,15 @@
   box-sizing: border-box;
 }
 
+/* Safari iOS touch fix - make all interactive elements tappable */
+button, a, [role="button"], [onclick], .clickable {
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
 html {
   /* Prevent font scaling on orientation change */
   -webkit-text-size-adjust: 100%;
-  /* Enable smooth scrolling */
-  scroll-behavior: smooth;
-}
-
-html, body, #root {
-  /* Enable touch scrolling on mobile */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-}
-
-#root {
-  min-height: 100vh;
 }
 
 body {
@@ -321,9 +314,6 @@ pre {
   align-items: center;
   padding: var(--space-lg);
   min-height: 100vh;
-  /* Enable scrolling */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* ================================
@@ -343,6 +333,9 @@ button {
   transition: all var(--transition-base);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  /* Safari iOS fix - enable touch events */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 button:hover {
@@ -1609,6 +1602,8 @@ label {
   border-radius: var(--radius-md);
   padding: var(--space-md) var(--space-sm);
   cursor: pointer;
+  /* Safari iOS touch fix */
+  touch-action: manipulation;
   transition: all var(--transition-base);
   -webkit-tap-highlight-color: transparent;
   text-align: center;
@@ -1884,13 +1879,13 @@ label {
 
 .time-desc {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   display: block;
   margin-top: var(--space-xs);
 }
 
 .time-control.active .time-desc {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-bg-secondary);
 }
 
 /* Desktop - hide mobile lobby */
