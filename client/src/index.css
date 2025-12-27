@@ -203,6 +203,19 @@
 html {
   /* Prevent font scaling on orientation change */
   -webkit-text-size-adjust: 100%;
+  /* Enable smooth scrolling */
+  scroll-behavior: smooth;
+}
+
+html, body, #root {
+  /* Enable touch scrolling on mobile */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 body {
@@ -308,6 +321,9 @@ pre {
   align-items: center;
   padding: var(--space-lg);
   min-height: 100vh;
+  /* Enable scrolling */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ================================
