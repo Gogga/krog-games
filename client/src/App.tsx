@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 import ChessBoard, { BoardTheme, BOARD_THEMES, PieceTheme, PIECE_THEMES } from './components/ChessBoard';
 import { useMediaQuery } from './hooks/useMediaQuery';
+import { useSwipeGestures } from './hooks/useGestures';
 import { ChessSounds, resumeAudio } from './utils/sounds';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthModal } from './components/AuthModal';
@@ -178,6 +179,63 @@ function App() {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [playerColor, setPlayerColor] = useState<PlayerColor>(null);
   const [boardFlipped, setBoardFlipped] = useState(false);
+  const [viewingMoveIndex, setViewingMoveIndex] = useState<number | null>(null); // null = viewing current position
+
+  // Get total moves count for navigation
+  const totalMoves = game.history().length;
+
+  // Navigate to previous move (swipe right)
+  const goToPreviousMove = useCallback(() => {
+    if (totalMoves === 0) return;
+    setViewingMoveIndex(prev => {
+      if (prev === null) {
+        // Currently at live position, go to last move
+        return totalMoves - 1;
+      } else if (prev > 0) {
+        return prev - 1;
+      }
+      return prev; // Already at first move
+    });
+  }, [totalMoves]);
+
+  // Navigate to next move (swipe left)
+  const goToNextMove = useCallback(() => {
+    if (totalMoves === 0) return;
+    setViewingMoveIndex(prev => {
+      if (prev === null) return null; // Already at live position
+      if (prev >= totalMoves - 1) {
+        return null; // Go back to live position
+      }
+      return prev + 1;
+    });
+  }, [totalMoves]);
+
+  // Get game state at viewed move index
+  const getViewedGame = useCallback(() => {
+    if (viewingMoveIndex === null) return game;
+
+    // Create a new game and replay moves up to the viewed index
+    const viewedGame = new Chess();
+    const moves = game.history();
+    for (let i = 0; i <= viewingMoveIndex && i < moves.length; i++) {
+      viewedGame.move(moves[i]);
+    }
+    return viewedGame;
+  }, [game, viewingMoveIndex]);
+
+  // Swipe gesture bindings for move history navigation
+  const swipeBindings = useSwipeGestures({
+    onSwipeLeft: goToNextMove,  // Swipe left = forward in time (next move)
+    onSwipeRight: goToPreviousMove, // Swipe right = back in time (previous move)
+  }, 50);
+
+  // Reset viewing index when game changes (new moves made)
+  useEffect(() => {
+    if (viewingMoveIndex !== null && viewingMoveIndex >= totalMoves) {
+      setViewingMoveIndex(null);
+    }
+  }, [totalMoves, viewingMoveIndex]);
+
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlType>('rapid');
@@ -2341,12 +2399,55 @@ function App() {
         )}
       </div>
 
-      <div style={{
-        background: 'var(--bg-secondary)',
-        padding: isMobile ? '10px' : '20px',
-        borderRadius: isMobile ? '10px' : '12px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-      }}>
+      <div
+        {...swipeBindings()}
+        style={{
+          background: 'var(--bg-secondary)',
+          padding: isMobile ? '10px' : '20px',
+          borderRadius: isMobile ? '10px' : '12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          touchAction: 'pan-y', // Allow vertical scroll, capture horizontal for swipe
+          position: 'relative'
+        }}
+      >
+        {/* Move history viewing indicator */}
+        {viewingMoveIndex !== null && (
+          <div style={{
+            position: 'absolute',
+            top: isMobile ? '50px' : '60px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(74, 144, 217, 0.95)',
+            color: 'white',
+            padding: isMobile ? '6px 12px' : '8px 16px',
+            borderRadius: '20px',
+            fontSize: isMobile ? '0.75rem' : '0.85rem',
+            fontWeight: 600,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            <span>Move {viewingMoveIndex + 1} of {totalMoves}</span>
+            <button
+              onClick={() => setViewingMoveIndex(null)}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                color: 'white',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: 600
+              }}
+            >
+              Live
+            </button>
+          </div>
+        )}
+
         {/* Opponent's clock (top) */}
         {timeControl && timeControl.type !== 'unlimited' && (
           <div style={{
@@ -2374,8 +2475,8 @@ function App() {
         )}
 
         <ChessBoard
-          game={game}
-          onMove={handleMove}
+          game={viewingMoveIndex !== null ? getViewedGame() : game}
+          onMove={viewingMoveIndex !== null ? undefined : handleMove}
           orientation={
             boardFlipped
               ? (playerColor === 'black' ? 'white' : 'black')

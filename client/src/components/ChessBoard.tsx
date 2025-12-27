@@ -198,7 +198,7 @@ interface PieceInfo {
 
 interface ChessBoardProps {
     game: Chess;
-    onMove: (move: { from: string; to: string; promotion?: string }) => void;
+    onMove?: (move: { from: string; to: string; promotion?: string }) => void;
     orientation?: 'white' | 'black';
     learnMode?: boolean;
     roomCode?: string | null;
@@ -375,6 +375,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     // Handle the actual move (with or without promotion) - memoized
     const executeMove = useCallback((from: Square, to: Square, promotion?: string) => {
+        if (!onMove) return; // View-only mode when onMove is not provided
         onMove({ from, to, promotion });
         setSelectedSquare(null);
         setOptionSquares([]);
@@ -458,7 +459,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 // Invalid move - flash feedback and send to server for KROG explanation
                 if (selectedSquare !== sq) {
                     flashInvalidMove(sq);
-                    onMove({ from: selectedSquare, to: sq });
+                    if (onMove) onMove({ from: selectedSquare, to: sq });
                 }
                 setSelectedSquare(null);
                 setOptionSquares([]);
@@ -614,7 +615,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                 } else {
                                     // Invalid move - flash feedback and send to server
                                     flashInvalidMove(square as Square);
-                                    onMove({ from: fromSquare, to: square });
+                                    if (onMove) onMove({ from: fromSquare, to: square });
                                     setSelectedSquare(null);
                                     setOptionSquares([]);
                                 }
