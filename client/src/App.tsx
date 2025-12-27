@@ -177,6 +177,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [playerColor, setPlayerColor] = useState<PlayerColor>(null);
+  const [boardFlipped, setBoardFlipped] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlType>('rapid');
@@ -2375,13 +2376,18 @@ function App() {
         <ChessBoard
           game={game}
           onMove={handleMove}
-          orientation={playerColor === 'black' ? 'black' : 'white'}
+          orientation={
+            boardFlipped
+              ? (playerColor === 'black' ? 'white' : 'black')
+              : (playerColor === 'black' ? 'black' : 'white')
+          }
           learnMode={learnMode}
           roomCode={roomCode}
           socket={socket}
           language={language}
           theme={boardTheme}
           pieceTheme={pieceTheme}
+          onFlipBoard={() => setBoardFlipped(prev => !prev)}
         />
 
         {/* Player's clock (bottom) */}
