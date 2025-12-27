@@ -1,4 +1,12 @@
-const API_BASE = 'http://localhost:3000/api';
+// Use environment variable in production, fall back to same-host for development
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api`;
+  }
+  const host = window.location.hostname;
+  return `http://${host}:3000/api`;
+};
+const API_BASE = getApiBase();
 
 export interface User {
   id: string;

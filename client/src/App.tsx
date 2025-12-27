@@ -39,12 +39,20 @@ function LoadingFallback() {
 }
 
 // Initialize socket outside component to prevent multiple connections
-// Connect to backend on same host (works for both localhost and network IP)
+// Uses environment variable in production, falls back to same-host for development
 const getSocketUrl = () => {
+  // Production: use VITE_SOCKET_URL environment variable
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  // Development: connect to backend on same host
   const host = window.location.hostname;
   return `http://${host}:3000`;
 };
-const socket = io(getSocketUrl());
+const socket = io(getSocketUrl(), {
+  transports: ['websocket', 'polling'],
+  withCredentials: true
+});
 
 type PlayerColor = 'white' | 'black' | 'spectator' | null;
 type TimeControlType = 'bullet' | 'blitz' | 'rapid' | 'unlimited';
