@@ -3294,7 +3294,7 @@ Learn more at KROG Chess!`;
                     }
 
                     // Track share event
-                    if (user) {
+                    if (getStoredToken()) {
                       socket.emit('track_krog_share', {
                         rType: moveExplanation.krog.rType,
                         operator: moveExplanation.krog.operator,
