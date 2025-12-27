@@ -742,3 +742,61 @@ FIDE:   Article 3.7.e
 EN:     "Pawn reaches last rank and must be promoted"
 NO:     "Bonde når siste rad og må forfremmes"
 ```
+
+---
+
+## KROG Architecture
+
+**All KROG operator logic is server-side.** The frontend is purely a display layer.
+
+### Server-Side (Complete Engine)
+```
+server/src/krog-framework/     # 36 operators
+├── engine.ts                  # KROGChessEngine class
+├── core-operators.ts          # P, O, F, C, L, W, B, I, D
+├── piece-logic.ts             # PM, PC, PA, NV, PD, CR, EP, PO
+├── board-logic.ts             # PV, MH, CS, LMG, GT, TC, PR, FMC
+├── notation.ts                # PSA, PLA, PUCI, PVN, GN, NC
+├── temporal.ts                # G, F, X, U, R
+└── rtype-classifier.ts        # R1-R15 classification
+
+server/src/krog/               # Move explanation
+├── explainer.ts               # Generates explanations using operators
+├── evaluator.ts               # Position evaluation
+└── types.ts                   # Type definitions
+```
+
+### Data Flow
+```
+Frontend                              Server
+   │                                    │
+   ├─ emit('make_move') ───────────────►│
+   │                                    ├─ explainMove()
+   │                                    ├─ Uses 36 KROG operators
+   │                                    ├─ classifyMoveRType()
+   │◄─ on('move_explanation') ──────────┤
+   │                                    │
+   └─ Displays pre-computed             └─ All calculation here
+      formula, R-type, FIDE ref
+      (no calculation logic)
+```
+
+### Frontend (Display Only)
+```typescript
+// Pre-computed by server, displayed by client
+interface MoveExplanation {
+  move: string;           // "Nf3"
+  krog: {
+    formula: string;      // "P(Nf3) <-> L_shape(g1, f3) AND NOT blocked"
+    operator: string;     // "P" (result, not logic)
+    tType: string;        // "T1"
+    rType: string;        // "R11_discrete_jump"
+    rTypeDescription: { en: string; no: string };
+  };
+  fide: { article: string; en: string; no: string };
+  explanation: { en: string; no: string };
+  conditions: { name: string; met: boolean; description: string }[];
+}
+```
+
+**No KROG calculation logic exists in the frontend.** All 36 operators run exclusively on the server.
