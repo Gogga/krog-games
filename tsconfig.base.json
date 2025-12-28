@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "paths": {
+      "@krog/types": ["./packages/types/src"],
+      "@krog/shared": ["./packages/shared/src"],
+      "@krog/auth": ["./packages/auth/src"],
+      "@krog/db": ["./packages/db/src"],
+      "@krog/krog-framework": ["./packages/krog-framework/src"],
+      "@krog/ui": ["./packages/ui/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

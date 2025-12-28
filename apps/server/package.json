@@ -1,0 +1,35 @@
+{
+  "name": "@krog/server",
+  "version": "1.0.0",
+  "description": "KROG Games Platform - Unified backend server",
+  "author": "Georg Philip Krog",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@krog/types": "workspace:*",
+    "@krog/auth": "workspace:*",
+    "@krog/db": "workspace:*",
+    "@krog/chess-server": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.10.1",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

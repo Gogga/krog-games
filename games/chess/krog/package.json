@@ -1,0 +1,32 @@
+{
+  "name": "@krog/chess-krog",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chess-specific KROG functor implementation",
+  "author": "Georg Philip Krog",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "ts-node src/tests.ts"
+  },
+  "dependencies": {
+    "@krog/krog-framework": "workspace:*",
+    "@krog/types": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.9.0",
+    "ts-node": "^10.9.0"
+  }
+}

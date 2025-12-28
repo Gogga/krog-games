@@ -1,23 +1,46 @@
 {
-  "name": "krog-chess",
+  "name": "krog-games",
   "version": "1.0.0",
-  "description": "KROG Chess - Multiplayer chess platform with formal rule explanations",
+  "description": "KROG Games - Multi-game platform with formal rule explanations",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
-    "dev": "./scripts/start-dev.sh",
-    "dev:safe": "./scripts/start-dev.sh",
-    "server": "cd server && npm run dev",
-    "client": "cd client && npm run dev",
-    "install:all": "cd server && npm install && cd ../client && npm install",
-    "clean": "pkill -9 node 2>/dev/null; lsof -ti:3000 | xargs kill -9 2>/dev/null; lsof -ti:5173 | xargs kill -9 2>/dev/null; echo 'Cleaned up'"
+    "dev": "turbo run dev --concurrency=20",
+    "dev:chess": "turbo run dev --filter=@krog/chess-client --filter=@krog/chess-server --concurrency=5",
+    "dev:platform": "turbo run dev --filter=@krog/platform --filter=@krog/server --concurrency=5",
+    "dev:admin": "turbo run dev --filter=@krog/admin --filter=@krog/server --concurrency=5",
+    "dev:server": "turbo run dev --filter=@krog/server",
+    "build": "turbo run build",
+    "build:packages": "turbo run build --filter=./packages/*",
+    "build:games": "turbo run build --filter=./games/**",
+    "build:apps": "turbo run build --filter=./apps/*",
+    "build:chess": "turbo run build --filter=@krog/chess-client --filter=@krog/chess-server --filter=@krog/chess-krog",
+    "build:platform": "turbo run build --filter=@krog/platform",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "prepare": "turbo run build --filter=./packages/*"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.0.0"
   },
   "keywords": [
     "chess",
     "krog",
     "multiplayer",
-    "game",
+    "games",
+    "platform",
     "react",
-    "socket.io"
+    "socket.io",
+    "monorepo",
+    "turborepo"
   ],
-  "author": "",
+  "author": "Georg Philip Krog",
   "license": "ISC"
 }

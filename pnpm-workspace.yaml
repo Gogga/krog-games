@@ -1,0 +1,6 @@
+packages:
+  - "apps/*"
+  - "games/*/client"
+  - "games/*/server"
+  - "games/*/krog"
+  - "packages/*"

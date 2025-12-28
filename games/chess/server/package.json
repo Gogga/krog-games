@@ -1,0 +1,23 @@
+{
+  "name": "@krog/chess-server",
+  "version": "1.0.0",
+  "description": "KROG Chess - Server-side game logic",
+  "author": "Georg Philip Krog",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@krog/types": "workspace:*",
+    "@krog/db": "workspace:*",
+    "@krog/chess-krog": "workspace:*",
+    "chess.js": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
