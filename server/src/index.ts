@@ -1,3 +1,7 @@
+// Force IPv4 DNS resolution BEFORE any other imports (Railway doesn't support IPv6)
+import dns from 'dns';
+dns.setDefaultResultOrder('ipv4first');
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -40,6 +44,11 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+
+// Root endpoint for health check
+app.get('/', (_req, res) => {
+    res.status(200).send('KROG Chess Server');
+});
 
 // Health check endpoint for Railway
 app.get('/health', (_req, res) => {
@@ -147,13 +156,13 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Get current user (verify token)
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
         res.status(401).json({ success: false, message: 'No token provided' });
         return;
     }
-    const user = auth.getUserFromToken(token);
+    const user = await auth.getUserFromToken(token);
     if (user) {
         res.json({ success: true, user });
     } else {
@@ -162,13 +171,13 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // Refresh token
-app.post('/api/auth/refresh', (req, res) => {
+app.post('/api/auth/refresh', async (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
         res.status(401).json({ success: false, message: 'No token provided' });
         return;
     }
-    const result = auth.refreshToken(token);
+    const result = await auth.refreshToken(token);
     if (result.success) {
         res.json(result);
     } else {
@@ -177,8 +186,8 @@ app.post('/api/auth/refresh', (req, res) => {
 });
 
 // Get user profile
-app.get('/api/profile/:userId', (req, res) => {
-    const profile = auth.getUserProfile(req.params.userId);
+app.get('/api/profile/:userId', async (req, res) => {
+    const profile = await auth.getUserProfile(req.params.userId);
     if (profile) {
         res.json({ success: true, ...profile });
     } else {
@@ -187,17 +196,17 @@ app.get('/api/profile/:userId', (req, res) => {
 });
 
 // Get leaderboard
-app.get('/api/leaderboard', (req, res) => {
+app.get('/api/leaderboard', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 100;
-    const leaderboard = auth.getLeaderboard(limit);
+    const leaderboard = await auth.getLeaderboard(limit);
     res.json({ success: true, leaderboard });
 });
 
 // Get user's game history
-app.get('/api/games/:userId', (req, res) => {
+app.get('/api/games/:userId', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
-    const games = dbOperations.getUserGames(req.params.userId, limit, offset);
+    const games = await dbOperations.getUserGames(req.params.userId, limit, offset);
     res.json({ success: true, games });
 });
 
@@ -782,7 +791,7 @@ function makeComputerMove(room: Room, roomCode: string) {
 }
 
 // Helper function to end game and update ratings
-function endGameAndUpdateRatings(
+async function endGameAndUpdateRatings(
     room: Room,
     roomCode: string,
     result: '1-0' | '0-1' | '1/2-1/2',
@@ -795,8 +804,8 @@ function endGameAndUpdateRatings(
     let blackChange = 0;
 
     if (room.whiteUserId && room.blackUserId) {
-        const whiteUser = dbOperations.getUserById(room.whiteUserId);
-        const blackUser = dbOperations.getUserById(room.blackUserId);
+        const whiteUser = await dbOperations.getUserById(room.whiteUserId);
+        const blackUser = await dbOperations.getUserById(room.blackUserId);
 
         if (whiteUser && blackUser) {
             let whiteResult: 0 | 0.5 | 1;
@@ -813,20 +822,21 @@ function endGameAndUpdateRatings(
                 blackResult = 0.5;
             }
 
-            whiteChange = calculateEloChange(whiteUser.rating, blackUser.rating, whiteResult);
-            blackChange = calculateEloChange(blackUser.rating, whiteUser.rating, blackResult);
+            const eloResult = calculateEloChange(whiteUser.rating, blackUser.rating, whiteResult);
+            whiteChange = eloResult.change1;
+            blackChange = eloResult.change2;
 
             // Update ratings
-            dbOperations.updateUserRating(room.whiteUserId, whiteUser.rating + whiteChange);
-            dbOperations.updateUserRating(room.blackUserId, blackUser.rating + blackChange);
+            await dbOperations.updateUserRating(room.whiteUserId, whiteUser.rating + whiteChange);
+            await dbOperations.updateUserRating(room.blackUserId, blackUser.rating + blackChange);
 
             // Update stats
-            dbOperations.updateUserStats(room.whiteUserId, whiteResult === 1 ? 'win' : whiteResult === 0 ? 'loss' : 'draw');
-            dbOperations.updateUserStats(room.blackUserId, blackResult === 1 ? 'win' : blackResult === 0 ? 'loss' : 'draw');
+            await dbOperations.updateUserStats(room.whiteUserId, whiteResult === 1 ? 'win' : whiteResult === 0 ? 'loss' : 'draw');
+            await dbOperations.updateUserStats(room.blackUserId, blackResult === 1 ? 'win' : blackResult === 0 ? 'loss' : 'draw');
 
             // Add rating history
-            dbOperations.addRatingHistory(room.whiteUserId, whiteUser.rating + whiteChange, whiteChange, room.dbGameId || null);
-            dbOperations.addRatingHistory(room.blackUserId, blackUser.rating + blackChange, blackChange, room.dbGameId || null);
+            await dbOperations.addRatingHistory(room.whiteUserId, whiteUser.rating + whiteChange, whiteChange, room.dbGameId || null);
+            await dbOperations.addRatingHistory(room.blackUserId, blackUser.rating + blackChange, blackChange, room.dbGameId || null);
 
             // Update authenticated socket ratings
             const whiteSocketAuth = authenticatedSockets.get(room.players.white || '');
@@ -838,7 +848,7 @@ function endGameAndUpdateRatings(
 
     // Store game in database
     if (room.dbGameId) {
-        dbOperations.endGame(room.dbGameId, room.game.pgn(), result, whiteChange, blackChange);
+        await dbOperations.endGame(room.dbGameId, room.game.pgn(), result, whiteChange, blackChange);
     }
 
     // Handle tournament game result
@@ -858,16 +868,16 @@ function endGameAndUpdateRatings(
         }
 
         // Update tournament game
-        dbOperations.updateTournamentGameResult(room.tournamentGameId, result, whiteScore, blackScore, room.game.pgn());
+        await dbOperations.updateTournamentGameResult(room.tournamentGameId, result, whiteScore, blackScore, room.game.pgn());
 
         // Update participant scores
-        const tournamentGame = dbOperations.getTournamentGame(room.tournamentGameId);
+        const tournamentGame = await dbOperations.getTournamentGame(room.tournamentGameId);
         if (tournamentGame) {
-            const whiteParticipant = dbOperations.getTournamentParticipant(tournamentGame.tournament_id, room.whiteUserId);
-            const blackParticipant = dbOperations.getTournamentParticipant(tournamentGame.tournament_id, room.blackUserId);
+            const whiteParticipant = await dbOperations.getTournamentParticipant(tournamentGame.tournament_id, room.whiteUserId);
+            const blackParticipant = await dbOperations.getTournamentParticipant(tournamentGame.tournament_id, room.blackUserId);
 
             if (whiteParticipant) {
-                dbOperations.updateParticipantScore(
+                await dbOperations.updateParticipantScore(
                     tournamentGame.tournament_id,
                     room.whiteUserId,
                     whiteParticipant.score + whiteScore,
@@ -879,7 +889,7 @@ function endGameAndUpdateRatings(
                 );
             }
             if (blackParticipant) {
-                dbOperations.updateParticipantScore(
+                await dbOperations.updateParticipantScore(
                     tournamentGame.tournament_id,
                     room.blackUserId,
                     blackParticipant.score + blackScore,
@@ -919,15 +929,15 @@ function endGameAndUpdateRatings(
         }
 
         // Update league match
-        dbOperations.updateLeagueMatchResult(room.leagueMatchId, result, homeScore, awayScore, room.game.pgn());
+        await dbOperations.updateLeagueMatchResult(room.leagueMatchId, result, homeScore, awayScore, room.game.pgn());
 
         // Update participant stats
-        const leagueMatch = dbOperations.getLeagueMatch(room.leagueMatchId);
+        const leagueMatch = await dbOperations.getLeagueMatch(room.leagueMatchId);
         if (leagueMatch) {
-            const league = dbOperations.getLeagueById(leagueMatch.league_id);
+            const league = await dbOperations.getLeagueById(leagueMatch.league_id);
             if (league) {
-                const homeParticipant = dbOperations.getLeagueParticipant(leagueMatch.league_id, room.whiteUserId);
-                const awayParticipant = dbOperations.getLeagueParticipant(leagueMatch.league_id, room.blackUserId);
+                const homeParticipant = await dbOperations.getLeagueParticipant(leagueMatch.league_id, room.whiteUserId);
+                const awayParticipant = await dbOperations.getLeagueParticipant(leagueMatch.league_id, room.blackUserId);
 
                 // Calculate points based on league settings
                 const homePoints = result === '1-0' ? league.points_for_win : result === '0-1' ? league.points_for_loss : league.points_for_draw;
@@ -939,7 +949,7 @@ function endGameAndUpdateRatings(
                     const newLosses = homeParticipant.losses + (result === '0-1' ? 1 : 0);
                     const newForm = (homeParticipant.form + (result === '1-0' ? 'W' : result === '0-1' ? 'L' : 'D')).slice(-5);
 
-                    dbOperations.updateLeagueParticipantStats(
+                    await dbOperations.updateLeagueParticipantStats(
                         leagueMatch.league_id,
                         room.whiteUserId,
                         homeParticipant.points + homePoints,
@@ -959,7 +969,7 @@ function endGameAndUpdateRatings(
                     const newLosses = awayParticipant.losses + (result === '1-0' ? 1 : 0);
                     const newForm = (awayParticipant.form + (result === '0-1' ? 'W' : result === '1-0' ? 'L' : 'D')).slice(-5);
 
-                    dbOperations.updateLeagueParticipantStats(
+                    await dbOperations.updateLeagueParticipantStats(
                         leagueMatch.league_id,
                         room.blackUserId,
                         awayParticipant.points + awayPoints,
@@ -1004,8 +1014,8 @@ io.on('connection', (socket) => {
     // ==================== SOCKET AUTHENTICATION ====================
 
     // Authenticate socket with JWT token
-    socket.on('authenticate', ({ token }: { token: string }) => {
-        const user = auth.getUserFromToken(token);
+    socket.on('authenticate', async ({ token }: { token: string }) => {
+        const user = await auth.getUserFromToken(token);
         if (user) {
             authenticatedSockets.set(socket.id, {
                 userId: user.id,
@@ -1027,17 +1037,17 @@ io.on('connection', (socket) => {
     });
 
     // Logout (clear socket authentication)
-    socket.on('logout', () => {
+    socket.on('logout', async () => {
         authenticatedSockets.delete(socket.id);
         // Also remove from matchmaking queue
-        dbOperations.removeFromQueueBySocket(socket.id);
+        await dbOperations.removeFromQueueBySocket(socket.id);
         socket.emit('logged_out', { success: true });
     });
 
     // ==================== MATCHMAKING ====================
 
     // Join matchmaking queue
-    socket.on('join_matchmaking', ({ timeControl }: { timeControl: TimeControlType }) => {
+    socket.on('join_matchmaking', async ({ timeControl }: { timeControl: TimeControlType }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to use matchmaking' });
@@ -1045,22 +1055,22 @@ io.on('connection', (socket) => {
         }
 
         // Add to queue
-        dbOperations.addToQueue(authInfo.userId, socket.id, authInfo.rating, timeControl);
+        await dbOperations.addToQueue(authInfo.userId, socket.id, authInfo.rating, timeControl);
         socket.emit('matchmaking_joined', { timeControl, rating: authInfo.rating });
 
         // Try to find a match (rating range starts at 100, expands over time)
-        const match = dbOperations.findMatch(authInfo.userId, authInfo.rating, timeControl, 200);
+        const match = await dbOperations.findMatch(timeControl, authInfo.userId, authInfo.rating, 200);
         if (match) {
             // Found a match! Create a room
-            dbOperations.removeFromQueue(authInfo.userId);
-            dbOperations.removeFromQueue(match.user_id);
+            await dbOperations.removeFromQueue(authInfo.userId);
+            await dbOperations.removeFromQueue(match.user_id);
 
             const code = generateRoomCode();
             const tc = TIME_CONTROLS[timeControl];
 
             // Get both users
-            const user1 = dbOperations.getUserById(authInfo.userId);
-            const user2 = dbOperations.getUserById(match.user_id);
+            const user1 = await dbOperations.getUserById(authInfo.userId);
+            const user2 = await dbOperations.getUserById(match.user_id);
 
             // Randomly assign colors
             const user1White = Math.random() < 0.5;
@@ -1087,7 +1097,7 @@ io.on('connection', (socket) => {
             };
 
             // Create database game record
-            const dbGame = dbOperations.createGame(
+            const dbGame = await dbOperations.createGame(
                 code,
                 whiteUser?.id || null,
                 blackUser?.id || null,
@@ -1133,16 +1143,16 @@ io.on('connection', (socket) => {
             console.log(`Match found: ${whiteUser?.username} vs ${blackUser?.username} in room ${code}`);
         } else {
             // No match yet, notify position in queue
-            const position = dbOperations.getQueuePosition(authInfo.userId, timeControl);
+            const position = await dbOperations.getQueuePosition(authInfo.userId, timeControl);
             socket.emit('matchmaking_waiting', { position, timeControl });
         }
     });
 
     // Leave matchmaking queue
-    socket.on('leave_matchmaking', () => {
+    socket.on('leave_matchmaking', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (authInfo) {
-            dbOperations.removeFromQueue(authInfo.userId);
+            await dbOperations.removeFromQueue(authInfo.userId);
             socket.emit('matchmaking_left', { success: true });
         }
     });
@@ -1262,7 +1272,7 @@ io.on('connection', (socket) => {
     });
 
     // Join existing room by code
-    socket.on('join_room', ({ code }: { code: string }) => {
+    socket.on('join_room', async ({ code }: { code: string }) => {
         const roomCode = code.toUpperCase().trim();
         const room = rooms.get(roomCode);
 
@@ -1336,9 +1346,9 @@ io.on('connection', (socket) => {
 
             // Both players joined - create database game record if both authenticated
             if (room.whiteUserId || room.blackUserId) {
-                const whiteUser = room.whiteUserId ? dbOperations.getUserById(room.whiteUserId) : null;
-                const blackUser = room.blackUserId ? dbOperations.getUserById(room.blackUserId) : null;
-                const dbGame = dbOperations.createGame(
+                const whiteUser = room.whiteUserId ? await dbOperations.getUserById(room.whiteUserId) : null;
+                const blackUser = room.blackUserId ? await dbOperations.getUserById(room.blackUserId) : null;
+                const dbGame = await dbOperations.createGame(
                     roomCode,
                     room.whiteUserId || null,
                     room.blackUserId || null,
@@ -1661,38 +1671,38 @@ io.on('connection', (socket) => {
     // ==================== KROG LEADERBOARD ====================
 
     // Track KROG explanation view
-    socket.on('track_krog_view', ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
+    socket.on('track_krog_view', async ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             // Guest users don't track stats
             return;
         }
         try {
-            dbOperations.recordKrogActivity(authInfo.userId, 'view', moveSan, rType, operator);
-            dbOperations.updateKrogStats(authInfo.userId, 'view', rType, operator);
+            await dbOperations.recordKrogActivity(authInfo.userId, 'view', moveSan, rType, operator);
+            await dbOperations.updateKrogStats(authInfo.userId, 'view', rType, operator);
         } catch (error) {
             console.error('Error tracking KROG view:', error);
         }
     });
 
     // Track KROG explanation share
-    socket.on('track_krog_share', ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
+    socket.on('track_krog_share', async ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             return;
         }
         try {
-            dbOperations.recordKrogActivity(authInfo.userId, 'share', moveSan, rType, operator);
-            dbOperations.updateKrogStats(authInfo.userId, 'share', rType, operator);
+            await dbOperations.recordKrogActivity(authInfo.userId, 'share', moveSan, rType, operator);
+            await dbOperations.updateKrogStats(authInfo.userId, 'share', rType, operator);
         } catch (error) {
             console.error('Error tracking KROG share:', error);
         }
     });
 
     // Get KROG leaderboard
-    socket.on('get_krog_leaderboard', ({ type }: { type: 'views' | 'shares' | 'rtypes' }) => {
+    socket.on('get_krog_leaderboard', async ({ type }: { type: 'views' | 'shares' | 'rtypes' }) => {
         try {
-            const leaderboard = dbOperations.getKrogLeaderboard(type, 50);
+            const leaderboard = await dbOperations.getKrogLeaderboard(type, 50);
             socket.emit('krog_leaderboard', { type, leaderboard });
         } catch (error) {
             console.error('Error getting KROG leaderboard:', error);
@@ -1701,15 +1711,15 @@ io.on('connection', (socket) => {
     });
 
     // Get user's KROG stats
-    socket.on('get_krog_stats', () => {
+    socket.on('get_krog_stats', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('krog_stats', { stats: null, rank: 0 });
             return;
         }
         try {
-            const stats = dbOperations.getKrogStats(authInfo.userId);
-            const rank = stats ? dbOperations.getKrogRank(authInfo.userId) : 0;
+            const stats = await dbOperations.getKrogStats(authInfo.userId);
+            const rank = stats ? await dbOperations.getKrogRank(authInfo.userId) : 0;
             socket.emit('krog_stats', { stats, rank });
         } catch (error) {
             console.error('Error getting KROG stats:', error);
@@ -2222,9 +2232,9 @@ io.on('connection', (socket) => {
     }
 
     // Helper function to get or assign today's puzzle
-    function getOrAssignDailyPuzzle(date: string): Puzzle | null {
+    async function getOrAssignDailyPuzzle(date: string): Promise<Puzzle | null> {
         // Check if already assigned
-        let dailyPuzzle = dbOperations.getDailyPuzzle(date);
+        let dailyPuzzle = await dbOperations.getDailyPuzzle(date);
 
         if (!dailyPuzzle) {
             // Generate deterministic puzzle selection based on date
@@ -2239,8 +2249,8 @@ io.on('connection', (socket) => {
             const selectedPuzzle = puzzles[puzzleIndex];
 
             // Save to database
-            dbOperations.setDailyPuzzle(date, selectedPuzzle.id);
-            dailyPuzzle = dbOperations.getDailyPuzzle(date);
+            await dbOperations.setDailyPuzzle(date, selectedPuzzle.id);
+            dailyPuzzle = await dbOperations.getDailyPuzzle(date);
         }
 
         if (!dailyPuzzle) return null;
@@ -2250,9 +2260,9 @@ io.on('connection', (socket) => {
     }
 
     // Get today's daily puzzle
-    socket.on('get_daily_puzzle', () => {
+    socket.on('get_daily_puzzle', async () => {
         const today = getTodayUTC();
-        const puzzle = getOrAssignDailyPuzzle(today);
+        const puzzle = await getOrAssignDailyPuzzle(today);
 
         if (!puzzle) {
             socket.emit('error', { message: 'Failed to get daily puzzle' });
@@ -2266,9 +2276,9 @@ io.on('connection', (socket) => {
 
         const authInfo = authenticatedSockets.get(socket.id);
         if (authInfo) {
-            completion = dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
+            completion = await dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
             alreadyCompleted = !!completion;
-            streak = dbOperations.getDailyPuzzleStreak(authInfo.userId);
+            streak = await dbOperations.getDailyPuzzleStreak(authInfo.userId);
         }
 
         socket.emit('daily_puzzle_data', {
@@ -2298,9 +2308,9 @@ io.on('connection', (socket) => {
     });
 
     // Check daily puzzle move
-    socket.on('check_daily_puzzle_move', ({ moveIndex, move, attempts }: { moveIndex: number; move: string; attempts: number }) => {
+    socket.on('check_daily_puzzle_move', async ({ moveIndex, move, attempts }: { moveIndex: number; move: string; attempts: number }) => {
         const today = getTodayUTC();
-        const puzzle = getOrAssignDailyPuzzle(today);
+        const puzzle = await getOrAssignDailyPuzzle(today);
 
         if (!puzzle) {
             socket.emit('error', { message: 'Daily puzzle not found' });
@@ -2336,7 +2346,7 @@ io.on('connection', (socket) => {
     });
 
     // Complete daily puzzle (record completion)
-    socket.on('complete_daily_puzzle', ({ timeSpentMs, attempts }: { timeSpentMs: number; attempts: number }) => {
+    socket.on('complete_daily_puzzle', async ({ timeSpentMs, attempts }: { timeSpentMs: number; attempts: number }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             // For guests, just confirm completion without saving
@@ -2351,9 +2361,9 @@ io.on('connection', (socket) => {
         const today = getTodayUTC();
 
         // Check if already completed
-        const existing = dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
+        const existing = await dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
         if (existing) {
-            const streak = dbOperations.getDailyPuzzleStreak(authInfo.userId);
+            const streak = await dbOperations.getDailyPuzzleStreak(authInfo.userId);
             socket.emit('daily_puzzle_completed', {
                 success: true,
                 alreadyCompleted: true,
@@ -2367,10 +2377,10 @@ io.on('connection', (socket) => {
         }
 
         // Record completion
-        dbOperations.recordDailyPuzzleCompletion(authInfo.userId, today, timeSpentMs, attempts);
+        await dbOperations.recordDailyPuzzleCompletion(authInfo.userId, today, timeSpentMs, attempts);
 
         // Update streak
-        const updatedStreak = dbOperations.processStreakAfterCompletion(authInfo.userId, today);
+        const updatedStreak = await dbOperations.processStreakAfterCompletion(authInfo.userId, today);
 
         socket.emit('daily_puzzle_completed', {
             success: true,
@@ -2383,7 +2393,7 @@ io.on('connection', (socket) => {
     });
 
     // Get user's daily puzzle stats
-    socket.on('get_daily_puzzle_stats', () => {
+    socket.on('get_daily_puzzle_stats', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('daily_puzzle_stats', {
@@ -2393,9 +2403,9 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const streak = dbOperations.getDailyPuzzleStreak(authInfo.userId);
+        const streak = await dbOperations.getDailyPuzzleStreak(authInfo.userId);
         const today = getTodayUTC();
-        const todayCompletion = dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
+        const todayCompletion = await dbOperations.getDailyPuzzleCompletion(authInfo.userId, today);
 
         socket.emit('daily_puzzle_stats', {
             streak: streak ? {
@@ -2408,8 +2418,8 @@ io.on('connection', (socket) => {
     });
 
     // Get daily puzzle leaderboard
-    socket.on('get_daily_puzzle_leaderboard', ({ limit }: { limit?: number }) => {
-        const leaderboard = dbOperations.getDailyPuzzleLeaderboard(limit || 20);
+    socket.on('get_daily_puzzle_leaderboard', async ({ limit }: { limit?: number }) => {
+        const leaderboard = await dbOperations.getDailyPuzzleLeaderboard(limit || 20);
 
         socket.emit('daily_puzzle_leaderboard', {
             entries: leaderboard.map((entry, index) => ({
@@ -2631,16 +2641,16 @@ io.on('connection', (socket) => {
     // ==================== FRIENDS ====================
 
     // Get friends list
-    socket.on('get_friends', () => {
+    socket.on('get_friends', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to view friends' });
             return;
         }
 
-        const friends = dbOperations.getFriends(authInfo.userId);
-        const incomingRequests = dbOperations.getIncomingRequests(authInfo.userId);
-        const outgoingRequests = dbOperations.getOutgoingRequests(authInfo.userId);
+        const friends = await dbOperations.getFriends(authInfo.userId);
+        const incomingRequests = await dbOperations.getIncomingRequests(authInfo.userId);
+        const outgoingRequests = await dbOperations.getOutgoingRequests(authInfo.userId);
 
         // Add online status to friends
         const friendsWithStatus = friends.map(friend => ({
@@ -2656,7 +2666,7 @@ io.on('connection', (socket) => {
     });
 
     // Search users
-    socket.on('search_users', ({ query }: { query: string }) => {
+    socket.on('search_users', async ({ query }: { query: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to search users' });
@@ -2668,12 +2678,12 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const users = dbOperations.searchUsers(query.trim(), authInfo.userId);
+        const users = await dbOperations.searchUsers(query.trim(), authInfo.userId);
         socket.emit('user_search_results', { users });
     });
 
     // Send friend request
-    socket.on('send_friend_request', ({ friendId }: { friendId: string }) => {
+    socket.on('send_friend_request', async ({ friendId }: { friendId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to send friend requests' });
@@ -2685,7 +2695,7 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const result = dbOperations.sendFriendRequest(authInfo.userId, friendId);
+        const result = await dbOperations.sendFriendRequestWithResult(authInfo.userId, friendId);
         if (result.success) {
             socket.emit('friend_request_sent', { success: true });
 
@@ -2698,62 +2708,62 @@ io.on('connection', (socket) => {
                 });
             }
         } else {
-            socket.emit('friend_request_sent', { success: false, error: result.error });
+            socket.emit('friend_request_sent', { success: false, error: result.message });
         }
     });
 
     // Accept friend request
-    socket.on('accept_friend_request', ({ requestId }: { requestId: string }) => {
+    socket.on('accept_friend_request', async ({ requestId }: { requestId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to accept friend requests' });
             return;
         }
 
-        const result = dbOperations.acceptFriendRequest(requestId, authInfo.userId);
+        const result = await dbOperations.acceptFriendRequestWithResult(requestId, authInfo.userId);
         if (result.success) {
             socket.emit('friend_request_accepted', { success: true, requestId });
         } else {
-            socket.emit('friend_request_accepted', { success: false, error: result.error });
+            socket.emit('friend_request_accepted', { success: false, error: result.message });
         }
     });
 
     // Decline friend request
-    socket.on('decline_friend_request', ({ requestId }: { requestId: string }) => {
+    socket.on('decline_friend_request', async ({ requestId }: { requestId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to decline friend requests' });
             return;
         }
 
-        const result = dbOperations.declineFriendRequest(requestId, authInfo.userId);
+        const result = await dbOperations.declineFriendRequestWithResult(requestId, authInfo.userId);
         if (result.success) {
             socket.emit('friend_request_declined', { success: true, requestId });
         } else {
-            socket.emit('friend_request_declined', { success: false, error: result.error });
+            socket.emit('friend_request_declined', { success: false, error: result.message });
         }
     });
 
     // Remove friend
-    socket.on('remove_friend', ({ friendId }: { friendId: string }) => {
+    socket.on('remove_friend', async ({ friendId }: { friendId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to remove friends' });
             return;
         }
 
-        const result = dbOperations.removeFriend(authInfo.userId, friendId);
+        const result = await dbOperations.removeFriendWithResult(authInfo.userId, friendId);
         if (result.success) {
             socket.emit('friend_removed', { success: true, friendId });
         } else {
-            socket.emit('friend_removed', { success: false, error: result.error });
+            socket.emit('friend_removed', { success: false, error: result.message });
         }
     });
 
     // ==================== CLUBS ====================
 
     // Create a new club
-    socket.on('create_club', ({ name, description, logoEmoji, isPublic }: { name: string; description?: string; logoEmoji?: string; isPublic?: boolean }) => {
+    socket.on('create_club', async ({ name, description, logoEmoji, isPublic }: { name: string; description?: string; logoEmoji?: string; isPublic?: boolean }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to create clubs' });
@@ -2765,54 +2775,54 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const result = dbOperations.createClub(name.trim(), description || null, authInfo.userId, logoEmoji, isPublic);
-        if (result.success && result.club) {
-            socket.emit('club_created', { success: true, club: result.club });
+        const club = await dbOperations.createClub(name.trim(), description || null, authInfo.userId, logoEmoji || '♟️', isPublic !== false);
+        if (club) {
+            socket.emit('club_created', { success: true, club });
         } else {
-            socket.emit('club_created', { success: false, error: result.error });
+            socket.emit('club_created', { success: false, error: 'Failed to create club' });
         }
     });
 
     // Get user's clubs
-    socket.on('get_my_clubs', () => {
+    socket.on('get_my_clubs', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to view clubs' });
             return;
         }
 
-        const clubs = dbOperations.getUserClubs(authInfo.userId);
+        const clubs = await dbOperations.getUserClubs(authInfo.userId);
         socket.emit('my_clubs', { clubs });
     });
 
     // Get public clubs
-    socket.on('get_public_clubs', ({ limit, offset }: { limit?: number; offset?: number }) => {
-        const clubs = dbOperations.getPublicClubs(limit || 20, offset || 0);
+    socket.on('get_public_clubs', async ({ limit, offset }: { limit?: number; offset?: number }) => {
+        const clubs = await dbOperations.getPublicClubs(limit || 20, offset || 0);
         socket.emit('public_clubs', { clubs });
     });
 
     // Search clubs
-    socket.on('search_clubs', ({ query }: { query: string }) => {
+    socket.on('search_clubs', async ({ query }: { query: string }) => {
         if (!query || query.trim().length < 2) {
             socket.emit('club_search_results', { clubs: [] });
             return;
         }
 
-        const clubs = dbOperations.searchClubs(query.trim());
+        const clubs = await dbOperations.searchClubs(query.trim());
         socket.emit('club_search_results', { clubs });
     });
 
     // Get club details
-    socket.on('get_club', ({ clubId }: { clubId: string }) => {
-        const club = dbOperations.getClubById(clubId);
+    socket.on('get_club', async ({ clubId }: { clubId: string }) => {
+        const club = await dbOperations.getClubById(clubId);
         if (!club) {
             socket.emit('error', { message: 'Club not found' });
             return;
         }
 
-        const members = dbOperations.getClubMembers(clubId);
+        const members = await dbOperations.getClubMembers(clubId);
         const authInfo = authenticatedSockets.get(socket.id);
-        const myMembership = authInfo ? dbOperations.getClubMember(clubId, authInfo.userId) : null;
+        const myMembership = authInfo ? await dbOperations.getClubMember(clubId, authInfo.userId) : null;
 
         // Add online status to members
         const membersWithStatus = members.map(member => ({
@@ -2828,51 +2838,51 @@ io.on('connection', (socket) => {
     });
 
     // Update club
-    socket.on('update_club', ({ clubId, name, description, logoEmoji, isPublic }: { clubId: string; name?: string; description?: string; logoEmoji?: string; isPublic?: boolean }) => {
+    socket.on('update_club', async ({ clubId, name, description, logoEmoji, isPublic }: { clubId: string; name?: string; description?: string; logoEmoji?: string; isPublic?: boolean }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to update clubs' });
             return;
         }
 
-        const result = dbOperations.updateClub(clubId, authInfo.userId, { name, description, logoEmoji, isPublic });
+        const result = await dbOperations.updateClubWithAuth(clubId, authInfo.userId, { name, description, logoEmoji, isPublic });
         if (result.success) {
-            const club = dbOperations.getClubById(clubId);
+            const club = await dbOperations.getClubById(clubId);
             socket.emit('club_updated', { success: true, club });
             // Notify all members in the club room
             io.to(`club:${clubId}`).emit('club_info_updated', { club });
         } else {
-            socket.emit('club_updated', { success: false, error: result.error });
+            socket.emit('club_updated', { success: false, error: result.message });
         }
     });
 
     // Delete club
-    socket.on('delete_club', ({ clubId }: { clubId: string }) => {
+    socket.on('delete_club', async ({ clubId }: { clubId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to delete clubs' });
             return;
         }
 
-        const result = dbOperations.deleteClub(clubId, authInfo.userId);
+        const result = await dbOperations.deleteClubWithAuth(clubId, authInfo.userId);
         if (result.success) {
             socket.emit('club_deleted', { success: true, clubId });
             // Notify all members
             io.to(`club:${clubId}`).emit('club_disbanded', { clubId });
         } else {
-            socket.emit('club_deleted', { success: false, error: result.error });
+            socket.emit('club_deleted', { success: false, error: result.message });
         }
     });
 
     // Join a public club
-    socket.on('join_club', ({ clubId }: { clubId: string }) => {
+    socket.on('join_club', async ({ clubId }: { clubId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to join clubs' });
             return;
         }
 
-        const result = dbOperations.joinClub(clubId, authInfo.userId);
+        const result = await dbOperations.joinClub(clubId, authInfo.userId);
         if (result.success) {
             socket.emit('club_joined', { success: true, clubId });
             // Join the club socket room for real-time updates
@@ -2883,19 +2893,19 @@ io.on('connection', (socket) => {
                 member: { userId: authInfo.userId, username: authInfo.username, rating: authInfo.rating }
             });
         } else {
-            socket.emit('club_joined', { success: false, error: result.error });
+            socket.emit('club_joined', { success: false, error: result.message });
         }
     });
 
     // Leave a club
-    socket.on('leave_club', ({ clubId }: { clubId: string }) => {
+    socket.on('leave_club', async ({ clubId }: { clubId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to leave clubs' });
             return;
         }
 
-        const result = dbOperations.leaveClub(clubId, authInfo.userId);
+        const result = await dbOperations.leaveClub(clubId, authInfo.userId);
         if (result.success) {
             socket.emit('club_left', { success: true, clubId });
             // Leave the club socket room
@@ -2907,19 +2917,19 @@ io.on('connection', (socket) => {
                 username: authInfo.username
             });
         } else {
-            socket.emit('club_left', { success: false, error: result.error });
+            socket.emit('club_left', { success: false, error: result.message });
         }
     });
 
     // Update member role
-    socket.on('update_member_role', ({ clubId, targetUserId, newRole }: { clubId: string; targetUserId: string; newRole: 'admin' | 'member' }) => {
+    socket.on('update_member_role', async ({ clubId, targetUserId, newRole }: { clubId: string; targetUserId: string; newRole: 'admin' | 'member' }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to update roles' });
             return;
         }
 
-        const result = dbOperations.updateMemberRole(clubId, authInfo.userId, targetUserId, newRole);
+        const result = await dbOperations.updateMemberRoleWithAuth(clubId, authInfo.userId, targetUserId, newRole);
         if (result.success) {
             socket.emit('member_role_updated', { success: true, clubId, targetUserId, newRole });
             io.to(`club:${clubId}`).emit('role_changed', {
@@ -2937,19 +2947,19 @@ io.on('connection', (socket) => {
                 });
             }
         } else {
-            socket.emit('member_role_updated', { success: false, error: result.error });
+            socket.emit('member_role_updated', { success: false, error: result.message });
         }
     });
 
     // Kick member
-    socket.on('kick_member', ({ clubId, targetUserId }: { clubId: string; targetUserId: string }) => {
+    socket.on('kick_member', async ({ clubId, targetUserId }: { clubId: string; targetUserId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to kick members' });
             return;
         }
 
-        const result = dbOperations.kickMember(clubId, authInfo.userId, targetUserId);
+        const result = await dbOperations.kickMember(clubId, authInfo.userId, targetUserId);
         if (result.success) {
             socket.emit('member_kicked', { success: true, clubId, targetUserId });
             io.to(`club:${clubId}`).emit('member_removed', {
@@ -2957,97 +2967,97 @@ io.on('connection', (socket) => {
                 userId: targetUserId
             });
         } else {
-            socket.emit('member_kicked', { success: false, error: result.error });
+            socket.emit('member_kicked', { success: false, error: result.message });
         }
     });
 
     // Send club invitation
-    socket.on('invite_to_club', ({ clubId, inviteeId }: { clubId: string; inviteeId: string }) => {
+    socket.on('invite_to_club', async ({ clubId, inviteeId }: { clubId: string; inviteeId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to send invitations' });
             return;
         }
 
-        const result = dbOperations.sendClubInvitation(clubId, authInfo.userId, inviteeId);
+        const result = await dbOperations.sendClubInvitation(clubId, authInfo.userId, inviteeId);
         if (result.success) {
-            socket.emit('invitation_sent', { success: true, invitation: result.invitation });
+            socket.emit('invitation_sent', { success: true });
             // Notify the invitee if online
             const inviteeSocket = Array.from(authenticatedSockets.entries())
                 .find(([_, info]) => info.userId === inviteeId);
             if (inviteeSocket) {
-                const club = dbOperations.getClubById(clubId);
+                const club = await dbOperations.getClubById(clubId);
                 io.to(inviteeSocket[0]).emit('club_invitation_received', {
-                    invitation: result.invitation,
+                    clubId,
                     clubName: club?.name,
                     inviterUsername: authInfo.username
                 });
             }
         } else {
-            socket.emit('invitation_sent', { success: false, error: result.error });
+            socket.emit('invitation_sent', { success: false, error: result.message });
         }
     });
 
     // Get pending club invitations
-    socket.on('get_club_invitations', () => {
+    socket.on('get_club_invitations', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to view invitations' });
             return;
         }
 
-        const invitations = dbOperations.getPendingClubInvitations(authInfo.userId);
+        const invitations = await dbOperations.getPendingClubInvitations(authInfo.userId);
         socket.emit('club_invitations', { invitations });
     });
 
     // Accept club invitation
-    socket.on('accept_club_invitation', ({ invitationId }: { invitationId: string }) => {
+    socket.on('accept_club_invitation', async ({ invitationId }: { invitationId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to accept invitations' });
             return;
         }
 
-        const result = dbOperations.acceptClubInvitation(invitationId, authInfo.userId);
+        const result = await dbOperations.acceptClubInvitation(invitationId, authInfo.userId);
         if (result.success) {
             socket.emit('invitation_accepted', { success: true, invitationId });
         } else {
-            socket.emit('invitation_accepted', { success: false, error: result.error });
+            socket.emit('invitation_accepted', { success: false, error: result.message });
         }
     });
 
     // Decline club invitation
-    socket.on('decline_club_invitation', ({ invitationId }: { invitationId: string }) => {
+    socket.on('decline_club_invitation', async ({ invitationId }: { invitationId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to decline invitations' });
             return;
         }
 
-        const result = dbOperations.declineClubInvitation(invitationId, authInfo.userId);
+        const result = await dbOperations.declineClubInvitation(invitationId, authInfo.userId);
         if (result.success) {
             socket.emit('invitation_declined', { success: true, invitationId });
         } else {
-            socket.emit('invitation_declined', { success: false, error: result.error });
+            socket.emit('invitation_declined', { success: false, error: result.message });
         }
     });
 
     // Join club chat room (for real-time messages)
-    socket.on('join_club_chat', ({ clubId }: { clubId: string }) => {
+    socket.on('join_club_chat', async ({ clubId }: { clubId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to join club chat' });
             return;
         }
 
-        const member = dbOperations.getClubMember(clubId, authInfo.userId);
+        const member = await dbOperations.getClubMember(clubId, authInfo.userId);
         if (!member) {
             socket.emit('error', { message: 'Not a member of this club' });
             return;
         }
 
         socket.join(`club:${clubId}`);
-        const messages = dbOperations.getClubMessages(clubId, 50, 0);
+        const messages = await dbOperations.getClubMessages(clubId, 50, 0);
         socket.emit('club_chat_joined', { clubId, messages: messages.reverse() });
     });
 
@@ -3058,7 +3068,7 @@ io.on('connection', (socket) => {
     });
 
     // Send message to club chat
-    socket.on('send_club_message', ({ clubId, message }: { clubId: string; message: string }) => {
+    socket.on('send_club_message', async ({ clubId, message }: { clubId: string; message: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to send messages' });
@@ -3070,47 +3080,47 @@ io.on('connection', (socket) => {
         }
 
         const sanitizedMessage = message.trim().slice(0, 500);
-        const result = dbOperations.addClubMessage(clubId, authInfo.userId, sanitizedMessage);
+        const clubMessage = await dbOperations.addClubMessage(clubId, authInfo.userId, sanitizedMessage);
 
-        if (result.success && result.message) {
+        if (clubMessage) {
             // Broadcast to all club members
-            io.to(`club:${clubId}`).emit('club_message', result.message);
+            io.to(`club:${clubId}`).emit('club_message', clubMessage);
         } else {
-            socket.emit('error', { message: result.error || 'Failed to send message' });
+            socket.emit('error', { message: 'Failed to send message' });
         }
     });
 
     // Get more club messages (pagination)
-    socket.on('get_club_messages', ({ clubId, limit, offset }: { clubId: string; limit?: number; offset?: number }) => {
+    socket.on('get_club_messages', async ({ clubId, limit, offset }: { clubId: string; limit?: number; offset?: number }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to view messages' });
             return;
         }
 
-        const member = dbOperations.getClubMember(clubId, authInfo.userId);
+        const member = await dbOperations.getClubMember(clubId, authInfo.userId);
         if (!member) {
             socket.emit('error', { message: 'Not a member of this club' });
             return;
         }
 
-        const messages = dbOperations.getClubMessages(clubId, limit || 50, offset || 0);
+        const messages = await dbOperations.getClubMessages(clubId, limit || 50, offset || 0);
         socket.emit('club_messages', { clubId, messages: messages.reverse(), offset: offset || 0 });
     });
 
     // Delete club message (admin/owner only)
-    socket.on('delete_club_message', ({ clubId, messageId }: { clubId: string; messageId: string }) => {
+    socket.on('delete_club_message', async ({ clubId, messageId }: { clubId: string; messageId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to delete messages' });
             return;
         }
 
-        const result = dbOperations.deleteClubMessage(messageId, authInfo.userId, clubId);
+        const result = await dbOperations.deleteClubMessageWithAuth(messageId, authInfo.userId, clubId);
         if (result.success) {
             io.to(`club:${clubId}`).emit('club_message_deleted', { clubId, messageId });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to delete message' });
+            socket.emit('error', { message: result.message || 'Failed to delete message' });
         }
     });
 
@@ -3165,7 +3175,7 @@ io.on('connection', (socket) => {
     });
 
     // Accept a challenge
-    socket.on('accept_challenge', ({ challengeId, challengerId, challengerSocketId: providedSocketId, timeControl: timeControlType, variant: variantType }: { challengeId: string; challengerId: string; challengerSocketId?: string; timeControl: TimeControlType; variant?: VariantType }) => {
+    socket.on('accept_challenge', async ({ challengeId, challengerId, challengerSocketId: providedSocketId, timeControl: timeControlType, variant: variantType }: { challengeId: string; challengerId: string; challengerSocketId?: string; timeControl: TimeControlType; variant?: VariantType }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to accept challenges' });
@@ -3222,9 +3232,9 @@ io.on('connection', (socket) => {
         };
 
         // Create database game record if both players are authenticated
-        const whiteUser = dbOperations.getUserById(whiteUserId);
-        const blackUser = dbOperations.getUserById(blackUserId);
-        const dbGame = dbOperations.createGame(
+        const whiteUser = await dbOperations.getUserById(whiteUserId);
+        const blackUser = await dbOperations.getUserById(blackUserId);
+        const dbGame = await dbOperations.createGame(
             code,
             whiteUserId,
             blackUserId,
@@ -3336,7 +3346,7 @@ io.on('connection', (socket) => {
     // ============ Tournament Events ============
 
     // Create a tournament
-    socket.on('create_tournament', ({ name, description, clubId, type, timeControl, maxParticipants, startTime }: {
+    socket.on('create_tournament', async ({ name, description, clubId, type, timeControl, maxParticipants, startTime }: {
         name: string;
         description?: string;
         clubId?: string;
@@ -3353,14 +3363,14 @@ io.on('connection', (socket) => {
 
         // If club tournament, verify user is admin/owner
         if (clubId) {
-            const member = dbOperations.getClubMember(clubId, authInfo.userId);
+            const member = await dbOperations.getClubMember(clubId, authInfo.userId);
             if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
                 socket.emit('error', { message: 'Must be club admin or owner to create club tournaments' });
                 return;
             }
         }
 
-        const result = dbOperations.createTournament(
+        const tournament = await dbOperations.createTournament(
             name,
             description || null,
             authInfo.userId,
@@ -3371,67 +3381,67 @@ io.on('connection', (socket) => {
             startTime || null
         );
 
-        if (result.success && result.tournament) {
-            socket.emit('tournament_created', { success: true, tournament: result.tournament });
+        if (tournament) {
+            socket.emit('tournament_created', { success: true, tournament });
             // Broadcast to all users so they can see the new tournament
             io.emit('tournaments_updated');
         } else {
-            socket.emit('error', { message: result.error || 'Failed to create tournament' });
+            socket.emit('error', { message: 'Failed to create tournament' });
         }
     });
 
     // Get upcoming tournaments
-    socket.on('get_upcoming_tournaments', () => {
-        const tournaments = dbOperations.getUpcomingTournaments();
+    socket.on('get_upcoming_tournaments', async () => {
+        const tournaments = await dbOperations.getUpcomingTournaments(20, 0);
         socket.emit('upcoming_tournaments', { tournaments });
     });
 
     // Get active tournaments
-    socket.on('get_active_tournaments', () => {
-        const tournaments = dbOperations.getActiveTournaments();
+    socket.on('get_active_tournaments', async () => {
+        const tournaments = await dbOperations.getActiveTournaments(20, 0);
         socket.emit('active_tournaments', { tournaments });
     });
 
     // Get completed tournaments
-    socket.on('get_completed_tournaments', () => {
-        const tournaments = dbOperations.getCompletedTournaments();
+    socket.on('get_completed_tournaments', async () => {
+        const tournaments = await dbOperations.getCompletedTournaments(20, 0);
         socket.emit('completed_tournaments', { tournaments });
     });
 
     // Get club tournaments
-    socket.on('get_club_tournaments', ({ clubId }: { clubId: string }) => {
-        const tournaments = dbOperations.getClubTournaments(clubId);
+    socket.on('get_club_tournaments', async ({ clubId }: { clubId: string }) => {
+        const tournaments = await dbOperations.getClubTournaments(clubId, 20, 0);
         socket.emit('club_tournaments', { clubId, tournaments });
     });
 
     // Get user's tournaments
-    socket.on('get_my_tournaments', () => {
+    socket.on('get_my_tournaments', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('my_tournaments', { tournaments: [] });
             return;
         }
-        const tournaments = dbOperations.getUserTournaments(authInfo.userId);
+        const tournaments = await dbOperations.getUserTournaments(authInfo.userId, 20, 0);
         socket.emit('my_tournaments', { tournaments });
     });
 
     // Get tournament details
-    socket.on('get_tournament', ({ tournamentId }: { tournamentId: string }) => {
+    socket.on('get_tournament', async ({ tournamentId }: { tournamentId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
-        const tournament = dbOperations.getTournamentById(tournamentId);
+        const tournament = await dbOperations.getTournamentById(tournamentId);
         if (!tournament) {
             socket.emit('error', { message: 'Tournament not found' });
             return;
         }
-        const participants = dbOperations.getTournamentParticipants(tournamentId);
+        const participants = await dbOperations.getTournamentParticipants(tournamentId);
         const currentRoundGames = tournament.current_round > 0
-            ? dbOperations.getTournamentRoundGames(tournamentId, tournament.current_round)
+            ? await dbOperations.getTournamentRoundGames(tournamentId, tournament.current_round)
             : [];
         const myGames = authInfo
-            ? dbOperations.getUserTournamentGames(tournamentId, authInfo.userId)
+            ? await dbOperations.getUserTournamentGames(tournamentId, authInfo.userId)
             : [];
 
-        const participant = authInfo ? dbOperations.getTournamentParticipant(tournamentId, authInfo.userId) : null;
+        const participant = authInfo ? await dbOperations.getTournamentParticipant(tournamentId, authInfo.userId) : null;
         const isRegistered = participant != null;  // Use != to catch both null and undefined
 
         socket.emit('tournament_details', {
@@ -3444,88 +3454,87 @@ io.on('connection', (socket) => {
     });
 
     // Join a tournament
-    socket.on('join_tournament', ({ tournamentId }: { tournamentId: string }) => {
+    socket.on('join_tournament', async ({ tournamentId }: { tournamentId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to join tournaments' });
             return;
         }
 
-        const result = dbOperations.joinTournament(tournamentId, authInfo.userId);
+        const result = await dbOperations.joinTournament(tournamentId, authInfo.userId);
         if (result.success) {
             socket.emit('tournament_joined', { success: true, tournamentId });
             // Notify all users viewing this tournament
             io.emit('tournament_participant_update', { tournamentId });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to join tournament' });
+            socket.emit('error', { message: result.message || 'Failed to join tournament' });
         }
     });
 
     // Leave a tournament
-    socket.on('leave_tournament', ({ tournamentId }: { tournamentId: string }) => {
+    socket.on('leave_tournament', async ({ tournamentId }: { tournamentId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to leave tournaments' });
             return;
         }
 
-        const result = dbOperations.leaveTournament(tournamentId, authInfo.userId);
+        const result = await dbOperations.leaveTournament(tournamentId, authInfo.userId);
         if (result.success) {
             socket.emit('tournament_left', { success: true, tournamentId });
             io.emit('tournament_participant_update', { tournamentId });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to leave tournament' });
+            socket.emit('error', { message: result.message || 'Failed to leave tournament' });
         }
     });
 
     // Start a tournament (creator only)
-    socket.on('start_tournament', ({ tournamentId }: { tournamentId: string }) => {
+    socket.on('start_tournament', async ({ tournamentId }: { tournamentId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to start tournaments' });
             return;
         }
 
-        const result = dbOperations.startTournament(tournamentId, authInfo.userId);
+        const result = await dbOperations.startTournament(tournamentId, authInfo.userId);
         if (result.success) {
-            socket.emit('tournament_started', { success: true, tournamentId, pairings: result.pairings });
+            socket.emit('tournament_started', { success: true, tournamentId });
             // Notify all participants
             io.emit('tournament_round_started', {
                 tournamentId,
-                round: 1,
-                pairings: result.pairings
+                round: 1
             });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to start tournament' });
+            socket.emit('error', { message: result.message || 'Failed to start tournament' });
         }
     });
 
     // Delete a tournament (creator only, if not active)
-    socket.on('delete_tournament', ({ tournamentId }: { tournamentId: string }) => {
+    socket.on('delete_tournament', async ({ tournamentId }: { tournamentId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to delete tournaments' });
             return;
         }
 
-        const result = dbOperations.deleteTournament(tournamentId, authInfo.userId);
+        const result = await dbOperations.deleteTournamentWithAuth(tournamentId, authInfo.userId);
         if (result.success) {
             socket.emit('tournament_deleted', { success: true, tournamentId });
             io.emit('tournaments_updated');
         } else {
-            socket.emit('error', { message: result.error || 'Failed to delete tournament' });
+            socket.emit('error', { message: result.message || 'Failed to delete tournament' });
         }
     });
 
     // Join a tournament game room
-    socket.on('join_tournament_game', ({ roomCode }: { roomCode: string }) => {
+    socket.on('join_tournament_game', async ({ roomCode }: { roomCode: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to play tournament games' });
             return;
         }
 
-        const tournamentGame = dbOperations.getTournamentGameByRoom(roomCode);
+        const tournamentGame = await dbOperations.getTournamentGameByRoom(roomCode);
         if (!tournamentGame) {
             socket.emit('error', { message: 'Tournament game not found' });
             return;
@@ -3540,7 +3549,7 @@ io.on('connection', (socket) => {
         // Create room if it doesn't exist
         let room = rooms.get(roomCode);
         if (!room) {
-            const tournament = dbOperations.getTournamentById(tournamentGame.tournament_id);
+            const tournament = await dbOperations.getTournamentById(tournamentGame.tournament_id);
             const timeControl = parseTimeControlString(tournament?.time_control || '5+0');
 
             const newRoom: Room = {
@@ -3594,14 +3603,14 @@ io.on('connection', (socket) => {
 
         // Update game status if both players have joined
         if (room.players.white && room.players.black && tournamentGame.status === 'pending') {
-            dbOperations.updateTournamentGameStatus(tournamentGame.id, 'active');
+            await dbOperations.updateTournamentGameStatus(tournamentGame.id, 'active');
         }
     });
 
     // ============ League Events ============
 
     // Create a league
-    socket.on('create_league', ({ name, description, clubId, type, format, timeControl, season, maxDivisions, pointsForWin, pointsForDraw, pointsForLoss, startDate, endDate }: {
+    socket.on('create_league', async ({ name, description, clubId, type, format, timeControl, season, maxDivisions, pointsForWin, pointsForDraw, pointsForLoss, startDate, endDate }: {
         name: string;
         description?: string;
         clubId?: string;
@@ -3624,14 +3633,14 @@ io.on('connection', (socket) => {
 
         // If club league, verify user is admin/owner
         if (clubId) {
-            const member = dbOperations.getClubMember(clubId, authInfo.userId);
+            const member = await dbOperations.getClubMember(clubId, authInfo.userId);
             if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
                 socket.emit('error', { message: 'Must be club admin or owner to create club leagues' });
                 return;
             }
         }
 
-        const result = dbOperations.createLeague(
+        const league = await dbOperations.createLeague(
             name,
             description || null,
             authInfo.userId,
@@ -3648,64 +3657,64 @@ io.on('connection', (socket) => {
             endDate || null
         );
 
-        if (result.success && result.league) {
-            socket.emit('league_created', { success: true, league: result.league });
+        if (league) {
+            socket.emit('league_created', { success: true, league });
             io.emit('leagues_updated');
         } else {
-            socket.emit('error', { message: result.error || 'Failed to create league' });
+            socket.emit('error', { message: 'Failed to create league' });
         }
     });
 
     // Get open leagues (registration)
-    socket.on('get_open_leagues', () => {
-        const leagues = dbOperations.getOpenLeagues();
+    socket.on('get_open_leagues', async () => {
+        const leagues = await dbOperations.getOpenLeagues(20, 0);
         socket.emit('open_leagues', { leagues });
     });
 
     // Get active leagues
-    socket.on('get_active_leagues', () => {
-        const leagues = dbOperations.getActiveLeagues();
+    socket.on('get_active_leagues', async () => {
+        const leagues = await dbOperations.getActiveLeagues(20, 0);
         socket.emit('active_leagues', { leagues });
     });
 
     // Get completed leagues
-    socket.on('get_completed_leagues', () => {
-        const leagues = dbOperations.getCompletedLeagues();
+    socket.on('get_completed_leagues', async () => {
+        const leagues = await dbOperations.getCompletedLeagues();
         socket.emit('completed_leagues', { leagues });
     });
 
     // Get club leagues
-    socket.on('get_club_leagues', ({ clubId }: { clubId: string }) => {
-        const leagues = dbOperations.getClubLeagues(clubId);
+    socket.on('get_club_leagues', async ({ clubId }: { clubId: string }) => {
+        const leagues = await dbOperations.getClubLeagues(clubId);
         socket.emit('club_leagues', { clubId, leagues });
     });
 
     // Get user's leagues
-    socket.on('get_my_leagues', () => {
+    socket.on('get_my_leagues', async () => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('my_leagues', { leagues: [] });
             return;
         }
-        const leagues = dbOperations.getUserLeagues(authInfo.userId);
+        const leagues = await dbOperations.getUserLeagues(authInfo.userId, 20, 0);
         socket.emit('my_leagues', { leagues });
     });
 
     // Get league details
-    socket.on('get_league', ({ leagueId }: { leagueId: string }) => {
+    socket.on('get_league', async ({ leagueId }: { leagueId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
-        const league = dbOperations.getLeagueById(leagueId);
+        const league = await dbOperations.getLeagueById(leagueId);
         if (!league) {
             socket.emit('error', { message: 'League not found' });
             return;
         }
-        const participants = dbOperations.getLeagueParticipants(leagueId);
-        const matches = dbOperations.getLeagueMatches(leagueId);
+        const participants = await dbOperations.getLeagueParticipants(leagueId);
+        const matches = await dbOperations.getLeagueMatches(leagueId);
         const myMatches = authInfo
-            ? dbOperations.getUserLeagueMatches(leagueId, authInfo.userId)
+            ? await dbOperations.getUserLeagueMatches(leagueId, authInfo.userId)
             : [];
 
-        const participant = authInfo ? dbOperations.getLeagueParticipant(leagueId, authInfo.userId) : null;
+        const participant = authInfo ? await dbOperations.getLeagueParticipant(leagueId, authInfo.userId) : null;
         const isRegistered = participant != null;
 
         socket.emit('league_details', {
@@ -3718,91 +3727,90 @@ io.on('connection', (socket) => {
     });
 
     // Get league standings by division
-    socket.on('get_league_standings', ({ leagueId, division }: { leagueId: string; division?: number }) => {
-        const standings = dbOperations.getLeagueStandings(leagueId, division || 1);
+    socket.on('get_league_standings', async ({ leagueId, division }: { leagueId: string; division?: number }) => {
+        const standings = await dbOperations.getLeagueStandings(leagueId, division || 1);
         socket.emit('league_standings', { leagueId, division: division || 1, standings });
     });
 
     // Join a league
-    socket.on('join_league', ({ leagueId, division }: { leagueId: string; division?: number }) => {
+    socket.on('join_league', async ({ leagueId, division }: { leagueId: string; division?: number }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to join leagues' });
             return;
         }
 
-        const result = dbOperations.joinLeague(leagueId, authInfo.userId, division || 1);
+        const result = await dbOperations.joinLeague(leagueId, authInfo.userId, division || 1);
         if (result.success) {
             socket.emit('league_joined', { success: true, leagueId });
             io.emit('league_participant_update', { leagueId });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to join league' });
+            socket.emit('error', { message: result.message || 'Failed to join league' });
         }
     });
 
     // Leave a league
-    socket.on('leave_league', ({ leagueId }: { leagueId: string }) => {
+    socket.on('leave_league', async ({ leagueId }: { leagueId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to leave leagues' });
             return;
         }
 
-        const result = dbOperations.leaveLeague(leagueId, authInfo.userId);
+        const result = await dbOperations.leaveLeague(leagueId, authInfo.userId);
         if (result.success) {
             socket.emit('league_left', { success: true, leagueId });
             io.emit('league_participant_update', { leagueId });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to leave league' });
+            socket.emit('error', { message: result.message || 'Failed to leave league' });
         }
     });
 
     // Start a league (creator only)
-    socket.on('start_league', ({ leagueId }: { leagueId: string }) => {
+    socket.on('start_league', async ({ leagueId }: { leagueId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to start leagues' });
             return;
         }
 
-        const result = dbOperations.startLeague(leagueId, authInfo.userId);
+        const result = await dbOperations.startLeague(leagueId, authInfo.userId);
         if (result.success) {
-            socket.emit('league_started', { success: true, leagueId, matches: result.matches });
+            socket.emit('league_started', { success: true, leagueId });
             io.emit('league_fixtures_generated', {
-                leagueId,
-                matches: result.matches
+                leagueId
             });
         } else {
-            socket.emit('error', { message: result.error || 'Failed to start league' });
+            socket.emit('error', { message: result.message || 'Failed to start league' });
         }
     });
 
     // Delete a league (creator only, if not active)
-    socket.on('delete_league', ({ leagueId }: { leagueId: string }) => {
+    socket.on('delete_league', async ({ leagueId }: { leagueId: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to delete leagues' });
             return;
         }
 
-        const result = dbOperations.deleteLeague(leagueId, authInfo.userId);
+        const result = await dbOperations.deleteLeagueWithAuth(leagueId, authInfo.userId);
         if (result.success) {
             socket.emit('league_deleted', { success: true, leagueId });
             io.emit('leagues_updated');
         } else {
-            socket.emit('error', { message: result.error || 'Failed to delete league' });
+            socket.emit('error', { message: result.message || 'Failed to delete league' });
         }
     });
 
     // Join a league match room
-    socket.on('join_league_match', ({ roomCode }: { roomCode: string }) => {
+    socket.on('join_league_match', async ({ roomCode }: { roomCode: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             socket.emit('error', { message: 'Must be logged in to play league matches' });
             return;
         }
 
-        const leagueMatch = dbOperations.getLeagueMatchByRoom(roomCode);
+        const leagueMatch = await dbOperations.getLeagueMatchByRoom(roomCode);
         if (!leagueMatch) {
             socket.emit('error', { message: 'League match not found' });
             return;
@@ -3817,7 +3825,7 @@ io.on('connection', (socket) => {
         // Create room if it doesn't exist
         let room = rooms.get(roomCode);
         if (!room) {
-            const league = dbOperations.getLeagueById(leagueMatch.league_id);
+            const league = await dbOperations.getLeagueById(leagueMatch.league_id);
             const timeControl = parseTimeControlString(league?.time_control || '10+0');
 
             const newRoom: Room = {
@@ -3871,19 +3879,19 @@ io.on('connection', (socket) => {
 
         // Update match status if both players have joined
         if (room.players.white && room.players.black && leagueMatch.status === 'scheduled') {
-            dbOperations.updateLeagueMatchStatus(leagueMatch.id, 'active');
+            await dbOperations.updateLeagueMatchStatus(leagueMatch.id, 'active');
         }
     });
 
     // Handle disconnection
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
         // Clean up authenticated socket and matchmaking queue
         const authInfo = authenticatedSockets.get(socket.id);
         if (authInfo) {
-            dbOperations.removeFromQueue(authInfo.userId);
+            await dbOperations.removeFromQueue(authInfo.userId);
             authenticatedSockets.delete(socket.id);
         }
-        dbOperations.removeFromQueueBySocket(socket.id);
+        await dbOperations.removeFromQueueBySocket(socket.id);
 
         const roomCode = socketToRoom.get(socket.id);
         if (roomCode) {
@@ -3916,6 +3924,18 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+httpServer.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Database URL configured: ${process.env.DATABASE_URL ? 'Yes' : 'No'}`);
 });

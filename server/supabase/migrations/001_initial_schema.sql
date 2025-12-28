@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
   games_drawn INTEGER DEFAULT 0,
   games_lost INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_login TIMESTAMP WITH TIME ZONE
 );
 
 CREATE INDEX idx_users_username ON users(username);

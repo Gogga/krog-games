@@ -59,13 +59,13 @@ export async function register(
   }
 
   // Check if username exists
-  const existingUsername = dbOperations.getUserByUsername(username);
+  const existingUsername = await dbOperations.getUserByUsername(username);
   if (existingUsername) {
     return { success: false, message: 'Username already taken' };
   }
 
   // Check if email exists
-  const existingEmail = dbOperations.getUserByEmail(email);
+  const existingEmail = await dbOperations.getUserByEmail(email);
   if (existingEmail) {
     return { success: false, message: 'Email already registered' };
   }
@@ -77,7 +77,7 @@ export async function register(
   }
 
   const token = generateToken(user);
-  dbOperations.updateLastLogin(user.id);
+  await dbOperations.updateLastLogin(user.id);
 
   return {
     success: true,
@@ -97,9 +97,9 @@ export async function login(
   }
 
   // Find user by username or email
-  let userWithPassword = dbOperations.getUserByUsername(usernameOrEmail) as (User & { password_hash: string }) | null;
+  let userWithPassword = await dbOperations.getUserByUsername(usernameOrEmail) as (User & { password_hash: string }) | null;
   if (!userWithPassword) {
-    userWithPassword = dbOperations.getUserByEmail(usernameOrEmail) as (User & { password_hash: string }) | null;
+    userWithPassword = await dbOperations.getUserByEmail(usernameOrEmail) as (User & { password_hash: string }) | null;
   }
 
   if (!userWithPassword) {
@@ -113,13 +113,13 @@ export async function login(
   }
 
   // Get user without password hash
-  const user = dbOperations.getUserById(userWithPassword.id);
+  const user = await dbOperations.getUserById(userWithPassword.id);
   if (!user) {
     return { success: false, message: 'User not found' };
   }
 
   const token = generateToken(user);
-  dbOperations.updateLastLogin(user.id);
+  await dbOperations.updateLastLogin(user.id);
 
   return {
     success: true,
@@ -130,22 +130,22 @@ export async function login(
 }
 
 // Get user from token
-export function getUserFromToken(token: string): User | null {
+export async function getUserFromToken(token: string): Promise<User | null> {
   const payload = verifyToken(token);
   if (!payload) {
     return null;
   }
-  return dbOperations.getUserById(payload.userId);
+  return await dbOperations.getUserById(payload.userId);
 }
 
 // Refresh token
-export function refreshToken(oldToken: string): AuthResult {
+export async function refreshToken(oldToken: string): Promise<AuthResult> {
   const payload = verifyToken(oldToken);
   if (!payload) {
     return { success: false, message: 'Invalid or expired token' };
   }
 
-  const user = dbOperations.getUserById(payload.userId);
+  const user = await dbOperations.getUserById(payload.userId);
   if (!user) {
     return { success: false, message: 'User not found' };
   }
@@ -160,14 +160,14 @@ export function refreshToken(oldToken: string): AuthResult {
 }
 
 // Get user profile with game history
-export function getUserProfile(userId: string) {
-  const user = dbOperations.getUserById(userId);
+export async function getUserProfile(userId: string) {
+  const user = await dbOperations.getUserById(userId);
   if (!user) {
     return null;
   }
 
-  const recentGames = dbOperations.getUserGames(userId, 10);
-  const ratingHistory = dbOperations.getUserRatingHistory(userId, 20);
+  const recentGames = await dbOperations.getUserGames(userId, 10);
+  const ratingHistory = await dbOperations.getUserRatingHistory(userId, 20);
 
   return {
     user,
@@ -177,6 +177,6 @@ export function getUserProfile(userId: string) {
 }
 
 // Get leaderboard
-export function getLeaderboard(limit: number = 100) {
-  return dbOperations.getLeaderboard(limit);
+export async function getLeaderboard(limit: number = 100) {
+  return await dbOperations.getLeaderboard(limit);
 }
