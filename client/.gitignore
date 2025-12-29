@@ -3,3 +3,4 @@ playwright-report/
 lighthouse*.json
 lighthouse*.html
 .vercel
+.env*.local

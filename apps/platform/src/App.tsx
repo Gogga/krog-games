@@ -85,7 +85,7 @@ export default function App() {
   const handlePlayGame = (gameId: string) => {
     if (gameId === 'chess') {
       // Chess client is deployed separately
-      window.location.href = 'https://client-hazel-five-75.vercel.app';
+      window.location.href = 'https://krog-chess.vercel.app';
     }
   };
 
