@@ -83,14 +83,7 @@ interface MoveExplanation {
   from: string;
   to: string;
   krog: {
-    formula: string;
     operator: string;
-    tType: string;
-    rType?: string;
-    rTypeDescription?: {
-      en: string;
-      no: string;
-    };
   };
   fide: {
     article: string;
@@ -112,10 +105,6 @@ interface IllegalMoveExplanation {
   from: string;
   to: string;
   reason: string;
-  krog: {
-    formula: string;
-    violation: string;
-  };
   fide: {
     article: string;
     en: string;
@@ -521,8 +510,6 @@ function App() {
       // Track view for KROG leaderboard (only for logged-in users)
       if (explanation.krog) {
         socket.emit('track_krog_view', {
-          rType: explanation.krog.rType,
-          operator: explanation.krog.operator,
           moveSan: explanation.move
         });
       }
@@ -3097,61 +3084,7 @@ function App() {
                   <span style={{ color: '#888', fontSize: '0.9rem' }}>
                     {moveExplanation.from} → {moveExplanation.to}
                   </span>
-                  <span style={{
-                    background: '#4a90d9',
-                    color: 'white',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600
-                  }}>
-                    {moveExplanation.krog.tType}
-                  </span>
-                  {moveExplanation.krog.rType && (
-                    <span style={{
-                      background: '#9b59b6',
-                      color: 'white',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600
-                    }}
-                    title={moveExplanation.krog.rTypeDescription?.[language] || moveExplanation.krog.rType}
-                    >
-                      {moveExplanation.krog.rType.replace('_', ' ').replace(/^R(\d+)/, 'R$1:')}
-                    </span>
-                  )}
                 </div>
-
-                {/* R-Type Classification */}
-                {moveExplanation.krog.rType && moveExplanation.krog.rTypeDescription && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ color: '#888', fontSize: '0.8rem', marginBottom: '4px' }}>
-                      {language === 'en' ? 'Rule Classification' : 'Regelklassifisering'}
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      background: 'rgba(155, 89, 182, 0.15)',
-                      border: '1px solid rgba(155, 89, 182, 0.4)',
-                      padding: '8px 12px',
-                      borderRadius: '6px'
-                    }}>
-                      <span style={{
-                        color: '#9b59b6',
-                        fontWeight: 600,
-                        fontFamily: 'monospace',
-                        fontSize: '0.9rem'
-                      }}>
-                        {moveExplanation.krog.rType}
-                      </span>
-                      <span style={{ color: '#ccc', fontSize: '0.9rem' }}>
-                        {moveExplanation.krog.rTypeDescription[language]}
-                      </span>
-                    </div>
-                  </div>
-                )}
 
                 {/* Move Validation */}
                 <div style={{ marginBottom: '12px' }}>
@@ -3240,12 +3173,11 @@ function App() {
                     const shareText = `KROG Chess - Move Explanation
 
 Move: ${moveExplanation.move} (${moveExplanation.from} → ${moveExplanation.to})
-Rule Type: ${moveExplanation.krog.rType || 'Standard'} - ${moveExplanation.krog.rTypeDescription?.[language] || ''}
 ${moveExplanation.explanation[language]}
 
-FIDE ${moveExplanation.fide.article}: ${moveExplanation.fide[language]}
+FIDE Article ${moveExplanation.fide.article}: ${moveExplanation.fide[language]}
 
-Learn chess with KROG's mathematical rule validation!`;
+Learn chess with KROG's proprietary rule validation!`;
 
                     // Try Web Share API first (works better on mobile)
                     if (navigator.share) {
@@ -3303,8 +3235,6 @@ Learn chess with KROG's mathematical rule validation!`;
                     // Track share event
                     if (getStoredToken()) {
                       socket.emit('track_krog_share', {
-                        rType: moveExplanation.krog.rType,
-                        operator: moveExplanation.krog.operator,
                         moveSan: moveExplanation.move
                       });
                     }

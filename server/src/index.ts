@@ -1477,11 +1477,7 @@ io.on('connection', (socket) => {
                 from: result.from,
                 to: result.to,
                 krog: {
-                    formula: legalExplanation.krog.formula,
-                    operator: legalExplanation.krog.operator,
-                    tType: legalExplanation.krog.tType,
-                    rType: rType,
-                    rTypeDescription: rTypeDescription
+                    operator: legalExplanation.krog.operator
                 },
                 fide: legalExplanation.fide,
                 explanation: legalExplanation.explanation,
@@ -1528,16 +1524,12 @@ io.on('connection', (socket) => {
                 }
             }
         } else {
-            // Illegal move - send KROG explanation for why
+            // Illegal move - send explanation for why
             const illegalExplanation = krogExplanation as IllegalMoveExplanation;
             socket.emit('illegal_move', {
                 from: illegalExplanation.from,
                 to: illegalExplanation.to,
                 reason: illegalExplanation.reason,
-                krog: {
-                    formula: illegalExplanation.krog.formula,
-                    violation: illegalExplanation.krog.violation
-                },
                 fide: illegalExplanation.fide,
                 explanation: illegalExplanation.explanation
             });
@@ -1577,11 +1569,7 @@ io.on('connection', (socket) => {
                 isLegal: true,
                 move: explanation.move,
                 krog: {
-                    formula: explanation.krog.formula,
-                    operator: explanation.krog.operator,
-                    tType: explanation.krog.tType,
-                    rType: rType,
-                    rTypeDescription: rTypeDescription
+                    operator: explanation.krog.operator
                 },
                 fide: explanation.fide,
                 explanation: explanation.explanation,
@@ -1595,10 +1583,6 @@ io.on('connection', (socket) => {
                 to,
                 isLegal: false,
                 reason: illegal.reason,
-                krog: {
-                    formula: illegal.krog.formula,
-                    violation: illegal.krog.violation
-                },
                 fide: illegal.fide,
                 explanation: illegal.explanation
             });
@@ -1648,11 +1632,7 @@ io.on('connection', (socket) => {
                     to: moveInfo.to,
                     piece: moveInfo.piece,
                     krog: {
-                        formula: explanation.krog.formula,
-                        operator: explanation.krog.operator,
-                        tType: explanation.krog.tType,
-                        rType: rType,
-                        rTypeDescription: rTypeDescription
+                        operator: explanation.krog.operator
                     },
                     fide: explanation.fide,
                     explanation: explanation.explanation,
@@ -1671,29 +1651,29 @@ io.on('connection', (socket) => {
     // ==================== KROG LEADERBOARD ====================
 
     // Track KROG explanation view
-    socket.on('track_krog_view', async ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
+    socket.on('track_krog_view', async ({ moveSan }: { moveSan: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             // Guest users don't track stats
             return;
         }
         try {
-            await dbOperations.recordKrogActivity(authInfo.userId, 'view', moveSan, rType, operator);
-            await dbOperations.updateKrogStats(authInfo.userId, 'view', rType, operator);
+            await dbOperations.recordKrogActivity(authInfo.userId, 'view', moveSan, 'general', 'P');
+            await dbOperations.updateKrogStats(authInfo.userId, 'view', 'general', 'P');
         } catch (error) {
             console.error('Error tracking KROG view:', error);
         }
     });
 
     // Track KROG explanation share
-    socket.on('track_krog_share', async ({ rType, operator, moveSan }: { rType: string; operator: string; moveSan: string }) => {
+    socket.on('track_krog_share', async ({ moveSan }: { moveSan: string }) => {
         const authInfo = authenticatedSockets.get(socket.id);
         if (!authInfo) {
             return;
         }
         try {
-            await dbOperations.recordKrogActivity(authInfo.userId, 'share', moveSan, rType, operator);
-            await dbOperations.updateKrogStats(authInfo.userId, 'share', rType, operator);
+            await dbOperations.recordKrogActivity(authInfo.userId, 'share', moveSan, 'general', 'P');
+            await dbOperations.updateKrogStats(authInfo.userId, 'share', 'general', 'P');
         } catch (error) {
             console.error('Error tracking KROG share:', error);
         }

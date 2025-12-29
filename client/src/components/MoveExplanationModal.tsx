@@ -15,11 +15,7 @@ interface MoveExplanationData {
   to: string;
   piece: string;
   krog: {
-    formula: string;
     operator: string;
-    tType: string;
-    rType: string;
-    rTypeDescription: { en: string; no: string };
   };
   fide: {
     article: string;
@@ -67,8 +63,6 @@ export default function MoveExplanationModal({ isOpen, onClose, data, language, 
   useEffect(() => {
     if (isOpen && data && socket && !hasTrackedView.current) {
       socket.emit('track_krog_view', {
-        rType: data.krog.rType,
-        operator: data.krog.operator,
         moveSan: data.move
       });
       hasTrackedView.current = true;
@@ -97,13 +91,11 @@ export default function MoveExplanationModal({ isOpen, onClose, data, language, 
     return `KROG Chess - Move Explanation
 
 Move ${moveNumber}: ${data.move}
-Rule Type: ${data.krog.rType.replace(/_/g, ' ')}
 FIDE Article ${fideInfo.article}
 
 ${language === 'en' ? data.explanation.en : data.explanation.no}
-${language === 'no' ? data.explanation.en : data.explanation.no}
 
-Learn chess with KROG's mathematical rule validation!`;
+Learn chess with KROG's proprietary rule validation!`;
   };
 
   const handleShare = async () => {
@@ -131,8 +123,6 @@ Learn chess with KROG's mathematical rule validation!`;
     // Track share event
     if (socket && data) {
       socket.emit('track_krog_share', {
-        rType: data.krog.rType,
-        operator: data.krog.operator,
         moveSan: data.move
       });
     }
@@ -278,36 +268,6 @@ Learn chess with KROG's mathematical rule validation!`;
                 ? 'Validated using KROG\'s proprietary mathematical framework'
                 : 'Validert med KROGs proprietære matematiske rammeverk'}
             </div>
-          </div>
-        </div>
-
-        {/* R-Type Badge */}
-        <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
-          <div style={{
-            fontWeight: 600,
-            marginBottom: isMobile ? '8px' : '10px',
-            color: '#9b59b6',
-            fontSize: isMobile ? '0.8rem' : '0.9rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            {language === 'en' ? 'Rule Type' : 'Regeltype'}
-          </div>
-          <div
-            style={{
-              display: 'inline-block',
-              backgroundColor: 'rgba(155, 89, 182, 0.15)',
-              color: '#9b59b6',
-              padding: isMobile ? '6px 12px' : '8px 14px',
-              borderRadius: '6px',
-              fontWeight: 500,
-              fontSize: isMobile ? '0.85rem' : '0.95rem'
-            }}
-          >
-            {data.krog.rType.replace(/_/g, ' ')}
-          </div>
-          <div style={{ color: '#ccc', marginTop: '8px', fontSize: isMobile ? '0.85rem' : '0.9rem', lineHeight: 1.5 }}>
-            {data.krog.rTypeDescription[language]}
           </div>
         </div>
 
