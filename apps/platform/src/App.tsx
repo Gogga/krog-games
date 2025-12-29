@@ -84,8 +84,8 @@ export default function App() {
 
   const handlePlayGame = (gameId: string) => {
     if (gameId === 'chess') {
-      // In production, this would route to the chess game
-      window.location.href = '/games/chess';
+      // Chess client is deployed separately
+      window.location.href = 'https://client-hazel-five-75.vercel.app';
     }
   };
 

@@ -2,3 +2,4 @@ test-results/
 playwright-report/
 lighthouse*.json
 lighthouse*.html
+.vercel

@@ -7,19 +7,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@krog/types": "workspace:*",
-    "@krog/shared": "workspace:*",
-    "@krog/ui": "workspace:*",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "socket.io-client": "^4.8.1"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
