@@ -304,7 +304,7 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                     </div>
                 )}
 
-                {/* KROG Formula */}
+                {/* KROG Rule Validation */}
                 {currentLesson.krog && (
                     <div style={{
                         background: 'rgba(129, 182, 76, 0.1)',
@@ -314,20 +314,16 @@ const LessonsMode: React.FC<LessonsModeProps> = ({ socket, language, onExit }) =
                         marginBottom: isMobile ? '12px' : '20px'
                     }}>
                         <h3 style={{ margin: isMobile ? '0 0 10px 0' : '0 0 12px 0', color: '#81b64c', fontSize: isMobile ? '1rem' : '1.17rem' }}>
-                            KROG
+                            {language === 'en' ? 'KROG Rule Validation' : 'KROG Regelvalidering'}
                         </h3>
                         <div style={{
-                            fontFamily: 'monospace',
-                            fontSize: isMobile ? '0.8rem' : '1rem',
+                            fontSize: isMobile ? '0.85rem' : '0.95rem',
                             color: '#81b64c',
                             background: 'rgba(0,0,0,0.3)',
                             padding: isMobile ? '10px 12px' : '12px 16px',
-                            borderRadius: '6px',
-                            overflowX: 'auto',
-                            whiteSpace: 'pre-wrap',
-                            WebkitOverflowScrolling: 'touch'
+                            borderRadius: '6px'
                         }}>
-                            {currentLesson.krog.formula}
+                            ✓ {language === 'en' ? 'This rule is validated using KROG\'s proprietary mathematical framework' : 'Denne regelen er validert med KROGs proprietære matematiske rammeverk'}
                         </div>
                         {currentLesson.krog.note && (
                             <p style={{

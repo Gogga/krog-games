@@ -76,8 +76,8 @@ const BADGES = {
 // Tab descriptions
 const TAB_DESCRIPTIONS = {
   views: {
-    en: 'Move explanations you\'ve read. Each time you see a KROG formula for a move, it counts as a view.',
-    no: 'Trekkforklaringer du har lest. Hver gang du ser en KROG-formel for et trekk, teller det som en visning.'
+    en: 'Move explanations you\'ve read. Each time you see a KROG explanation for a move, it counts as a view.',
+    no: 'Trekkforklaringer du har lest. Hver gang du ser en KROG-forklaring for et trekk, teller det som en visning.'
   },
   shares: {
     en: 'Explanations you\'ve shared with others. Spread knowledge of chess rules!',
@@ -285,8 +285,8 @@ export default function KrogLeaderboard({ isOpen, onClose, socket, language, cur
                 </div>
                 <div style={{ color: '#aaa', fontSize: isMobile ? '0.8rem' : '0.85rem', lineHeight: 1.5 }}>
                   {language === 'en'
-                    ? 'The KROG leaderboard rewards curiosity! Explore move explanations to understand the mathematical formulas behind chess rules. Compete with others and earn badges as you master all 15 rule types.'
-                    : 'KROG-topplisten belønner nysgjerrighet! Utforsk trekkforklaringer for å forstå de matematiske formlene bak sjakkregler. Konkurrer med andre og tjen merker mens du mestrer alle 15 regeltyper.'}
+                    ? 'The KROG leaderboard rewards curiosity! Explore move explanations to understand the logic behind chess rules. Compete with others and earn badges as you master all 15 rule types.'
+                    : 'KROG-topplisten belønner nysgjerrighet! Utforsk trekkforklaringer for å forstå logikken bak sjakkregler. Konkurrer med andre og tjen merker mens du mestrer alle 15 regeltyper.'}
                 </div>
               </div>
 
@@ -556,8 +556,8 @@ export default function KrogLeaderboard({ isOpen, onClose, socket, language, cur
           <div style={{ padding: isMobile ? '12px 14px 80px 14px' : '14px 20px', borderTop: '1px solid #333', backgroundColor: '#252525' }}>
             <div style={{ textAlign: 'center', color: '#ccc', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>
               {language === 'en'
-                ? (isMobile ? 'Tap moves to learn KROG formulas' : 'Click moves in game history to learn KROG formulas')
-                : (isMobile ? 'Trykk på trekk for KROG-formler' : 'Klikk på trekk i spillhistorikken for å lære KROG-formler')}
+                ? (isMobile ? 'Tap moves to learn KROG explanations' : 'Click moves in game history to learn KROG explanations')
+                : (isMobile ? 'Trykk på trekk for KROG-forklaringer' : 'Klikk på trekk i spillhistorikken for å lære KROG-forklaringer')}
             </div>
           </div>
         </div>

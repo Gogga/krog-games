@@ -3028,20 +3028,19 @@ function App() {
                   </span>
                 </div>
 
-                {/* KROG Formula */}
+                {/* Move Validation */}
                 <div style={{ marginBottom: '12px' }}>
                   <div style={{ color: '#888', fontSize: '0.8rem', marginBottom: '4px' }}>
-                    KROG Formula
+                    {language === 'en' ? 'Rule Violation' : 'Regelbrudd'}
                   </div>
                   <div style={{
-                    fontFamily: 'monospace',
                     fontSize: '0.95rem',
                     color: '#e74c3c',
                     background: 'rgba(0,0,0,0.3)',
                     padding: '10px 14px',
                     borderRadius: '6px'
                   }}>
-                    F({illegalMoveExplanation.to}) ↔ {illegalMoveExplanation.krog.violation}
+                    ✗ {language === 'en' ? 'This move is prohibited' : 'Dette trekket er forbudt'}
                   </div>
                 </div>
 
@@ -3154,21 +3153,22 @@ function App() {
                   </div>
                 )}
 
-                {/* KROG Formula */}
+                {/* Move Validation */}
                 <div style={{ marginBottom: '12px' }}>
                   <div style={{ color: '#888', fontSize: '0.8rem', marginBottom: '4px' }}>
-                    KROG Formula
+                    {language === 'en' ? 'Move Validation' : 'Trekkvalidering'}
                   </div>
                   <div style={{
-                    fontFamily: 'monospace',
                     fontSize: '0.95rem',
                     color: '#81b64c',
                     background: 'rgba(0,0,0,0.3)',
                     padding: '10px 14px',
-                    borderRadius: '6px',
-                    overflowX: 'auto'
+                    borderRadius: '6px'
                   }}>
-                    {moveExplanation.krog.formula}
+                    ✓ {language === 'en' ? 'This move is permitted' : 'Dette trekket er tillatt'}
+                    <div style={{ color: '#666', fontSize: '0.8rem', marginTop: '4px' }}>
+                      {language === 'en' ? 'Validated using KROG\'s proprietary framework' : 'Validert med KROGs proprietære rammeverk'}
+                    </div>
                   </div>
                 </div>
 
@@ -3240,13 +3240,12 @@ function App() {
                     const shareText = `KROG Chess - Move Explanation
 
 Move: ${moveExplanation.move} (${moveExplanation.from} → ${moveExplanation.to})
-Rule: ${moveExplanation.krog.rType || 'Standard'} - ${moveExplanation.krog.rTypeDescription?.[language] || ''}
-Formula: ${moveExplanation.krog.formula}
+Rule Type: ${moveExplanation.krog.rType || 'Standard'} - ${moveExplanation.krog.rTypeDescription?.[language] || ''}
 ${moveExplanation.explanation[language]}
 
 FIDE ${moveExplanation.fide.article}: ${moveExplanation.fide[language]}
 
-Learn more at KROG Chess!`;
+Learn chess with KROG's mathematical rule validation!`;
 
                     // Try Web Share API first (works better on mobile)
                     if (navigator.share) {

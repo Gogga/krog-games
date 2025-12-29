@@ -302,17 +302,14 @@ const PuzzleMode: React.FC<PuzzleModeProps> = ({ socket, language, onExit }) => 
                         KROG {language === 'en' ? 'Explanation' : 'Forklaring'}
                     </div>
                     <div style={{
-                        fontFamily: 'monospace',
-                        fontSize: isMobile ? '0.8rem' : '0.95rem',
+                        fontSize: isMobile ? '0.85rem' : '0.95rem',
                         color: '#81b64c',
                         background: 'rgba(0,0,0,0.3)',
                         padding: isMobile ? '8px 10px' : '10px 14px',
                         borderRadius: '6px',
-                        marginBottom: isMobile ? '8px' : '10px',
-                        overflowX: 'auto',
-                        WebkitOverflowScrolling: 'touch'
+                        marginBottom: isMobile ? '8px' : '10px'
                     }}>
-                        {solvedKrog.formula}
+                        ✓ {language === 'en' ? 'Move validated using KROG\'s proprietary framework' : 'Trekk validert med KROGs proprietære rammeverk'}
                     </div>
                     <div style={{ color: '#ccc', fontSize: isMobile ? '0.85rem' : '1rem', lineHeight: 1.5 }}>
                         {solvedKrog.explanation[language]}

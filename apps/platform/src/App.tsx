@@ -40,7 +40,7 @@ const games: Game[] = [
     id: 'go',
     name: 'KROG Go',
     description: 'Ancient strategy game of territory control. Simple rules, infinite depth.',
-    icon: '⚫',
+    icon: '●',
     available: false,
     playerCount: '2 players',
     features: ['Territory Scoring', 'Handicap Stones', 'Life & Death Problems']
@@ -80,7 +80,7 @@ const krogFeatures = [
 ];
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<'games' | 'about' | 'learn'>('games');
+  const [activeSection, setActiveSection] = useState<'games' | 'about' | 'learn' | 'research'>('games');
 
   const handlePlayGame = (gameId: string) => {
     if (gameId === 'chess') {
@@ -107,19 +107,19 @@ export default function App() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.5rem' }}>♟</span>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f97316' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#81b64c' }}>
               KROG Games
             </h1>
           </div>
           <nav style={{ display: 'flex', gap: '1.5rem' }}>
-            {(['games', 'about', 'learn'] as const).map(section => (
+            {(['games', 'about', 'learn', 'research'] as const).map(section => (
               <button
                 key={section}
                 onClick={() => setActiveSection(section)}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: activeSection === section ? '#f97316' : '#9ca3af',
+                  color: activeSection === section ? '#81b64c' : '#9ca3af',
                   fontWeight: activeSection === section ? 'bold' : 'normal',
                   fontSize: '1rem',
                   cursor: 'pointer',
@@ -146,7 +146,7 @@ export default function App() {
             marginBottom: '1rem',
             color: '#f3f4f6'
           }}>
-            Board Games with <span style={{ color: '#f97316' }}>Formal Rule Explanations</span>
+            Board Games with <span style={{ color: '#81b64c' }}>Formal Rule Explanations</span>
           </h2>
           <p style={{
             fontSize: '1.25rem',
@@ -161,7 +161,7 @@ export default function App() {
             <button
               onClick={() => handlePlayGame('chess')}
               style={{
-                backgroundColor: '#f97316',
+                backgroundColor: '#81b64c',
                 color: 'white',
                 padding: '0.75rem 2rem',
                 borderRadius: '0.5rem',
@@ -177,10 +177,10 @@ export default function App() {
               onClick={() => setActiveSection('learn')}
               style={{
                 backgroundColor: 'transparent',
-                color: '#f97316',
+                color: '#81b64c',
                 padding: '0.75rem 2rem',
                 borderRadius: '0.5rem',
-                border: '2px solid #f97316',
+                border: '2px solid #81b64c',
                 fontSize: '1.1rem',
                 fontWeight: 'bold',
                 cursor: 'pointer'
@@ -227,7 +227,7 @@ export default function App() {
                     <div style={{
                       fontSize: '3rem',
                       marginBottom: '1rem',
-                      filter: game.available ? 'none' : 'grayscale(100%)'
+                      color: game.available ? '#81b64c' : '#e67e22'
                     }}>
                       {game.icon}
                     </div>
@@ -287,7 +287,7 @@ export default function App() {
                     {game.available ? (
                       <button
                         style={{
-                          backgroundColor: '#f97316',
+                          backgroundColor: '#81b64c',
                           color: 'white',
                           padding: '0.5rem 1rem',
                           borderRadius: '0.375rem',
@@ -360,7 +360,7 @@ export default function App() {
                   backgroundColor: '#1f2937',
                   borderRadius: '0.5rem',
                   padding: '1.5rem',
-                  borderLeft: '4px solid #f97316'
+                  borderLeft: '4px solid #81b64c'
                 }}>
                   <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>7 T-Types</h5>
                   <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
@@ -454,23 +454,247 @@ export default function App() {
                   marginBottom: '1rem',
                   color: '#f3f4f6'
                 }}>
-                  Example: Knight Move Validation
+                  How It Works
                 </h4>
-                <div style={{
-                  fontFamily: 'monospace',
-                  backgroundColor: '#111827',
-                  padding: '1rem',
-                  borderRadius: '0.5rem',
-                  overflow: 'auto'
-                }}>
-                  <div style={{ color: '#9ca3af' }}>// KROG validation for Ng1-f3</div>
-                  <div style={{ color: '#f97316' }}>KROG Formula:</div>
-                  <div style={{ color: '#d1d5db' }}>  P(Nf3) ≡ PM(knight,g1,f3) ∧ ¬CS(self)</div>
-                  <div style={{ marginTop: '0.5rem', color: '#f97316' }}>R-Type:</div>
-                  <div style={{ color: '#d1d5db' }}>  R11_discrete_jump (maps to universal R1)</div>
-                  <div style={{ marginTop: '0.5rem', color: '#f97316' }}>FIDE Rule:</div>
-                  <div style={{ color: '#d1d5db' }}>  Article 3.6 - Knight moves in L-shape</div>
+                <p style={{ color: '#d1d5db', lineHeight: '1.8', marginBottom: '1rem' }}>
+                  When you make a move, KROG validates it against formal rules and provides:
+                </p>
+                <ul style={{ color: '#9ca3af', lineHeight: '2', paddingLeft: '1.5rem' }}>
+                  <li>Mathematical proof of move legality</li>
+                  <li>Classification into universal rule types (R-types)</li>
+                  <li>Reference to official game rules (e.g., FIDE articles)</li>
+                  <li>Bilingual explanations (English/Norwegian)</li>
+                </ul>
+              </div>
+            </>
+          )}
+
+          {activeSection === 'research' && (
+            <>
+              <h3 style={{
+                fontSize: '1.75rem',
+                fontWeight: 'bold',
+                marginBottom: '2rem',
+                color: '#f3f4f6'
+              }}>
+                Neurosymbolic AI Research Platform
+              </h3>
+
+              {/* Hero Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                marginBottom: '2rem',
+                border: '1px solid #81b64c'
+              }}>
+                <h4 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#81b64c', marginBottom: '1rem' }}>
+                  The Future of Explainable AI
+                </h4>
+                <p style={{ color: '#d1d5db', lineHeight: '1.8', fontSize: '1.1rem' }}>
+                  KROG Games is the world's first neurosymbolic game platform, combining neural pattern recognition
+                  with symbolic logical reasoning to create AI that can explain its decisions.
+                </p>
+              </div>
+
+              {/* What is Neurosymbolic AI */}
+              <div style={{
+                backgroundColor: '#1f2937',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                marginBottom: '2rem'
+              }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  What is Neurosymbolic AI?
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#e67e22', fontWeight: 'bold', marginBottom: '0.5rem' }}>Neural AI (Pattern)</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Deep learning that recognizes patterns from data. Powerful but opaque - cannot explain why it makes decisions.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>Symbolic AI (Logic)</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Rule-based reasoning with explicit logic. Interpretable but requires hand-coded knowledge.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem', border: '1px solid #81b64c' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Neurosymbolic (Both)</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Combines pattern recognition with logical rules. The best of both worlds: powerful AND explainable.
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Why This Matters */}
+              <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#f3f4f6' }}>
+                Why Neurosymbolic AI Matters
+              </h4>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '1rem',
+                marginBottom: '2rem'
+              }}>
+                {[
+                  { title: 'Explainability', desc: 'AI decisions can be traced to logical rules, not black boxes', icon: '🔍' },
+                  { title: 'Data Efficiency', desc: 'Symbolic rules reduce need for massive training datasets by 100x', icon: '📊' },
+                  { title: 'Transfer Learning', desc: 'Universal rules transfer knowledge across different domains', icon: '🔄' },
+                  { title: 'Safety & Trust', desc: 'Symbolic constraints prevent AI from violating hard rules', icon: '🛡️' },
+                  { title: 'Human Collaboration', desc: 'Humans can understand and verify AI reasoning', icon: '🤝' },
+                  { title: 'Regulatory Compliance', desc: 'EU AI Act requires explainable AI for high-risk applications', icon: '⚖️' }
+                ].map((item, i) => (
+                  <div key={i} style={{
+                    backgroundColor: '#1f2937',
+                    borderRadius: '0.5rem',
+                    padding: '1.25rem',
+                    borderLeft: '3px solid #81b64c'
+                  }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{item.icon}</div>
+                    <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#f3f4f6' }}>{item.title}</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* KROG Advantage */}
+              <div style={{
+                backgroundColor: '#1f2937',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                marginBottom: '2rem'
+              }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  The KROG Games Advantage
+                </h4>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>1.</span>
+                    <div>
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Explainable Game AI</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                        Unlike AlphaZero which can't explain moves, KROG AI provides formal logical reasoning for every decision.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>2.</span>
+                    <div>
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Cross-Game Transfer</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                        Universal R-types enable skill transfer: master a concept in chess, apply it faster in shogi or go.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>3.</span>
+                    <div>
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Research-Grade Data</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                        Every decision captures both neural patterns (behavior) and symbolic rules - unique neurosymbolic training data.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>4.</span>
+                    <div>
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Cognitive Science Platform</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                        Empirically measure how humans learn symbolic rules vs. neural patterns across multiple game domains.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Industry Validation */}
+              <div style={{
+                backgroundColor: '#1f2937',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                marginBottom: '2rem'
+              }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#f3f4f6' }}>
+                  Industry Validation
+                </h4>
+                <p style={{ color: '#d1d5db', lineHeight: '1.8', marginBottom: '1rem' }}>
+                  Major organizations investing in neurosymbolic AI research:
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {['IBM', 'MIT-IBM Watson Lab', 'DeepMind', 'DARPA', 'Microsoft Research', 'Stanford HAI'].map(org => (
+                    <span key={org} style={{
+                      backgroundColor: '#2a2a2a',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '2rem',
+                      fontSize: '0.85rem',
+                      color: '#d1d5db'
+                    }}>
+                      {org}
+                    </span>
+                  ))}
+                </div>
+                <p style={{ color: '#81b64c', marginTop: '1.5rem', fontWeight: '500' }}>
+                  KROG Games is the first deployed neurosymbolic platform with real user data at scale.
+                </p>
+              </div>
+
+              {/* Research Opportunities */}
+              <div style={{
+                backgroundColor: '#1f2937',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                marginBottom: '2rem'
+              }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  Research Opportunities
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {[
+                    { venue: 'AI/ML Conferences', topics: 'AAAI, NeurIPS, IJCAI', focus: 'Neurosymbolic framework foundations' },
+                    { venue: 'Cognitive Science', topics: 'COGSCI, CogSci Journal', focus: 'Human transfer learning patterns' },
+                    { venue: 'AI Safety', topics: 'JAIR, AI Magazine', focus: 'Explainable AI in games' },
+                    { venue: 'High Impact', topics: 'Science, Nature', focus: 'Large-scale decision analysis' }
+                  ].map((item, i) => (
+                    <div key={i} style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                      <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.25rem' }}>{item.venue}</h5>
+                      <p style={{ color: '#6b7280', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{item.topics}</p>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>{item.focus}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Contact CTA */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                textAlign: 'center',
+                border: '1px solid #333'
+              }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#f3f4f6' }}>
+                  Interested in Research Collaboration?
+                </h4>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+                  We're open to academic partnerships, research collaborations, and investor discussions.
+                </p>
+                <a
+                  href="mailto:georg@kroggames.com"
+                  style={{
+                    display: 'inline-block',
+                    backgroundColor: '#81b64c',
+                    color: 'white',
+                    padding: '0.75rem 2rem',
+                    borderRadius: '0.5rem',
+                    fontWeight: 'bold',
+                    textDecoration: 'none'
+                  }}
+                >
+                  Contact Us
+                </a>
               </div>
             </>
           )}

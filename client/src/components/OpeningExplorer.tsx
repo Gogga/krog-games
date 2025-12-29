@@ -401,27 +401,15 @@ const OpeningExplorer: React.FC<OpeningExplorerProps> = ({ socket, language, onE
                                             borderRadius: '6px'
                                         }}>
                                             <div style={{ color: '#81b64c', fontWeight: 600, marginBottom: isMobile ? '4px' : '6px', fontSize: isMobile ? '0.75rem' : '0.85rem' }}>
-                                                KROG
+                                                {language === 'en' ? 'Strategic Theme' : 'Strategisk tema'}
                                             </div>
                                             <div style={{
-                                                fontFamily: 'monospace',
-                                                fontSize: isMobile ? '0.7rem' : '0.8rem',
+                                                fontSize: isMobile ? '0.75rem' : '0.85rem',
                                                 color: '#81b64c',
-                                                marginBottom: '4px',
-                                                overflowX: 'auto',
-                                                WebkitOverflowScrolling: 'touch'
+                                                marginBottom: '4px'
                                             }}>
                                                 {selectedOpening.krog.mainTheme}
                                             </div>
-                                            {!isMobile && (
-                                                <div style={{
-                                                    fontFamily: 'monospace',
-                                                    fontSize: '0.75rem',
-                                                    color: '#888'
-                                                }}>
-                                                    {selectedOpening.krog.strategicFormula}
-                                                </div>
-                                            )}
                                         </div>
                                     )}
                                 </div>

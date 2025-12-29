@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-type Page = 'overview' | 'decisions' | 'transfer' | 'rtypes' | 'experiments' | 'export';
+type Page = 'overview' | 'decisions' | 'transfer' | 'rtypes' | 'experiments' | 'export' | 'neurosymbolic';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('overview');
@@ -15,6 +15,7 @@ function App() {
         {currentPage === 'rtypes' && <RTypeMasteryPage />}
         {currentPage === 'experiments' && <ExperimentsPage />}
         {currentPage === 'export' && <DataExportPage />}
+        {currentPage === 'neurosymbolic' && <NeurosymbolicPage />}
       </main>
     </div>
   );
@@ -62,6 +63,12 @@ function Sidebar({ currentPage, setCurrentPage }: { currentPage: Page; setCurren
 
         <div className="nav-section">
           <div className="nav-section-title">Research</div>
+          <div
+            className={`nav-item ${currentPage === 'neurosymbolic' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('neurosymbolic')}
+          >
+            Neurosymbolic AI
+          </div>
           <div
             className={`nav-item ${currentPage === 'experiments' ? 'active' : ''}`}
             onClick={() => setCurrentPage('experiments')}
@@ -882,6 +889,230 @@ function RTypeFullHeatmap() {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function NeurosymbolicPage() {
+  return (
+    <>
+      <div className="page-header">
+        <h1>Neurosymbolic AI Platform</h1>
+        <p>Understanding the KROG Games research advantage</p>
+      </div>
+
+      {/* Key Concept Banner */}
+      <div className="chart-container" style={{ borderLeft: '4px solid var(--color-primary)', marginBottom: '2rem' }}>
+        <h3 className="chart-title" style={{ color: 'var(--color-primary)', marginBottom: '1rem' }}>
+          The Future of Explainable AI
+        </h3>
+        <p style={{ color: 'var(--color-text-secondary)', lineHeight: '1.8' }}>
+          KROG Games is the world's first neurosymbolic game platform. We combine neural pattern recognition
+          (learning from player behavior) with symbolic logical reasoning (formal game rules) to create
+          AI that can explain its decisions - something traditional deep learning cannot do.
+        </p>
+      </div>
+
+      {/* Two AI Paradigms */}
+      <div className="card-grid" style={{ marginBottom: '2rem' }}>
+        <div className="card" style={{ borderLeft: '4px solid #e67e22' }}>
+          <h4 style={{ color: '#e67e22', marginBottom: '0.5rem' }}>Neural AI (Pattern)</h4>
+          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Deep learning recognizes patterns from massive datasets. Powerful but opaque.
+          </p>
+          <ul style={{ color: 'var(--color-text-tertiary)', fontSize: '0.85rem', paddingLeft: '1.25rem' }}>
+            <li>Cannot explain decisions</li>
+            <li>Requires millions of examples</li>
+            <li>No knowledge transfer</li>
+          </ul>
+        </div>
+        <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
+          <h4 style={{ color: '#3b82f6', marginBottom: '0.5rem' }}>Symbolic AI (Logic)</h4>
+          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Rule-based reasoning with explicit logic. Interpretable but brittle.
+          </p>
+          <ul style={{ color: 'var(--color-text-tertiary)', fontSize: '0.85rem', paddingLeft: '1.25rem' }}>
+            <li>Fully explainable</li>
+            <li>Requires hand-coded rules</li>
+            <li>Breaks on edge cases</li>
+          </ul>
+        </div>
+        <div className="card" style={{ borderLeft: '4px solid var(--color-primary)' }}>
+          <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>Neurosymbolic (KROG)</h4>
+          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Best of both worlds: pattern recognition + logical rules.
+          </p>
+          <ul style={{ color: 'var(--color-text-tertiary)', fontSize: '0.85rem', paddingLeft: '1.25rem' }}>
+            <li>Explainable decisions</li>
+            <li>100x more data efficient</li>
+            <li>Cross-domain transfer</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Why It Matters */}
+      <div className="table-container" style={{ marginBottom: '2rem' }}>
+        <div className="table-header">
+          <h3 className="table-title">Why Neurosymbolic AI Matters</h3>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Challenge</th>
+              <th>Traditional AI</th>
+              <th>KROG Solution</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Explainability</td>
+              <td style={{ color: 'var(--color-error)' }}>Black box</td>
+              <td style={{ color: 'var(--color-success)' }}>Formal logical proofs</td>
+              <td>Regulatory compliance (EU AI Act)</td>
+            </tr>
+            <tr>
+              <td>Data Efficiency</td>
+              <td style={{ color: 'var(--color-error)' }}>Millions of examples</td>
+              <td style={{ color: 'var(--color-success)' }}>Rules + thousands</td>
+              <td>100x faster training</td>
+            </tr>
+            <tr>
+              <td>Transfer Learning</td>
+              <td style={{ color: 'var(--color-error)' }}>Start from scratch</td>
+              <td style={{ color: 'var(--color-success)' }}>Universal R-types</td>
+              <td>Cross-game skill transfer</td>
+            </tr>
+            <tr>
+              <td>Safety</td>
+              <td style={{ color: 'var(--color-error)' }}>Adversarial attacks</td>
+              <td style={{ color: 'var(--color-success)' }}>Hard constraints</td>
+              <td>Critical system reliability</td>
+            </tr>
+            <tr>
+              <td>Human Trust</td>
+              <td style={{ color: 'var(--color-error)' }}>"Trust me"</td>
+              <td style={{ color: 'var(--color-success)' }}>"Here's why"</td>
+              <td>Human-AI collaboration</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* KROG Advantage */}
+      <div className="chart-container" style={{ marginBottom: '2rem' }}>
+        <div className="chart-header">
+          <h3 className="chart-title">The KROG Games Research Advantage</h3>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', padding: '1rem 0' }}>
+          <div>
+            <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>1. Explainable Game AI</h4>
+            <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem' }}>
+              Unlike AlphaZero, KROG AI provides formal logical reasoning for every decision,
+              enabling true teachability.
+            </p>
+          </div>
+          <div>
+            <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>2. Cross-Game Transfer</h4>
+            <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem' }}>
+              Universal R-types enable skill transfer: master a concept in chess,
+              apply it faster in shogi or go.
+            </p>
+          </div>
+          <div>
+            <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>3. Research-Grade Data</h4>
+            <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem' }}>
+              Every decision captures both neural patterns and symbolic rules -
+              unique neurosymbolic training data.
+            </p>
+          </div>
+          <div>
+            <h4 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>4. Cognitive Science Platform</h4>
+            <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.9rem' }}>
+              Empirically measure how humans learn symbolic rules vs. neural patterns
+              across multiple domains.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Industry Validation */}
+      <div className="chart-container" style={{ marginBottom: '2rem' }}>
+        <div className="chart-header">
+          <h3 className="chart-title">Industry Validation</h3>
+        </div>
+        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+          Major organizations investing in neurosymbolic AI research:
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          {['IBM', 'MIT-IBM Watson Lab', 'DeepMind', 'DARPA', 'Microsoft Research', 'Stanford HAI'].map(org => (
+            <span key={org} className="badge badge-blue">{org}</span>
+          ))}
+        </div>
+        <p style={{ color: 'var(--color-primary)', fontWeight: 500 }}>
+          KROG Games is the first deployed neurosymbolic platform with real user data at scale.
+        </p>
+      </div>
+
+      {/* Research Publications */}
+      <div className="table-container">
+        <div className="table-header">
+          <h3 className="table-title">Research Publication Opportunities</h3>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Venue Category</th>
+              <th>Target Conferences/Journals</th>
+              <th>Research Focus</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span className="badge badge-blue">AI/ML</span></td>
+              <td>AAAI, NeurIPS, IJCAI</td>
+              <td>Neurosymbolic framework foundations</td>
+            </tr>
+            <tr>
+              <td><span className="badge badge-purple">Cognitive Science</span></td>
+              <td>COGSCI, Cognitive Science Journal</td>
+              <td>Human transfer learning patterns</td>
+            </tr>
+            <tr>
+              <td><span className="badge badge-green">AI Safety</span></td>
+              <td>JAIR, AI Magazine</td>
+              <td>Explainable AI in games</td>
+            </tr>
+            <tr>
+              <td><span className="badge badge-orange">High Impact</span></td>
+              <td>Science, Nature Human Behaviour</td>
+              <td>Large-scale decision analysis</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Contact */}
+      <div className="chart-container" style={{ borderLeft: '4px solid var(--color-primary)', textAlign: 'center' }}>
+        <h3 className="chart-title" style={{ marginBottom: '1rem' }}>Get in Touch</h3>
+        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+          For research collaboration, investment discussions, or partnership inquiries.
+        </p>
+        <a
+          href="mailto:georg@kroggames.com"
+          style={{
+            display: 'inline-block',
+            backgroundColor: 'var(--color-primary)',
+            color: 'white',
+            padding: '0.75rem 2rem',
+            borderRadius: '0.5rem',
+            fontWeight: 'bold',
+            textDecoration: 'none'
+          }}
+        >
+          georg@kroggames.com
+        </a>
+      </div>
+    </>
   );
 }
 

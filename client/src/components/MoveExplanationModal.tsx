@@ -51,11 +51,11 @@ const FIDE_ARTICLES: Record<string, { article: string; en: string; no: string }>
   'p': { article: '3.7', en: 'The pawn may move forward to the square immediately in front of it on the same file', no: 'Bonden kan flytte fremover til feltet rett foran pa samme linje' }
 };
 
-// Operator descriptions
+// Operator descriptions (natural language only - no operator letters exposed)
 const OPERATOR_DESCRIPTIONS: Record<string, { en: string; no: string }> = {
-  'P': { en: 'Permitted (may do)', no: 'Tillatt (kan gjore)' },
-  'O': { en: 'Obligated (must do)', no: 'Pakrevd (ma gjore)' },
-  'F': { en: 'Forbidden (must not do)', no: 'Forbudt (kan ikke gjore)' }
+  'P': { en: 'This move is permitted', no: 'Dette trekket er tillatt' },
+  'O': { en: 'This move is required', no: 'Dette trekket er påkrevd' },
+  'F': { en: 'This move is prohibited', no: 'Dette trekket er forbudt' }
 };
 
 export default function MoveExplanationModal({ isOpen, onClose, data, language, socket }: MoveExplanationModalProps) {
@@ -97,14 +97,13 @@ export default function MoveExplanationModal({ isOpen, onClose, data, language, 
     return `KROG Chess - Move Explanation
 
 Move ${moveNumber}: ${data.move}
-Formula: ${data.krog.formula}
 Rule Type: ${data.krog.rType.replace(/_/g, ' ')}
 FIDE Article ${fideInfo.article}
 
 ${language === 'en' ? data.explanation.en : data.explanation.no}
 ${language === 'no' ? data.explanation.en : data.explanation.no}
 
-Learn chess with KROG formulas!`;
+Learn chess with KROG's mathematical rule validation!`;
   };
 
   const handleShare = async () => {
@@ -250,7 +249,7 @@ Learn chess with KROG formulas!`;
           </button>
         </div>
 
-        {/* KROG Formula */}
+        {/* Move Validation */}
         <div style={{ padding: isMobile ? '14px 16px' : '16px 20px', borderBottom: '1px solid #333' }}>
           <div style={{
             fontWeight: 600,
@@ -260,39 +259,24 @@ Learn chess with KROG formulas!`;
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
-            KROG Formula
+            {language === 'en' ? 'Move Validation' : 'Trekkvalidering'}
           </div>
           <div
             style={{
-              fontFamily: 'monospace',
-              fontSize: isMobile ? '0.85rem' : '1rem',
+              fontSize: isMobile ? '0.9rem' : '1rem',
               color: '#81b64c',
               backgroundColor: 'rgba(129, 182, 76, 0.1)',
               padding: isMobile ? '10px 12px' : '12px 16px',
               borderRadius: '8px',
               border: '1px solid rgba(129, 182, 76, 0.2)',
-              lineHeight: 1.5,
-              wordBreak: 'break-word',
-              overflowX: 'auto'
+              lineHeight: 1.6
             }}
           >
-            {data.krog.formula}
-          </div>
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '8px' : '16px',
-            marginTop: isMobile ? '10px' : '12px',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ color: '#aaa', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
-              <span style={{ color: '#666' }}>{language === 'en' ? 'Operator' : 'Operator'}:</span>{' '}
-              <span style={{ color: '#81b64c', fontWeight: 500 }}>{data.krog.operator}</span>
-              <span style={{ color: '#888' }}> ({operatorDesc[language]})</span>
-            </div>
-            <div style={{ color: '#aaa', fontSize: isMobile ? '0.85rem' : '0.9rem' }}>
-              <span style={{ color: '#666' }}>T-Type:</span>{' '}
-              <span style={{ color: '#81b64c', fontWeight: 500 }}>{data.krog.tType}</span>
+            <div style={{ marginBottom: '4px' }}>✓ {operatorDesc[language]}</div>
+            <div style={{ color: '#aaa', fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+              {language === 'en'
+                ? 'Validated using KROG\'s proprietary mathematical framework'
+                : 'Validert med KROGs proprietære matematiske rammeverk'}
             </div>
           </div>
         </div>

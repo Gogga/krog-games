@@ -68,8 +68,8 @@ const faqData: FAQCategory[] = [
           no: 'Hva er KROG-operatorer?'
         },
         answer: {
-          en: 'KROG operators are mathematical symbols that describe chess rules formally. There are 36 operators: 9 core operators (P, O, F, C, L, W, B, I, D), 8 piece logic operators (PM, PC, PA, NV, PD, CR, EP, PO), 8 board logic operators, 6 notation operators, and 5 temporal operators.',
-          no: 'KROG-operatorer er matematiske symboler som beskriver sjakkregler formelt. Det er 36 operatorer: 9 kjerneoperatorer (P, O, F, C, L, W, B, I, D), 8 brikkelogikkoperatorer (PM, PC, PA, NV, PD, CR, EP, PO), 8 brettlogikkoperatorer, 6 notasjonsoperatorer og 5 temporale operatorer.'
+          en: 'KROG uses a proprietary mathematical framework with 36 specialized operators organized into five categories: core modal operators (permissions, obligations, prohibitions), piece logic operators (movement validation, path checking), board logic operators (position analysis, game state), notation operators (parsing different formats), and temporal operators (timing conditions). The exact notation is proprietary.',
+          no: 'KROG bruker et proprietært matematisk rammeverk med 36 spesialiserte operatorer organisert i fem kategorier: modale kjerneoperatorer (tillatelser, forpliktelser, forbud), brikkelogikkoperatorer (trekkvalidering, banesjekking), brettlogikkoperatorer (posisjonsanalyse, spilltilstand), notasjonsoperatorer (parsing av ulike formater), og temporale operatorer (tidsbetingelser). Den eksakte notasjonen er proprietær.'
         }
       },
       {
@@ -78,8 +78,8 @@ const faqData: FAQCategory[] = [
           no: 'Hva er R-typer?'
         },
         answer: {
-          en: 'R-types are rule classification types. There are 15 R-types in KROG describing different relationships: R1 (Asymmetric), R2 (Intransitive), R3 (Path-dependent), R4 (Capture-only), R5 (Non-capture), R6 (First move special), R7 (Temporal window), R8 (Mandatory transformation), R9 (Compound move), R10 (Conditional), R11 (Discrete jump), R12 (State-dependent), R13 (Terminal), R14 (Repetition), R15 (Counter-based).',
-          no: 'R-typer er regelklassifikasjonstyper. Det er 15 R-typer i KROG som beskriver forskjellige relasjoner: R1 (Asymmetrisk), R2 (Intransitiv), R3 (Baneavhengig), R4 (Kun fangst), R5 (Ikke-fangst), R6 (Første trekk spesiell), R7 (Temporalt vindu), R8 (Obligatorisk transformasjon), R9 (Sammensatt trekk), R10 (Betinget), R11 (Diskret hopp), R12 (Tilstandsavhengig), R13 (Terminal), R14 (Repetisjon), R15 (Tellerbasert).'
+          en: 'R-types are universal rule classification types that KROG uses to categorize chess rules. There are 15 R-types that describe fundamental patterns like movement types, capture rules, special conditions, and game-ending states. These classifications transfer across different games, enabling cross-game skill learning. The specific mappings are part of KROG\'s proprietary framework.',
+          no: 'R-typer er universelle regelklassifikasjonstyper som KROG bruker for å kategorisere sjakkregler. Det er 15 R-typer som beskriver grunnleggende mønstre som bevegelsestyper, fangstregler, spesielle betingelser og spillavsluttende tilstander. Disse klassifikasjonene overføres mellom ulike spill, noe som muliggjør læring på tvers av spill. De spesifikke tilordningene er en del av KROGs proprietære rammeverk.'
         }
       },
       {
@@ -98,8 +98,8 @@ const faqData: FAQCategory[] = [
           no: 'Hvordan validerer KROG trekk?'
         },
         answer: {
-          en: 'When you make a move, KROG: (1) Parses the move notation, (2) Identifies the piece and squares involved, (3) Applies relevant operators (PM, PC, PA, CR, EP, etc.), (4) Evaluates all conditions, (5) Generates the KROG formula, (6) Maps to FIDE article, (7) Produces bilingual explanation.',
-          no: 'Når du gjør et trekk, gjør KROG: (1) Parser trekknotasjonen, (2) Identifiserer brikken og rutene involvert, (3) Bruker relevante operatorer (PM, PC, PA, CR, EP, etc.), (4) Evaluerer alle betingelser, (5) Genererer KROG-formelen, (6) Mapper til FIDE-artikkel, (7) Produserer tospråklig forklaring.'
+          en: 'When you make a move, KROG: (1) Parses the move notation, (2) Identifies the piece and squares involved, (3) Applies proprietary validation operators, (4) Evaluates all conditions, (5) Validates against FIDE rules, (6) Classifies the rule type, (7) Produces a human-readable bilingual explanation.',
+          no: 'Når du gjør et trekk, gjør KROG: (1) Parser trekknotasjonen, (2) Identifiserer brikken og rutene involvert, (3) Bruker proprietære valideringsoperatorer, (4) Evaluerer alle betingelser, (5) Validerer mot FIDE-regler, (6) Klassifiserer regeltypen, (7) Produserer en lesbar tospråklig forklaring.'
         }
       }
     ]

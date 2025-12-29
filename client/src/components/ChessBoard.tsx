@@ -915,18 +915,16 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                         </div>
                     )}
 
-                    {/* KROG Formula */}
+                    {/* Move Validation */}
                     <div style={{
-                        fontFamily: 'monospace',
                         fontSize: '0.85rem',
                         color: '#9b59b6',
                         background: 'rgba(0,0,0,0.3)',
                         padding: '8px 10px',
                         borderRadius: '6px',
-                        marginBottom: '10px',
-                        wordBreak: 'break-word'
+                        marginBottom: '10px'
                     }}>
-                        {hoverExplanation.krog.formula}
+                        ✓ {language === 'en' ? 'Move permitted' : 'Trekk tillatt'}
                     </div>
 
                     {/* Explanation */}
@@ -1116,19 +1114,20 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                         </div>
                                     )}
 
-                                    {/* KROG Formula */}
+                                    {/* Move Validation */}
                                     <div style={{
-                                        fontFamily: 'monospace',
                                         fontSize: '0.85rem',
                                         color: '#81b64c',
                                         backgroundColor: 'rgba(129, 182, 76, 0.1)',
                                         padding: '12px',
                                         borderRadius: '8px',
                                         border: '1px solid rgba(129, 182, 76, 0.2)',
-                                        marginBottom: '12px',
-                                        wordBreak: 'break-word'
+                                        marginBottom: '12px'
                                     }}>
-                                        {mobileLearnSheet.explanation.krog.formula}
+                                        ✓ {language === 'en' ? 'This move is permitted' : 'Dette trekket er tillatt'}
+                                        <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '4px' }}>
+                                            {language === 'en' ? 'Validated using KROG\'s proprietary framework' : 'Validert med KROGs proprietære rammeverk'}
+                                        </div>
                                     </div>
 
                                     {/* Explanation */}

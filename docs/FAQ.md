@@ -21,7 +21,7 @@ Think of it as chess with complete transparency. Every move comes with a proof.
 
 Lichess and Chess.com are excellent platforms for playing chess. They have millions of users and extensive features. KROG Chess is different in four fundamental ways.
 
-First, mathematical validation. Every move on KROG Chess is explained using formal logic operators. When you castle, you see the formula CR(kingside) equals king not moved AND rook not moved AND not in check AND path clear AND squares safe. No other platform does this.
+First, mathematical validation. Every move on KROG Chess is explained using formal logic. When you castle, you see the requirements: King has not moved, Rook has not moved, King is not in check, Path is clear, King does not pass through or end in check. No other platform provides this level of rule validation.
 
 Second, educational focus. KROG Chess teaches the mathematics behind chess. Students learn formal logic, set theory, and modal operators through gameplay. Teachers get curriculum-compatible tools. This makes KROG ideal for schools.
 
@@ -73,20 +73,18 @@ But the core chess platform with KROG explanations remains free. Always.
 
 **What are KROG operators?**
 
-KROG operators are mathematical symbols that describe chess rules formally. There are 36 operators used in KROG Chess.
+KROG uses a proprietary mathematical framework with 36 specialized operators to describe chess rules formally.
 
-Examples include PM for Piece Movement Permission, PC for Path Clear, PA for Path Attack-free, CR for Castling Rights, EP for En Passant, GT for Game Termination, and CS for Check State.
+The operators are organized into five categories:
+- **Core operators (9):** Handle permissions, obligations, and prohibitions
+- **Piece logic operators (8):** Validate how pieces move and interact
+- **Board logic operators (8):** Analyze positions and game state
+- **Notation operators (6):** Translate between different chess notation formats
+- **Temporal operators (5):** Handle move sequencing and timing conditions
 
-When you make a move, KROG combines these operators into a formula. For example, moving a rook from a1 to a8 generates the formula PM(rook,a1,a8) which equals straight(a1,a8) AND PC(a1,a8). This means the rook can move because the path is straight and clear.
+When you make a move, KROG validates it using these operators internally. For example, moving a rook from a1 to a8 checks: the path is straight (along a file), all squares between are empty, and the destination is valid. You see this as a human-readable explanation.
 
-Operators are grouped into categories:
-- **Core operators (9):** P, O, F, C, L, W, B, I, D - handle permissions and obligations
-- **Piece logic operators (8):** PM, PC, PA, NV, PD, CR, EP, PO - handle how pieces move
-- **Board logic operators (8):** PV, MH, CS, LMG, GT, TC, PR, FMC - handle spatial relationships
-- **Notation operators (6):** PSA, PLA, PUCI, PVN, GN, NC - translate between notation formats
-- **Temporal operators (5):** G, F, X, U, R - handle move sequencing and time
-
-You do not need to memorize operators to use KROG Chess. The platform shows you the formulas and explains them in plain language. But if you want to learn formal logic, KROG operators provide a complete mathematical foundation.
+You do not need to understand the underlying operators to use KROG Chess. The platform validates moves mathematically and shows you clear explanations in plain language. The specific operator notation is proprietary to KROG.
 
 ---
 
@@ -348,7 +346,7 @@ English was chosen for global reach. English is the international language of ch
 
 Additional languages are planned. The architecture supports internationalization. Community translations will add French, German, Spanish, Russian, Chinese, and other major chess languages.
 
-KROG formulas use mathematical notation which is language-neutral. The operators P, O, F are universal. Only the explanatory text requires translation.
+KROG's underlying mathematical framework is language-neutral. The formal validation works the same regardless of display language. Only the explanatory text requires translation.
 
 ---
 
@@ -398,7 +396,7 @@ Potential papers include:
 - "Teaching Formal Logic Through KROG Chess"
 - "Accessibility in Chess: Voice plus Mathematical Explanations"
 
-Researchers interested in collaborating should contact Georg at georg@signatu.com.
+Researchers interested in collaborating should contact Georg at georg@kroggames.com.
 
 KROG Chess generates novel research questions at the intersection of game theory, formal methods, AI, education, and accessibility.
 
@@ -462,7 +460,7 @@ For education, federations can license KROG Chess for youth programs. The mathem
 
 For governance, federations benefit from KROG's bilingual FIDE rule encoding. Rules are formalized, disambiguated, and verifiable. This improves rule clarity and international consistency.
 
-Partnership terms are flexible. Contact georg@signatu.com to discuss federation collaboration.
+Partnership terms are flexible. Contact georg@kroggames.com to discuss federation collaboration.
 
 ---
 
@@ -526,7 +524,7 @@ Developers can build:
 
 The "Built with KROG" program showcases developer projects. Outstanding integrations receive promotion and potential revenue sharing.
 
-Developer API launches in 2025. Early access available for serious builders. Contact georg@signatu.com.
+Developer API launches in 2025. Early access available for serious builders. Contact georg@kroggames.com.
 
 ---
 
@@ -541,7 +539,7 @@ Priority roles include:
 - Educational specialist for curriculum development
 - Marketing growth specialist for viral expansion
 
-If you are passionate about mathematics, chess, accessibility, or education, and want to work on KROG Chess, send your background to georg@signatu.com with subject line "KROG Chess Hiring".
+If you are passionate about mathematics, chess, accessibility, or education, and want to work on KROG Chess, send your background to georg@kroggames.com with subject line "KROG Chess Hiring".
 
 We value depth over credentials. Show us what you have built. Show us how you think. Show us why KROG excites you.
 
@@ -613,7 +611,7 @@ There are many ways to support KROG Chess, depending on your skills and resource
 
 **Research collaboration:** If you are in academia, consider research projects using KROG data. Co-author papers. Cite KROG Chess.
 
-**Investment:** KROG Chess will raise funding in 2025. Interested investors contact georg@signatu.com.
+**Investment:** KROG Chess will raise funding in 2025. Interested investors contact georg@kroggames.com.
 
 **Feedback:** Use the platform and report bugs. Suggest features. Tell us what works and what does not.
 
@@ -625,7 +623,7 @@ Thank you for supporting KROG Chess.
 
 **How do I contact KROG Chess?**
 
-- **Email:** georg@signatu.com
+- **Email:** georg@kroggames.com
 - **Website:** krogrules.com/chess
 
 For press inquiries, email with subject line "Press Inquiry".
