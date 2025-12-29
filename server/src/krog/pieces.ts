@@ -140,7 +140,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     // Check not moving to own piece
     const notOwnPiece = !targetPiece || targetPiece.color !== piece?.color;
     conditions.push({
-      name: '¬own_piece',
+      name: 'square available',
       met: notOwnPiece,
       description: 'Target square not occupied by own piece'
     });
@@ -149,7 +149,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     const opponentColor = piece?.color === 'w' ? 'b' : 'w';
     const notIntoCheck = !isSquareAttacked(game, to, opponentColor);
     conditions.push({
-      name: '¬attacked',
+      name: 'safe square',
       met: notIntoCheck,
       description: 'Target square not attacked by opponent'
     });
@@ -170,7 +170,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     const diagonal = isDiagonal(from, to);
     const rankFile = isRankOrFile(from, to);
     conditions.push({
-      name: 'diagonal ∨ rank_file',
+      name: 'diagonal or straight',
       met: diagonal || rankFile,
       description: 'Queen moves along diagonal, rank, or file'
     });
@@ -186,7 +186,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     // Check not capturing own piece
     const notOwnPiece = !targetPiece || targetPiece.color !== piece?.color;
     conditions.push({
-      name: '¬own_piece',
+      name: 'square available',
       met: notOwnPiece,
       description: 'Target square not occupied by own piece'
     });
@@ -222,7 +222,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     // Check not capturing own piece
     const notOwnPiece = !targetPiece || targetPiece.color !== piece?.color;
     conditions.push({
-      name: '¬own_piece',
+      name: 'square available',
       met: notOwnPiece,
       description: 'Target square not occupied by own piece'
     });
@@ -258,7 +258,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     // Check not capturing own piece
     const notOwnPiece = !targetPiece || targetPiece.color !== piece?.color;
     conditions.push({
-      name: '¬own_piece',
+      name: 'square available',
       met: notOwnPiece,
       description: 'Target square not occupied by own piece'
     });
@@ -293,7 +293,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
     // Check not capturing own piece
     const notOwnPiece = !targetPiece || targetPiece.color !== piece?.color;
     conditions.push({
-      name: '¬own_piece',
+      name: 'square available',
       met: notOwnPiece,
       description: 'Target square not occupied by own piece'
     });
@@ -332,7 +332,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
         description: 'Pawn moves one square forward'
       });
       conditions.push({
-        name: '¬blocked',
+        name: 'path clear',
         met: true,
         description: 'Square ahead is empty'
       });
@@ -355,7 +355,7 @@ export const MOVEMENT_CHECKERS: Record<PieceType, (game: Chess, from: Square, to
         description: 'Pawn is on starting rank'
       });
       conditions.push({
-        name: '¬blocked',
+        name: 'path clear',
         met: middleClear && targetClear,
         description: 'Path is clear'
       });

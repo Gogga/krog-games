@@ -28,14 +28,14 @@ export function checkCastlingConditions(
   const castlingRights = game.getCastlingRights(color);
   const canCastle = side === 'kingside' ? castlingRights.k : castlingRights.q;
   conditions.push({
-    name: '¬moved(king)',
+    name: 'king unmoved',
     met: canCastle,
     description: 'King has not moved'
   });
 
   // Check rook hasn't moved (implicitly via castling rights)
   conditions.push({
-    name: '¬moved(rook)',
+    name: 'rook unmoved',
     met: canCastle,
     description: 'Rook has not moved'
   });
@@ -43,7 +43,7 @@ export function checkCastlingConditions(
   // Check king is not in check
   const notInCheck = !game.inCheck();
   conditions.push({
-    name: '¬in_check',
+    name: 'not in check',
     met: notInCheck,
     description: 'King is not currently in check'
   });
@@ -70,7 +70,7 @@ export function checkCastlingConditions(
     !isSquareAttacked(game, sq as Square, opponentColor)
   );
   conditions.push({
-    name: '¬attacked(path)',
+    name: 'safe path',
     met: pathNotAttacked,
     description: 'King does not pass through or end on attacked square'
   });
