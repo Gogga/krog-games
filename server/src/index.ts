@@ -2249,7 +2249,7 @@ io.on('connection', (socket) => {
             const selectedPuzzle = puzzles[puzzleIndex];
 
             // Save to database
-            await dbOperations.setDailyPuzzle(date, selectedPuzzle.id);
+            await dbOperations.setDailyPuzzle(selectedPuzzle.id, date);
             dailyPuzzle = await dbOperations.getDailyPuzzle(date);
         }
 
