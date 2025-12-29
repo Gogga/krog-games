@@ -1472,6 +1472,7 @@ io.on('connection', (socket) => {
             const rType = classifyMoveRType(result);
             const rTypeDescription = getRTypeDescription(rType);
 
+            // Send sanitized explanation to clients (no proprietary data)
             io.to(roomId).emit('move_explanation', {
                 move: result.san,
                 from: result.from,
@@ -1483,6 +1484,21 @@ io.on('connection', (socket) => {
                 explanation: legalExplanation.explanation,
                 conditions: legalExplanation.conditions
             });
+
+            // Store full KROG data server-side for neurosymbolic reasoning
+            // Track move with full formula data (not exposed to client)
+            const playerAuthInfo = authenticatedSockets.get(socket.id);
+            if (playerAuthInfo) {
+                // Fire-and-forget: don't await to avoid blocking the game
+                dbOperations.recordKrogActivity(
+                    playerAuthInfo.userId,
+                    'move',
+                    result.san,
+                    rType,
+                    legalExplanation.krog.operator
+                ).catch(err => console.error('Error recording KROG move data:', err));
+                // Full formula data available: legalExplanation.krog.formula, legalExplanation.krog.tType
+            }
 
             // Send updated clock times
             const times = getCurrentClockTimes(room);
