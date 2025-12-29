@@ -28,14 +28,14 @@ export function checkCastlingConditions(
   const castlingRights = game.getCastlingRights(color);
   const canCastle = side === 'kingside' ? castlingRights.k : castlingRights.q;
   conditions.push({
-    name: 'king unmoved',
+    name: 'King has not moved',
     met: canCastle,
     description: 'King has not moved'
   });
 
   // Check rook hasn't moved (implicitly via castling rights)
   conditions.push({
-    name: 'rook unmoved',
+    name: 'Rook has not moved',
     met: canCastle,
     description: 'Rook has not moved'
   });
@@ -43,7 +43,7 @@ export function checkCastlingConditions(
   // Check king is not in check
   const notInCheck = !game.inCheck();
   conditions.push({
-    name: 'not in check',
+    name: 'Not in check',
     met: notInCheck,
     description: 'King is not currently in check'
   });
@@ -55,7 +55,7 @@ export function checkCastlingConditions(
 
   const squaresEmpty = betweenSquares.every(sq => !game.get(sq as ChessSquare));
   conditions.push({
-    name: 'empty(between)',
+    name: 'Path is clear',
     met: squaresEmpty,
     description: 'No pieces between king and rook'
   });
@@ -70,7 +70,7 @@ export function checkCastlingConditions(
     !isSquareAttacked(game, sq as Square, opponentColor)
   );
   conditions.push({
-    name: 'safe path',
+    name: 'Safe passage',
     met: pathNotAttacked,
     description: 'King does not pass through or end on attacked square'
   });
@@ -110,7 +110,7 @@ export function checkEnPassantConditions(
 
   const piece = game.get(from as ChessSquare);
   if (!piece || piece.type !== 'p') {
-    return { valid: false, conditions: [{ name: 'is_pawn', met: false, description: 'Moving piece is a pawn' }] };
+    return { valid: false, conditions: [{ name: 'Is a pawn', met: false, description: 'Moving piece is a pawn' }] };
   }
 
   const fromCoords = squareToCoords(from);
@@ -121,7 +121,7 @@ export function checkEnPassantConditions(
   // Check pawn is on correct rank for en passant
   const onCorrectRank = fromCoords.rank === enPassantRank;
   conditions.push({
-    name: 'on_fifth_rank',
+    name: 'On correct rank',
     met: onCorrectRank,
     description: `Pawn is on the ${piece.color === 'w' ? '5th' : '4th'} rank`
   });
@@ -130,7 +130,7 @@ export function checkEnPassantConditions(
   const isDiagonalMove = Math.abs(toCoords.file - fromCoords.file) === 1 &&
     toCoords.rank - fromCoords.rank === direction;
   conditions.push({
-    name: 'diagonal_move',
+    name: 'Diagonal move',
     met: isDiagonalMove,
     description: 'Move is one square diagonally forward'
   });
@@ -150,7 +150,7 @@ export function checkEnPassantConditions(
   }
 
   conditions.push({
-    name: 'opponent_double_advance',
+    name: 'Opponent just double-pushed',
     met: opponentDoubleAdvance,
     description: 'Opponent pawn just advanced two squares to adjacent file'
   });
@@ -194,7 +194,7 @@ export function checkPromotionConditions(
     return {
       valid: false,
       isPromotion: false,
-      conditions: [{ name: 'is_pawn', met: false, description: 'Moving piece is a pawn' }]
+      conditions: [{ name: 'Is a pawn', met: false, description: 'Moving piece is a pawn' }]
     };
   }
 
@@ -203,7 +203,7 @@ export function checkPromotionConditions(
   const isPromotion = toCoords.rank === promotionRank;
 
   conditions.push({
-    name: 'reaches_eighth',
+    name: 'Reaches last rank',
     met: isPromotion,
     description: 'Pawn reaches the last rank'
   });
@@ -213,7 +213,7 @@ export function checkPromotionConditions(
     const validPieces = ['q', 'r', 'b', 'n'];
     const pieceSpecified = promotionPiece && validPieces.includes(promotionPiece.toLowerCase());
     conditions.push({
-      name: 'piece_chosen',
+      name: 'Piece selected',
       met: !!pieceSpecified,
       description: 'Promotion piece (Q/R/B/N) is specified'
     });
