@@ -471,29 +471,23 @@ export default function App() {
 
           {activeSection === 'research' && (
             <>
-              <h3 style={{
-                fontSize: '1.75rem',
-                fontWeight: 'bold',
-                marginBottom: '2rem',
-                color: '#f3f4f6'
-              }}>
-                Neurosymbolic AI Research Platform
-              </h3>
-
               {/* Hero Banner */}
               <div style={{
                 background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
                 borderRadius: '0.75rem',
-                padding: '2rem',
+                padding: '2.5rem',
                 marginBottom: '2rem',
-                border: '1px solid #81b64c'
+                border: '1px solid #81b64c',
+                textAlign: 'center'
               }}>
-                <h4 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#81b64c', marginBottom: '1rem' }}>
-                  The Future of Explainable AI
+                <h4 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#81b64c', marginBottom: '0.5rem' }}>
+                  Neurosymbolic AI Research Platform
                 </h4>
-                <p style={{ color: '#d1d5db', lineHeight: '1.8', fontSize: '1.1rem' }}>
-                  KROG Games is the world's first neurosymbolic game platform, combining neural pattern recognition
-                  with symbolic logical reasoning to create AI that can explain its decisions.
+                <p style={{ fontSize: '1.25rem', color: '#f3f4f6', marginBottom: '1.5rem', fontWeight: '500' }}>
+                  The Future of Explainable Intelligence
+                </p>
+                <p style={{ color: '#d1d5db', lineHeight: '1.8', fontSize: '1.1rem', maxWidth: '700px', margin: '0 auto' }}>
+                  KROG Games is pioneering neurosymbolic AI - combining neural pattern recognition with symbolic logical reasoning to create AI systems that can both learn from experience and explain their decisions.
                 </p>
               </div>
 
@@ -504,26 +498,29 @@ export default function App() {
                 padding: '2rem',
                 marginBottom: '2rem'
               }}>
-                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#f3f4f6' }}>
                   What is Neurosymbolic AI?
                 </h4>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+                  The future of AI combines the best of two approaches:
+                </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
-                    <h5 style={{ color: '#e67e22', fontWeight: 'bold', marginBottom: '0.5rem' }}>Neural AI (Pattern)</h5>
-                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                      Deep learning that recognizes patterns from data. Powerful but opaque - cannot explain why it makes decisions.
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#e67e22', fontWeight: 'bold', marginBottom: '0.75rem' }}>Neural AI (Pattern Recognition)</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                      Deep learning that recognizes patterns from data. Powerful but opaque - cannot explain why it makes decisions. Like AlphaGo: incredibly strong at chess, but can't tell you why a move is good.
                     </p>
                   </div>
-                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
-                    <h5 style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>Symbolic AI (Logic)</h5>
-                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                      Rule-based reasoning with explicit logic. Interpretable but requires hand-coded knowledge.
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.75rem' }}>Symbolic AI (Logical Reasoning)</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                      Rule-based reasoning with explicit logic. Interpretable and explainable, but requires hand-coded knowledge. Traditional chess engines can explain moves, but struggle with complexity.
                     </p>
                   </div>
-                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem', border: '1px solid #81b64c' }}>
-                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Neurosymbolic (Both)</h5>
-                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                      Combines pattern recognition with logical rules. The best of both worlds: powerful AND explainable.
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem', border: '1px solid #81b64c' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>Neurosymbolic AI (The Best of Both)</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                      Combines pattern recognition with logical rules. Systems that are both powerful AND explainable. KROG captures how humans actually think - recognizing patterns while applying logical principles.
                     </p>
                   </div>
                 </div>
@@ -535,17 +532,17 @@ export default function App() {
               </h4>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                 gap: '1rem',
                 marginBottom: '2rem'
               }}>
                 {[
-                  { title: 'Explainability', desc: 'AI decisions can be traced to logical rules, not black boxes', icon: '🔍' },
-                  { title: 'Data Efficiency', desc: 'Symbolic rules reduce need for massive training datasets by 100x', icon: '📊' },
-                  { title: 'Transfer Learning', desc: 'Universal rules transfer knowledge across different domains', icon: '🔄' },
-                  { title: 'Safety & Trust', desc: 'Symbolic constraints prevent AI from violating hard rules', icon: '🛡️' },
-                  { title: 'Human Collaboration', desc: 'Humans can understand and verify AI reasoning', icon: '🤝' },
-                  { title: 'Regulatory Compliance', desc: 'EU AI Act requires explainable AI for high-risk applications', icon: '⚖️' }
+                  { title: 'Explainability', desc: 'AI decisions can be traced to logical rules, not black boxes. Critical for education, healthcare, and high-stakes decisions.', icon: '🔍' },
+                  { title: 'Data Efficiency', desc: 'Symbolic rules reduce the need for massive training datasets by 100x. Learn faster with less data by encoding human knowledge.', icon: '📊' },
+                  { title: 'Transfer Learning', desc: 'Universal rules enable knowledge transfer across different domains. Master a principle in one game, apply it faster everywhere.', icon: '🔄' },
+                  { title: 'Safety & Trust', desc: 'Symbolic constraints prevent AI from violating fundamental rules. Hard limits that can\'t be overridden by training data.', icon: '🛡️' },
+                  { title: 'Human-AI Collaboration', desc: 'Humans can understand and verify AI reasoning. Build trust through transparency and interpretability.', icon: '🤝' },
+                  { title: 'Regulatory Compliance', desc: 'The EU AI Act requires explainable AI for high-risk applications. Neurosymbolic approaches meet these requirements naturally.', icon: '⚖️' }
                 ].map((item, i) => (
                   <div key={i} style={{
                     backgroundColor: '#1f2937',
@@ -555,7 +552,7 @@ export default function App() {
                   }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{item.icon}</div>
                     <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#f3f4f6' }}>{item.title}</h5>
-                    <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
+                    <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.6' }}>{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -567,45 +564,106 @@ export default function App() {
                 padding: '2rem',
                 marginBottom: '2rem'
               }}>
-                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#f3f4f6' }}>
                   The KROG Games Advantage
                 </h4>
-                <div style={{ display: 'grid', gap: '1rem' }}>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem', lineHeight: '1.7' }}>
+                  KROG is the world's first universal, interoperable language for representing game rules - enabling unique research capabilities.
+                </p>
+                <div style={{ display: 'grid', gap: '1.25rem' }}>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                     <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>1.</span>
                     <div>
-                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Explainable Game AI</h5>
-                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                        Unlike AlphaZero which can't explain moves, KROG AI provides formal logical reasoning for every decision.
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Universal Game Language</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                        One framework formalizes chess, shogi, go, poker, and any strategy game with mathematical precision. Like SQL for databases or HTTP for the web - KROG is infrastructure for strategic reasoning.
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                     <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>2.</span>
                     <div>
-                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Cross-Game Transfer</h5>
-                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                        Universal R-types enable skill transfer: master a concept in chess, apply it faster in shogi or go.
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Standard & Unambiguous</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                        35 universal relationship types cover all possible strategic interactions. Every rule is mathematically verifiable with no interpretation needed.
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                     <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>3.</span>
                     <div>
-                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Research-Grade Data</h5>
-                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                        Every decision captures both neural patterns (behavior) and symbolic rules - unique neurosymbolic training data.
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Cross-Game Transfer</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                        Knowledge transfers seamlessly between games. Players who master a concept in chess apply it 40% faster in shogi - measured empirically.
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                     <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>4.</span>
                     <div>
-                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Cognitive Science Platform</h5>
-                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                        Empirically measure how humans learn symbolic rules vs. neural patterns across multiple game domains.
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Explainable Game AI</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                        Unlike AlphaZero which can't explain moves, KROG AI provides formal logical reasoning for every decision. Transparent, teachable, and trustworthy.
                       </p>
                     </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>5.</span>
+                    <div>
+                      <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>Research-Grade Data</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                        Every player decision captures both neural patterns (behavior) and symbolic rules (logic) - creating unique neurosymbolic training datasets that enable groundbreaking cognitive science research.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Research Applications */}
+              <div style={{
+                backgroundColor: '#1f2937',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                marginBottom: '2rem'
+              }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#f3f4f6' }}>
+                  Research Applications
+                </h4>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
+                  KROG Games enables novel research across multiple disciplines:
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>Cognitive Science</h5>
+                    <ul style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>How do humans learn abstract principles vs. specific patterns?</li>
+                      <li>What role does symbolic reasoning play in skill acquisition?</li>
+                      <li>Can we measure transfer learning empirically across domains?</li>
+                    </ul>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>AI & Machine Learning</h5>
+                    <ul style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Training explainable AI with symbolic annotations</li>
+                      <li>Measuring neural vs. symbolic learning efficiency</li>
+                      <li>Cross-domain knowledge representation and transfer</li>
+                    </ul>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>Educational Technology</h5>
+                    <ul style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Optimal learning paths based on empirical mastery data</li>
+                      <li>Personalized instruction using cognitive profiles</li>
+                      <li>Formal assessment of strategic reasoning skills</li>
+                    </ul>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>Game Theory & Decision Science</h5>
+                    <ul style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Strategic decision-making under constraints</li>
+                      <li>Multi-agent coordination and competition</li>
+                      <li>Bounded rationality in complex environments</li>
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -617,31 +675,26 @@ export default function App() {
                 padding: '2rem',
                 marginBottom: '2rem'
               }}>
-                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#f3f4f6' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#f3f4f6' }}>
                   Industry Validation
                 </h4>
-                <p style={{ color: '#d1d5db', lineHeight: '1.8', marginBottom: '1rem' }}>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
                   Major organizations investing in neurosymbolic AI research:
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {['IBM', 'MIT-IBM Watson Lab', 'DeepMind', 'DARPA', 'Microsoft Research', 'Stanford HAI'].map(org => (
-                    <span key={org} style={{
-                      backgroundColor: '#2a2a2a',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '2rem',
-                      fontSize: '0.85rem',
-                      color: '#d1d5db'
-                    }}>
-                      {org}
-                    </span>
-                  ))}
-                </div>
-                <p style={{ color: '#81b64c', marginTop: '1.5rem', fontWeight: '500' }}>
+                <ul style={{ color: '#d1d5db', fontSize: '0.95rem', lineHeight: '2', paddingLeft: '1.25rem', marginBottom: '1.5rem' }}>
+                  <li><strong>IBM</strong> - Neuro-Symbolic AI Initiative</li>
+                  <li><strong>MIT-IBM Watson AI Lab</strong> - Hybrid AI systems</li>
+                  <li><strong>DeepMind</strong> - Exploring symbolic + neural approaches</li>
+                  <li><strong>DARPA</strong> - Funding neurosymbolic research programs</li>
+                  <li><strong>Microsoft Research</strong> - Logic Tensor Networks</li>
+                  <li><strong>Stanford HAI</strong> - Human-compatible AI</li>
+                </ul>
+                <p style={{ color: '#81b64c', fontWeight: '500', fontSize: '1rem' }}>
                   KROG Games is the first deployed neurosymbolic platform with real user data at scale.
                 </p>
               </div>
 
-              {/* Research Opportunities */}
+              {/* Data & Collaboration */}
               <div style={{
                 backgroundColor: '#1f2937',
                 borderRadius: '0.75rem',
@@ -649,52 +702,103 @@ export default function App() {
                 marginBottom: '2rem'
               }}>
                 <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
-                  Research Opportunities
+                  Research Data & Collaboration
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                  {[
-                    { venue: 'AI/ML Conferences', topics: 'AAAI, NeurIPS, IJCAI', focus: 'Neurosymbolic framework foundations' },
-                    { venue: 'Cognitive Science', topics: 'COGSCI, CogSci Journal', focus: 'Human transfer learning patterns' },
-                    { venue: 'AI Safety', topics: 'JAIR, AI Magazine', focus: 'Explainable AI in games' },
-                    { venue: 'High Impact', topics: 'Science, Nature', focus: 'Large-scale decision analysis' }
-                  ].map((item, i) => (
-                    <div key={i} style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
-                      <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.25rem' }}>{item.venue}</h5>
-                      <p style={{ color: '#6b7280', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{item.topics}</p>
-                      <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>{item.focus}</p>
-                    </div>
-                  ))}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '1rem' }}>What Researchers Receive:</h5>
+                    <ul style={{ color: '#d1d5db', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '0', margin: 0, listStyle: 'none' }}>
+                      <li>✓ Anonymized decision-level data</li>
+                      <li>✓ Rule type classifications</li>
+                      <li>✓ Player behavior patterns</li>
+                      <li>✓ Cross-game transfer metrics</li>
+                      <li>✓ Temporal dynamics</li>
+                      <li>✓ Cognitive profiles</li>
+                    </ul>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#e67e22', fontWeight: 'bold', marginBottom: '1rem' }}>What Remains Proprietary:</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                      The underlying KROG mathematical notation and classification algorithms remain protected intellectual property. Publications reference our framework without disclosing implementation details.
+                    </p>
+                  </div>
+                </div>
+
+                <h5 style={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '1rem' }}>Collaboration Models:</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem', borderLeft: '3px solid #81b64c' }}>
+                    <h6 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Academic Partnerships</h6>
+                    <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>
+                      Free dataset access for research and publications. Joint authorship opportunities on empirical studies.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem', borderLeft: '3px solid #3b82f6' }}>
+                    <h6 style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>Educational Institutions</h6>
+                    <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>
+                      Classroom use for game theory, AI, and cognitive science courses. Custom datasets for specific research questions.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem', borderLeft: '3px solid #e67e22' }}>
+                    <h6 style={{ color: '#e67e22', fontWeight: 'bold', marginBottom: '0.5rem' }}>Industry Research Labs</h6>
+                    <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>
+                      Licensed access to longitudinal datasets. Collaboration on neurosymbolic AI development.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Contact CTA */}
+              {/* Contact */}
               <div style={{
                 background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
                 borderRadius: '0.75rem',
                 padding: '2rem',
-                textAlign: 'center',
                 border: '1px solid #333'
               }}>
-                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#f3f4f6' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6', textAlign: 'center' }}>
                   Interested in Research Collaboration?
                 </h4>
-                <p style={{ color: '#9ca3af', marginBottom: '1.5rem' }}>
-                  We're open to academic partnerships, research collaborations, and investor discussions.
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>We welcome partnerships with:</h5>
+                    <ul style={{ color: '#d1d5db', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>University research groups</li>
+                      <li>Cognitive science labs</li>
+                      <li>AI research institutions</li>
+                      <li>Educational technology researchers</li>
+                      <li>Game theory scholars</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.75rem' }}>Contact us to discuss:</h5>
+                    <ul style={{ color: '#d1d5db', fontSize: '0.9rem', lineHeight: '1.8', paddingLeft: '1.25rem', margin: 0 }}>
+                      <li>Dataset access for research</li>
+                      <li>Joint publication opportunities</li>
+                      <li>Educational partnerships</li>
+                      <li>Custom research projects</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                  <p style={{ color: '#d1d5db', marginBottom: '0.5rem' }}>
+                    <strong>Email:</strong>{' '}
+                    <a href="mailto:georg@kroggames.com" style={{ color: '#81b64c', textDecoration: 'none' }}>georg@kroggames.com</a>
+                  </p>
+                  <p style={{ color: '#d1d5db', marginBottom: '0.5rem' }}>
+                    <strong>Website:</strong>{' '}
+                    <a href="https://kroggames.com" style={{ color: '#81b64c', textDecoration: 'none' }}>kroggames.com</a>
+                  </p>
+                  <p style={{ color: '#d1d5db' }}>
+                    <strong>Platform:</strong>{' '}
+                    <a href="https://chess.kroggames.com" style={{ color: '#81b64c', textDecoration: 'none' }}>chess.kroggames.com</a>
+                  </p>
+                </div>
+
+                <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: '1.6', textAlign: 'center', fontStyle: 'italic' }}>
+                  Note: The KROG mathematical framework is proprietary intellectual property. Research collaborations operate under data use agreements that protect our core technology while enabling academic publications.
                 </p>
-                <a
-                  href="mailto:georg@kroggames.com"
-                  style={{
-                    display: 'inline-block',
-                    backgroundColor: '#81b64c',
-                    color: 'white',
-                    padding: '0.75rem 2rem',
-                    borderRadius: '0.5rem',
-                    fontWeight: 'bold',
-                    textDecoration: 'none'
-                  }}
-                >
-                  Contact Us
-                </a>
               </div>
             </>
           )}
@@ -708,12 +812,12 @@ export default function App() {
         padding: '2rem 1rem',
         textAlign: 'center'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <p style={{ color: '#6b7280', marginBottom: '0.5rem' }}>
-            KROG Games Platform - Formal game rule explanations
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <p style={{ color: '#6b7280', fontSize: '0.85rem', lineHeight: '1.7', marginBottom: '1rem' }}>
+            <strong style={{ color: '#9ca3af' }}>KROG™ Framework:</strong> The mathematical notation, operators, and classification system used by KROG Games are proprietary intellectual property. Research collaborations provide access to annotated datasets while protecting the underlying formalization system.
           </p>
-          <p style={{ color: '#4b5563', fontSize: '0.875rem' }}>
-            Created by Georg Philip Krog
+          <p style={{ color: '#4b5563', fontSize: '0.8rem' }}>
+            © {new Date().getFullYear()} KROG Games
           </p>
         </div>
       </footer>
