@@ -1683,6 +1683,15 @@ io.on('connection', (socket) => {
             const gameIdForTracking = room.dbGameId || `anon_${roomId}`;
             const moveHistory = room.game.history({ verbose: true });
             const moveNumber = Math.ceil(moveHistory.length / 2);
+
+            console.log('=== MOVE MADE ===');
+            console.log('san:', result.san);
+            console.log('roomId:', roomId);
+            console.log('room.dbGameId:', room.dbGameId);
+            console.log('gameIdForTracking:', gameIdForTracking);
+            console.log('moveNumber:', moveNumber);
+            console.log('rType:', rType);
+
             const moveRecord: MoveRecord = {
                 game_id: gameIdForTracking,
                 move_number: moveNumber,
@@ -1703,9 +1712,11 @@ io.on('connection', (socket) => {
                 is_check: room.game.inCheck(),
                 is_checkmate: room.game.isCheckmate()
             };
-            // Fire-and-forget: don't await to avoid blocking the game
+
+            // Persist with explicit error logging
             dbOperations.insertMove(moveRecord)
-                .catch(err => console.error('Error persisting move:', err));
+                .then(() => console.log('=== MOVE PERSISTED SUCCESSFULLY ===', result.san))
+                .catch(err => console.error('=== MOVE PERSIST FAILED ===', err));
 
             // Send updated clock times
             const times = getCurrentClockTimes(room);
