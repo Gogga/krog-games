@@ -317,77 +317,280 @@ export default function App() {
 
           {activeSection === 'about' && (
             <>
-              <h3 style={{
-                fontSize: '1.75rem',
-                fontWeight: 'bold',
+              {/* Hero Section */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                borderRadius: '0.75rem',
+                padding: '2.5rem',
                 marginBottom: '2rem',
-                color: '#f3f4f6'
+                border: '1px solid #81b64c',
+                textAlign: 'center'
               }}>
-                About KROG Games
-              </h3>
+                <h3 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#81b64c', marginBottom: '0.5rem' }}>
+                  Learn Chess The Way Computers Think
+                </h3>
+                <p style={{ fontSize: '1.1rem', color: '#f3f4f6', marginBottom: '1.5rem' }}>
+                  See the exact mathematical logic behind every move
+                </p>
+                <p style={{ color: '#d1d5db', lineHeight: '1.8', maxWidth: '700px', margin: '0 auto' }}>
+                  KROG Games teaches chess through formal rule explanations - showing you WHY moves work, not just IF they work.
+                </p>
+              </div>
+
+              {/* What Makes KROG Different */}
               <div style={{
                 backgroundColor: '#1f2937',
                 borderRadius: '0.75rem',
                 padding: '2rem',
                 marginBottom: '2rem'
               }}>
-                <p style={{ color: '#d1d5db', lineHeight: '1.8', marginBottom: '1rem' }}>
-                  KROG Games is a multi-game platform that uses a formal mathematical framework
-                  to validate and explain game rules. The KROG (Knowledge Representation of Games)
-                  framework maps game-specific rules to universal relationship types (R-types)
-                  through domain functors.
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#f3f4f6' }}>
+                  What Makes KROG Different?
+                </h4>
+                <p style={{ color: '#9ca3af', marginBottom: '1.5rem', lineHeight: '1.7' }}>
+                  Most chess platforms tell you "good move" or "bad move." KROG shows you the precise logical reasoning behind every decision.
                 </p>
-                <p style={{ color: '#d1d5db', lineHeight: '1.8' }}>
-                  Each game implements its own KROG functor that connects the game's rules to
-                  the universal framework, enabling precise validation and bilingual explanations
-                  of every move.
-                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Every Move Explained</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      See exactly why each move is permitted or forbidden, with references to official FIDE chess rules.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Mathematical Validation</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Moves are validated using a proprietary mathematical framework that ensures perfect accuracy and consistency.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Learn Transferable Principles</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      The logic you learn in chess applies to strategic thinking everywhere - in business, programming, and life.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bilingual Support</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Full explanations in English and Norwegian (Norsk), making chess education accessible globally.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <h4 style={{
-                fontSize: '1.25rem',
-                fontWeight: 'bold',
-                marginBottom: '1rem',
-                color: '#f3f4f6'
-              }}>
-                The Framework
-              </h4>
+
+              {/* How KROG Explains Chess */}
+              <div style={{ backgroundColor: '#1f2937', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  How KROG Explains Chess
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <div style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '0.5rem' }}>1</div>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Make Your Move</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Play chess naturally - KROG validates every move in real-time.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <div style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '0.5rem' }}>2</div>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>See The Logic</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Click any move to see the mathematical reasoning behind it, translated into clear, natural language.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <div style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '0.5rem' }}>3</div>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Understand The Rules</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Every explanation includes: Why the move is permitted, what conditions must be met, official FIDE rule reference, and strategic value of the move.
+                    </p>
+                  </div>
+                  <div style={{ padding: '1.25rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                    <div style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '0.5rem' }}>4</div>
+                    <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>Learn & Improve</h5>
+                    <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                      Build deep understanding of chess principles that transfer to other strategic thinking.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Example: Knight Move */}
+                <div style={{ backgroundColor: '#2a2a2a', borderRadius: '0.5rem', padding: '1.5rem', border: '1px solid #81b64c' }}>
+                  <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '1rem', fontSize: '1rem' }}>Example: Knight Move</h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                    <div>
+                      <p style={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>Knight Move: g1 → f3</p>
+                      <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>Move Validation:</p>
+                      <p style={{ color: '#81b64c', fontSize: '0.85rem', lineHeight: '1.8' }}>
+                        ✓ Knight moves in L-shaped pattern<br/>
+                        ✓ Can jump over other pieces<br/>
+                        ✓ Destination not occupied by own piece
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>Reference: FIDE Article 3.6</p>
+                      <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.6', fontStyle: 'italic', marginBottom: '1rem' }}>
+                        "The knight moves to one of the squares nearest but not on the same rank, file or diagonal"
+                      </p>
+                      <p style={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '0.25rem' }}>Strategic Value:</p>
+                      <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Develops piece while controlling center</p>
+                    </div>
+                  </div>
+                  <p style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: '1rem', textAlign: 'right', fontStyle: 'italic' }}>
+                    Validated using KROG's proprietary framework
+                  </p>
+                </div>
+              </div>
+
+              {/* Who Is KROG For */}
+              <div style={{ marginBottom: '2rem' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: '#f3f4f6' }}>
+                  Who Is KROG For?
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {[
+                    { icon: '🎓', title: 'Students & Learners', desc: 'Understand chess systematically through formal logic rather than memorization. Perfect for analytical minds.' },
+                    { icon: '👨‍🏫', title: 'Teachers & Coaches', desc: 'Teach chess with precise rule explanations and official FIDE references. Build deeper understanding in students.' },
+                    { icon: '🧠', title: 'Curious Minds', desc: 'Satisfy your "but WHY?" instinct with mathematical precision. No handwaving, no magic - just pure logic.' },
+                    { icon: '🔬', title: 'Researchers', desc: 'Study strategic decision-making with formal rule annotations. Research collaboration opportunities available.' },
+                    { icon: '💼', title: 'Strategic Thinkers', desc: 'Learn principles that transfer beyond chess - strategic planning, constraint reasoning, and logical decision-making.' }
+                  ].map((item, i) => (
+                    <div key={i} style={{ backgroundColor: '#1f2937', borderRadius: '0.5rem', padding: '1.25rem', borderLeft: '3px solid #81b64c' }}>
+                      <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{item.icon}</div>
+                      <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#f3f4f6' }}>{item.title}</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.6' }}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Platform Features */}
+              <div style={{ backgroundColor: '#1f2937', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  Platform Features
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                  {[
+                    { title: 'Daily Puzzles', desc: 'Sharpen your tactical skills with new puzzles every day, complete with detailed explanations.' },
+                    { title: 'Opening Explorer', desc: 'Learn chess openings with move-by-move explanations of why each move works strategically.' },
+                    { title: 'Lessons & Tutorials', desc: 'Structured learning path from beginner to advanced, with formal rule explanations throughout.' },
+                    { title: 'Progress Tracking', desc: 'Monitor your improvement with detailed statistics and performance analytics.' },
+                    { title: 'Multiplayer Games', desc: 'Play against friends or AI opponents with full move explanations available.' },
+                    { title: 'Mobile Responsive', desc: 'Learn chess anywhere - fully optimized for desktop, tablet, and mobile devices.' }
+                  ].map((item, i) => (
+                    <div key={i} style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                      <h5 style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>{item.title}</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* The Technology */}
+              <div style={{ backgroundColor: '#1f2937', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  The Technology Behind KROG
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                  {[
+                    { title: 'Universal Rule Framework', desc: 'KROG uses a proprietary mathematical framework to represent game rules with complete precision and consistency.' },
+                    { title: 'Formal Validation', desc: 'Every move is validated against official chess rules using formal logic - no ambiguity, no errors.' },
+                    { title: 'Natural Language Translation', desc: 'Complex mathematical validations are translated into clear, readable explanations that anyone can understand.' },
+                    { title: 'Cross-Platform', desc: 'Built with modern web technologies (React, Node.js, PostgreSQL) for reliability, speed, and scalability.' },
+                    { title: 'Privacy Focused', desc: 'Your game data is private. Research collaborations use only anonymized datasets with your consent.' },
+                    { title: 'Open to Research', desc: 'Academic partnerships available for studying strategic decision-making and learning patterns.' }
+                  ].map((item, i) => (
+                    <div key={i} style={{ padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                      <h5 style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: '0.5rem' }}>{item.title}</h5>
+                      <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Our Mission */}
+              <div style={{ backgroundColor: '#1f2937', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#f3f4f6' }}>
+                  Our Mission
+                </h4>
+                <p style={{ color: '#81b64c', fontWeight: '500', marginBottom: '1.5rem' }}>
+                  Making Strategic Thinking Accessible
+                </p>
+                <p style={{ color: '#d1d5db', lineHeight: '1.8', marginBottom: '1.5rem' }}>
+                  We believe chess is more than a game - it's a way of thinking. KROG makes the logical foundations of chess accessible to everyone through clear, precise explanations.
+                </p>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {[
+                    { title: 'Beyond Memorization', desc: 'Traditional chess learning relies on memorizing positions and patterns. KROG teaches you the underlying principles, enabling true understanding and transfer to new situations.' },
+                    { title: 'Building Analytical Minds', desc: 'The formal reasoning skills learned through KROG chess transfer to programming, mathematics, business strategy, and life decisions.' },
+                    { title: 'Supporting Education', desc: 'We partner with schools and educators to bring formal logical reasoning into classrooms through engaging gameplay.' },
+                    { title: 'Advancing Research', desc: 'KROG enables groundbreaking research in how humans learn strategic thinking, bridging cognitive science and artificial intelligence.' }
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#81b64c', fontWeight: 'bold', fontSize: '1.25rem' }}>•</span>
+                      <div>
+                        <h5 style={{ fontWeight: 'bold', color: '#f3f4f6', marginBottom: '0.25rem' }}>{item.title}</h5>
+                        <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: '1.6' }}>{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Get Started CTA */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: '1rem'
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                borderRadius: '0.75rem',
+                padding: '2rem',
+                border: '1px solid #333',
+                textAlign: 'center'
               }}>
-                <div style={{
-                  backgroundColor: '#1f2937',
-                  borderRadius: '0.5rem',
-                  padding: '1.5rem',
-                  borderLeft: '4px solid #81b64c'
-                }}>
-                  <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>7 T-Types</h5>
-                  <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                    Agent states from T1 (full discretion) to T7 (mandatory prevention)
-                  </p>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#f3f4f6' }}>
+                  Start Learning Chess Through Logic
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem', maxWidth: '800px', margin: '0 auto 1.5rem' }}>
+                  {[
+                    { label: 'Free to Play', desc: 'Create an account and start playing immediately. No credit card required.' },
+                    { label: 'Daily Puzzles', desc: 'New challenges every day to sharpen your tactical thinking.' },
+                    { label: 'Structured Lessons', desc: 'Learn systematically from beginner to advanced levels.' },
+                    { label: 'Play Anytime', desc: 'Desktop, tablet, or mobile - play wherever you are.' }
+                  ].map((item, i) => (
+                    <div key={i} style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#2a2a2a', borderRadius: '0.5rem' }}>
+                      <p style={{ color: '#81b64c', fontWeight: 'bold', marginBottom: '0.5rem' }}>{item.label}</p>
+                      <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
+                    </div>
+                  ))}
                 </div>
-                <div style={{
-                  backgroundColor: '#1f2937',
-                  borderRadius: '0.5rem',
-                  padding: '1.5rem',
-                  borderLeft: '4px solid #3b82f6'
-                }}>
-                  <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>35 R-Types</h5>
-                  <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                    Bilateral relationships between agents as T-type combinations
-                  </p>
-                </div>
-                <div style={{
-                  backgroundColor: '#1f2937',
-                  borderRadius: '0.5rem',
-                  padding: '1.5rem',
-                  borderLeft: '4px solid #10b981'
-                }}>
-                  <h5 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>9 Modal Operators</h5>
-                  <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
-                    P, O, F, C, L, W, B, I, D based on Hohfeldian legal relations
-                  </p>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <a
+                    href="https://chess.kroggames.com"
+                    style={{
+                      display: 'inline-block',
+                      backgroundColor: '#81b64c',
+                      color: 'white',
+                      padding: '0.75rem 2rem',
+                      borderRadius: '0.5rem',
+                      fontWeight: 'bold',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    Play Chess Now
+                  </a>
+                  <a
+                    href="https://chess.kroggames.com"
+                    style={{
+                      display: 'inline-block',
+                      backgroundColor: 'transparent',
+                      color: '#81b64c',
+                      padding: '0.75rem 2rem',
+                      borderRadius: '0.5rem',
+                      fontWeight: 'bold',
+                      textDecoration: 'none',
+                      border: '2px solid #81b64c'
+                    }}
+                  >
+                    View Daily Puzzle
+                  </a>
                 </div>
               </div>
             </>
