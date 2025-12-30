@@ -299,6 +299,29 @@ export interface KrogStats {
   rtype_count?: number;
 }
 
+export interface MoveRecord {
+  id?: number;
+  game_id: string;
+  move_number: number;
+  color: 'white' | 'black';
+  san: string;
+  from_square: string;
+  to_square: string;
+  piece: string;
+  captured: string | null;
+  promotion: string | null;
+  flags: string;
+  r_type: string;
+  r_type_description: string;
+  conditions: string;
+  fide_ref: string;
+  move_type: string;
+  fen_after: string;
+  is_check: boolean;
+  is_checkmate: boolean;
+  created_at?: string;
+}
+
 // Database operations
 export const dbOperations = {
   // User operations
@@ -407,6 +430,68 @@ export const dbOperations = {
        ORDER BY g.started_at DESC
        LIMIT $2 OFFSET $3`,
       [userId, limit, offset]
+    );
+    return result.rows;
+  },
+
+  // Move records with KROG R-type annotations
+  async insertMove(move: MoveRecord): Promise<void> {
+    await pool.query(
+      `INSERT INTO moves (
+        game_id, move_number, color, san, from_square, to_square,
+        piece, captured, promotion, flags, r_type, r_type_description,
+        conditions, fide_ref, move_type, fen_after, is_check, is_checkmate
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+      [
+        move.game_id,
+        move.move_number,
+        move.color,
+        move.san,
+        move.from_square,
+        move.to_square,
+        move.piece,
+        move.captured,
+        move.promotion,
+        move.flags,
+        move.r_type,
+        move.r_type_description,
+        move.conditions,
+        move.fide_ref,
+        move.move_type,
+        move.fen_after,
+        move.is_check,
+        move.is_checkmate
+      ]
+    );
+  },
+
+  async getMovesByGame(gameId: string): Promise<MoveRecord[]> {
+    const result = await pool.query(
+      `SELECT * FROM moves WHERE game_id = $1 ORDER BY move_number ASC, color ASC`,
+      [gameId]
+    );
+    return result.rows;
+  },
+
+  async getMovesByRType(rType: string, limit: number = 100): Promise<MoveRecord[]> {
+    const result = await pool.query(
+      `SELECT m.*, g.room_code, g.white_id, g.black_id
+       FROM moves m
+       JOIN games g ON m.game_id = g.id
+       WHERE m.r_type = $1
+       ORDER BY m.created_at DESC
+       LIMIT $2`,
+      [rType, limit]
+    );
+    return result.rows;
+  },
+
+  async getMoveStats(): Promise<{ r_type: string; count: number }[]> {
+    const result = await pool.query(
+      `SELECT r_type, COUNT(*) as count
+       FROM moves
+       GROUP BY r_type
+       ORDER BY count DESC`
     );
     return result.rows;
   },

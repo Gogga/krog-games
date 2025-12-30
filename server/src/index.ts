@@ -23,7 +23,7 @@ import {
     createKROGEngine,
     KROGValidation
 } from './krog';
-import { dbOperations, calculateEloChange, User, Game, DailyPuzzleStreak } from './db';
+import { dbOperations, calculateEloChange, User, Game, DailyPuzzleStreak, MoveRecord } from './db';
 import * as auth from './auth';
 import {
     VariantType,
@@ -1498,6 +1498,35 @@ io.on('connection', (socket) => {
                     legalExplanation.krog.operator
                 ).catch(err => console.error('Error recording KROG move data:', err));
                 // Full formula data available: legalExplanation.krog.formula, legalExplanation.krog.tType
+            }
+
+            // Persist move with R-type annotation to database
+            if (room.dbGameId) {
+                const history = room.game.history({ verbose: true });
+                const moveNumber = Math.ceil(history.length / 2);
+                const moveRecord: MoveRecord = {
+                    game_id: room.dbGameId,
+                    move_number: moveNumber,
+                    color: currentTurn as 'white' | 'black',
+                    san: result.san,
+                    from_square: result.from,
+                    to_square: result.to,
+                    piece: result.piece,
+                    captured: result.captured || null,
+                    promotion: result.promotion || null,
+                    flags: result.flags,
+                    r_type: rType,
+                    r_type_description: rTypeDescription.en,
+                    conditions: JSON.stringify(legalExplanation.conditions || []),
+                    fide_ref: legalExplanation.fide ? legalExplanation.fide.article : '',
+                    move_type: legalExplanation.moveType || 'normal',
+                    fen_after: room.game.fen(),
+                    is_check: room.game.inCheck(),
+                    is_checkmate: room.game.isCheckmate()
+                };
+                // Fire-and-forget: don't await to avoid blocking the game
+                dbOperations.insertMove(moveRecord)
+                    .catch(err => console.error('Error persisting move:', err));
             }
 
             // Send updated clock times
