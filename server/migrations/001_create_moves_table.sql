@@ -1,9 +1,12 @@
 -- Migration: Create moves table for R-type annotation persistence
 -- Run this in Supabase SQL Editor or via migration tool
 
+-- NOTE: game_id does NOT have a foreign key constraint to allow tracking
+-- anonymous games (game_id = 'anon_<roomId>') for research analytics
+
 CREATE TABLE IF NOT EXISTS moves (
   id SERIAL PRIMARY KEY,
-  game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  game_id TEXT NOT NULL,  -- No FK constraint to allow anonymous game tracking
   move_number INTEGER NOT NULL,
   color TEXT NOT NULL CHECK (color IN ('white', 'black')),
   san TEXT NOT NULL,
