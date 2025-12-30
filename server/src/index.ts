@@ -933,6 +933,45 @@ function makeComputerMove(room: Room, roomCode: string) {
             variantState: room.variantState
         });
 
+        // Persist computer move with R-type annotation
+        const rType = classifyMoveRType(result);
+        const rTypeDescription = getRTypeDescription(rType);
+        const gameIdForTracking = room.dbGameId || `anon_${roomCode}`;
+        const moveNumber = Math.ceil(history.length / 2);
+
+        console.log('=== COMPUTER MOVE MADE ===');
+        console.log('san:', result.san);
+        console.log('roomCode:', roomCode);
+        console.log('gameIdForTracking:', gameIdForTracking);
+        console.log('rType:', rType);
+
+        const moveRecord: MoveRecord = {
+            game_id: gameIdForTracking,
+            move_number: moveNumber,
+            color: room.computerColor as 'white' | 'black',
+            san: result.san,
+            from_square: result.from,
+            to_square: result.to,
+            piece: result.piece,
+            captured: result.captured || null,
+            promotion: result.promotion || null,
+            flags: result.flags,
+            r_type: rType,
+            r_type_description: rTypeDescription.en,
+            conditions: '[]',
+            fide_ref: '',
+            move_type: result.flags.includes('k') || result.flags.includes('q') ? 'castling' :
+                       result.flags.includes('e') ? 'en_passant' :
+                       result.flags.includes('p') ? 'promotion' : 'normal',
+            fen_after: room.game.fen(),
+            is_check: room.game.inCheck(),
+            is_checkmate: room.game.isCheckmate()
+        };
+
+        dbOperations.insertMove(moveRecord)
+            .then(() => console.log('=== COMPUTER MOVE PERSISTED ===', result.san))
+            .catch(err => console.error('=== COMPUTER MOVE PERSIST FAILED ===', err));
+
         // Send clock update
         const times = getCurrentClockTimes(room);
         io.to(roomCode).emit('clock_update', {
