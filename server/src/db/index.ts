@@ -5,8 +5,8 @@ import { randomUUID } from 'crypto';
 // Use Node.js built-in UUID generator
 const uuidv4 = randomUUID;
 
-// Database connection pool
-const pool = new Pool({
+// Database connection pool (exported for direct queries in research endpoints)
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: 10000,

@@ -23,7 +23,7 @@ import {
     createKROGEngine,
     KROGValidation
 } from './krog';
-import { dbOperations, calculateEloChange, User, Game, DailyPuzzleStreak, MoveRecord } from './db';
+import { dbOperations, calculateEloChange, User, Game, DailyPuzzleStreak, MoveRecord, pool } from './db';
 import * as auth from './auth';
 import {
     VariantType,
@@ -250,6 +250,185 @@ app.post('/api/krog/classify', (req, res) => {
         rType,
         description: rTypeDescription
     });
+});
+
+// ==================== RESEARCH API ENDPOINTS ====================
+
+// GET /api/research/stats - total moves, games, unique R-types
+app.get('/api/research/stats', async (req, res) => {
+    try {
+        const [moveStats, gameCount] = await Promise.all([
+            dbOperations.getMoveStats(),
+            pool.query('SELECT COUNT(*) as count FROM games WHERE ended_at IS NOT NULL')
+        ]);
+
+        const totalMoves = moveStats.reduce((sum, s) => sum + parseInt(s.count as any), 0);
+        const uniqueRTypes = moveStats.length;
+
+        res.json({
+            success: true,
+            stats: {
+                totalMoves,
+                totalGames: parseInt(gameCount.rows[0]?.count || '0'),
+                uniqueRTypes,
+                lastUpdated: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching research stats:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch stats' });
+    }
+});
+
+// GET /api/research/r-types - R-type distribution with counts and percentages
+app.get('/api/research/r-types', async (req, res) => {
+    try {
+        const stats = await dbOperations.getMoveStats();
+        const totalMoves = stats.reduce((sum, s) => sum + parseInt(s.count as any), 0);
+
+        const distribution = stats.map(s => ({
+            rType: s.r_type,
+            description: getRTypeDescription(s.r_type).en,
+            count: parseInt(s.count as any),
+            percentage: totalMoves > 0 ? ((parseInt(s.count as any) / totalMoves) * 100).toFixed(2) : '0.00'
+        }));
+
+        res.json({
+            success: true,
+            totalMoves,
+            distribution
+        });
+    } catch (error) {
+        console.error('Error fetching R-type distribution:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch R-type distribution' });
+    }
+});
+
+// GET /api/research/r-types/by-piece - R-type breakdown per piece
+app.get('/api/research/r-types/by-piece', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT piece, r_type, COUNT(*) as count
+            FROM moves
+            GROUP BY piece, r_type
+            ORDER BY piece, count DESC
+        `);
+
+        // Group by piece
+        const byPiece: Record<string, { rType: string; count: number }[]> = {};
+        for (const row of result.rows) {
+            if (!byPiece[row.piece]) {
+                byPiece[row.piece] = [];
+            }
+            byPiece[row.piece].push({
+                rType: row.r_type,
+                count: parseInt(row.count)
+            });
+        }
+
+        const pieceNames: Record<string, string> = {
+            k: 'King', q: 'Queen', r: 'Rook', b: 'Bishop', n: 'Knight', p: 'Pawn'
+        };
+
+        res.json({
+            success: true,
+            byPiece: Object.entries(byPiece).map(([piece, rtypes]) => ({
+                piece,
+                pieceName: pieceNames[piece] || piece,
+                rtypes,
+                totalMoves: rtypes.reduce((sum, r) => sum + r.count, 0)
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching R-types by piece:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch R-types by piece' });
+    }
+});
+
+// GET /api/research/special-moves - castling, en passant, promotion stats
+app.get('/api/research/special-moves', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                move_type,
+                r_type,
+                COUNT(*) as count,
+                SUM(CASE WHEN is_check THEN 1 ELSE 0 END) as checks,
+                SUM(CASE WHEN is_checkmate THEN 1 ELSE 0 END) as checkmates
+            FROM moves
+            WHERE move_type IN ('castle_kingside', 'castle_queenside', 'en_passant', 'promotion')
+            GROUP BY move_type, r_type
+            ORDER BY count DESC
+        `);
+
+        const specialMoves = result.rows.map(row => ({
+            moveType: row.move_type,
+            rType: row.r_type,
+            count: parseInt(row.count),
+            checks: parseInt(row.checks),
+            checkmates: parseInt(row.checkmates)
+        }));
+
+        // Summary stats
+        const summary = {
+            castling: specialMoves.filter(m => m.moveType.includes('castle')).reduce((sum, m) => sum + m.count, 0),
+            enPassant: specialMoves.filter(m => m.moveType === 'en_passant').reduce((sum, m) => sum + m.count, 0),
+            promotion: specialMoves.filter(m => m.moveType === 'promotion').reduce((sum, m) => sum + m.count, 0)
+        };
+
+        res.json({
+            success: true,
+            summary,
+            details: specialMoves
+        });
+    } catch (error) {
+        console.error('Error fetching special moves:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch special moves' });
+    }
+});
+
+// GET /api/games/:gameId/moves - all moves for a game with KROG annotations
+app.get('/api/games/:gameId/moves', async (req, res) => {
+    try {
+        const { gameId } = req.params;
+        const moves = await dbOperations.getMovesByGame(gameId);
+
+        if (moves.length === 0) {
+            // Check if game exists
+            const game = await dbOperations.getGameById(gameId);
+            if (!game) {
+                res.status(404).json({ success: false, message: 'Game not found' });
+                return;
+            }
+        }
+
+        res.json({
+            success: true,
+            gameId,
+            totalMoves: moves.length,
+            moves: moves.map(m => ({
+                moveNumber: m.move_number,
+                color: m.color,
+                san: m.san,
+                from: m.from_square,
+                to: m.to_square,
+                piece: m.piece,
+                captured: m.captured,
+                promotion: m.promotion,
+                rType: m.r_type,
+                rTypeDescription: m.r_type_description,
+                conditions: m.conditions ? JSON.parse(m.conditions) : [],
+                fideRef: m.fide_ref,
+                moveType: m.move_type,
+                fenAfter: m.fen_after,
+                isCheck: m.is_check,
+                isCheckmate: m.is_checkmate
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching game moves:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch game moves' });
+    }
 });
 
 // Load opening book at startup
