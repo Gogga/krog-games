@@ -17,18 +17,6 @@ importers:
 
   apps/admin:
     dependencies:
-      '@krog/analytics':
-        specifier: workspace:*
-        version: link:../../packages/analytics
-      '@krog/learning-engine':
-        specifier: workspace:*
-        version: link:../../packages/learning-engine
-      '@krog/recommendation':
-        specifier: workspace:*
-        version: link:../../packages/recommendation
-      '@krog/types':
-        specifier: workspace:*
-        version: link:../../packages/types
       react:
         specifier: ^19.0.0
         version: 19.2.3
