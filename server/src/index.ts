@@ -389,6 +389,306 @@ app.get('/api/research/special-moves', async (req, res) => {
     }
 });
 
+// ==================== KUIE RESEARCH DASHBOARD ENDPOINTS ====================
+
+// GET /api/research/t-types - T-type distribution from krog_ld
+app.get('/api/research/t-types', async (_req, res) => {
+    try {
+        // Extract T-types from agentI (player) in krog_ld
+        const result = await pool.query(`
+            SELECT
+                COALESCE(
+                    SUBSTRING(krog_ld->'krog:agentI'->'krog:tType'->>'@id' FROM '/([^/]+)$'),
+                    'Unknown'
+                ) as t_type,
+                COUNT(*) as count
+            FROM moves
+            WHERE krog_ld IS NOT NULL
+            GROUP BY t_type
+            ORDER BY count DESC
+        `);
+
+        const total = result.rows.reduce((sum, row) => sum + parseInt(row.count), 0);
+        const tTypes = result.rows.map(row => ({
+            tType: row.t_type,
+            count: parseInt(row.count),
+            percentage: total > 0 ? Math.round((parseInt(row.count) / total) * 1000) / 10 : 0
+        }));
+
+        res.json({
+            success: true,
+            tTypes,
+            total
+        });
+    } catch (error) {
+        console.error('Error fetching T-types:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch T-types' });
+    }
+});
+
+// GET /api/research/t-type-pairs - T-type pair frequency for heatmap
+app.get('/api/research/t-type-pairs', async (_req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                COALESCE(
+                    SUBSTRING(krog_ld->'krog:agentI'->'krog:tType'->>'@id' FROM '/([^/]+)$'),
+                    'Unknown'
+                ) as agent_i_ttype,
+                COALESCE(
+                    SUBSTRING(krog_ld->'krog:agentJ'->'krog:tType'->>'@id' FROM '/([^/]+)$'),
+                    'Unknown'
+                ) as agent_j_ttype,
+                krog_ld->'krog:rType'->>'@id' as r_type,
+                COUNT(*) as count
+            FROM moves
+            WHERE krog_ld IS NOT NULL
+            GROUP BY agent_i_ttype, agent_j_ttype, r_type
+            ORDER BY count DESC
+        `);
+
+        const pairs = result.rows.map(row => ({
+            agentI: row.agent_i_ttype,
+            agentJ: row.agent_j_ttype,
+            rType: row.r_type?.replace('krog:', '') || 'Unknown',
+            count: parseInt(row.count)
+        }));
+
+        res.json({
+            success: true,
+            pairs
+        });
+    } catch (error) {
+        console.error('Error fetching T-type pairs:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch T-type pairs' });
+    }
+});
+
+// GET /api/research/formulas - Unique logical formulas with counts
+app.get('/api/research/formulas', async (_req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                krog_ld->'krog:rType'->>'krog:formal' as formula,
+                krog_ld->'krog:rType'->>'@id' as r_type,
+                krog_ld->'krog:rType'->>'krog:natural' as natural_description,
+                krog_ld->'krog:rType'->>'krog:riskLevel' as risk_level,
+                COUNT(*) as count
+            FROM moves
+            WHERE krog_ld IS NOT NULL AND krog_ld->'krog:rType'->>'krog:formal' IS NOT NULL
+            GROUP BY formula, r_type, natural_description, risk_level
+            ORDER BY count DESC
+        `);
+
+        const formulas = result.rows.map(row => ({
+            formula: row.formula,
+            rType: row.r_type?.replace('krog:', '') || 'Unknown',
+            natural: row.natural_description,
+            riskLevel: row.risk_level || 'unknown',
+            count: parseInt(row.count)
+        }));
+
+        res.json({
+            success: true,
+            formulas,
+            total: formulas.reduce((sum, f) => sum + f.count, 0)
+        });
+    } catch (error) {
+        console.error('Error fetching formulas:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch formulas' });
+    }
+});
+
+// GET /api/research/operators - Modal operator usage statistics
+app.get('/api/research/operators', async (_req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT krog_ld->'krog:rType'->>'krog:formal' as formula
+            FROM moves
+            WHERE krog_ld IS NOT NULL AND krog_ld->'krog:rType'->>'krog:formal' IS NOT NULL
+        `);
+
+        // Count operator occurrences in all formulas
+        const operatorCounts: Record<string, number> = {
+            'P': 0, 'O': 0, 'F': 0, 'C': 0, 'L': 0, 'W': 0, 'B': 0, 'I': 0, 'D': 0
+        };
+
+        result.rows.forEach(row => {
+            const formula = row.formula || '';
+            // Count P (Permission) - match P( not followed by another letter
+            operatorCounts['P'] += (formula.match(/P\(/g) || []).length;
+            // Count O (Obligation) - match O( or O¬(
+            operatorCounts['O'] += (formula.match(/O[¬(]/g) || []).length;
+            // F (Prohibition) rarely appears directly
+            operatorCounts['F'] += (formula.match(/F\(/g) || []).length;
+            // Other operators are less common in chess but count them
+            operatorCounts['C'] += (formula.match(/C[_i]/g) || []).length;
+            operatorCounts['L'] += (formula.match(/L[_i]/g) || []).length;
+            operatorCounts['W'] += (formula.match(/W[_i]/g) || []).length;
+            operatorCounts['B'] += (formula.match(/B[_i]/g) || []).length;
+            operatorCounts['I'] += (formula.match(/I[_i]/g) || []).length;
+            operatorCounts['D'] += (formula.match(/D[_i]/g) || []).length;
+        });
+
+        const operators = Object.entries(operatorCounts)
+            .map(([op, count]) => ({ operator: op, count }))
+            .sort((a, b) => b.count - a.count);
+
+        res.json({
+            success: true,
+            operators,
+            totalFormulas: result.rows.length
+        });
+    } catch (error) {
+        console.error('Error fetching operators:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch operators' });
+    }
+});
+
+// GET /api/research/domains - List of domains with decision counts
+app.get('/api/research/domains', async (_req, res) => {
+    try {
+        // Currently only chess has data - structure for future multi-domain
+        const chessCount = await pool.query(`
+            SELECT COUNT(*) as count FROM moves WHERE krog_ld IS NOT NULL
+        `);
+
+        const domains = [
+            {
+                name: 'Chess',
+                id: 'chess',
+                status: 'active',
+                count: parseInt(chessCount.rows[0]?.count || '0'),
+                description: 'Chess move decisions with KROG annotations'
+            },
+            // Placeholder for future domains
+            { name: 'Contracts', id: 'contracts', status: 'coming_soon', count: 0, description: 'Contract clause governance' },
+            { name: 'AI Auth', id: 'ai-auth', status: 'coming_soon', count: 0, description: 'AI authorization decisions' },
+            { name: 'Physics', id: 'physics', status: 'coming_soon', count: 0, description: 'Physical system constraints' }
+        ];
+
+        res.json({
+            success: true,
+            domains,
+            activeDomains: domains.filter(d => d.status === 'active').length
+        });
+    } catch (error) {
+        console.error('Error fetching domains:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch domains' });
+    }
+});
+
+// GET /api/research/decisions - Paginated decision stream
+app.get('/api/research/decisions', async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+        const offset = parseInt(req.query.offset as string) || 0;
+
+        const [decisions, countResult] = await Promise.all([
+            pool.query(`
+                SELECT
+                    id,
+                    game_id,
+                    move_number,
+                    color,
+                    san,
+                    from_square,
+                    to_square,
+                    piece,
+                    captured,
+                    r_type,
+                    r_type_description,
+                    krog_ld,
+                    created_at
+                FROM moves
+                WHERE krog_ld IS NOT NULL
+                ORDER BY created_at DESC
+                LIMIT $1 OFFSET $2
+            `, [limit, offset]),
+            pool.query(`SELECT COUNT(*) as total FROM moves WHERE krog_ld IS NOT NULL`)
+        ]);
+
+        const total = parseInt(countResult.rows[0]?.total || '0');
+        const decisionsData = decisions.rows.map(row => ({
+            id: row.id,
+            domain: 'chess',
+            gameId: row.game_id,
+            moveNumber: row.move_number,
+            color: row.color,
+            san: row.san,
+            from: row.from_square,
+            to: row.to_square,
+            piece: row.piece,
+            captured: row.captured,
+            rType: row.r_type,
+            rTypeDescription: row.r_type_description,
+            agentI_ttype: row.krog_ld?.['krog:agentI']?.['krog:tType']?.['@id']?.split('/').pop() || 'Unknown',
+            agentJ_ttype: row.krog_ld?.['krog:agentJ']?.['krog:tType']?.['@id']?.split('/').pop() || 'Unknown',
+            krog_ld: row.krog_ld,
+            createdAt: row.created_at
+        }));
+
+        res.json({
+            success: true,
+            decisions: decisionsData,
+            total,
+            limit,
+            offset,
+            hasMore: offset + limit < total
+        });
+    } catch (error) {
+        console.error('Error fetching decisions:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch decisions' });
+    }
+});
+
+// GET /api/research/decisions/:id - Single decision with full krog_ld
+app.get('/api/research/decisions/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(`
+            SELECT * FROM moves WHERE id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({ success: false, message: 'Decision not found' });
+            return;
+        }
+
+        const row = result.rows[0];
+        res.json({
+            success: true,
+            decision: {
+                id: row.id,
+                domain: 'chess',
+                gameId: row.game_id,
+                moveNumber: row.move_number,
+                color: row.color,
+                san: row.san,
+                from: row.from_square,
+                to: row.to_square,
+                piece: row.piece,
+                captured: row.captured,
+                promotion: row.promotion,
+                flags: row.flags,
+                rType: row.r_type,
+                rTypeDescription: row.r_type_description,
+                conditions: row.conditions ? JSON.parse(row.conditions) : [],
+                fideRef: row.fide_ref,
+                moveType: row.move_type,
+                fenAfter: row.fen_after,
+                isCheck: row.is_check,
+                isCheckmate: row.is_checkmate,
+                krog_ld: row.krog_ld,
+                createdAt: row.created_at
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching decision:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch decision' });
+    }
+});
+
 // GET /api/games/:gameId/moves - all moves for a game with KROG annotations
 app.get('/api/games/:gameId/moves', async (req, res) => {
     try {

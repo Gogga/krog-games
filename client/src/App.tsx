@@ -27,6 +27,7 @@ const LeaguePanel = lazy(() => import('./components/LeaguePanel').then(m => ({ d
 const GestureHelp = lazy(() => import('./components/GestureHelp'));
 const InstallPrompt = lazy(() => import('./components/InstallPrompt').then(m => ({ default: m.InstallPrompt })));
 const OfflineIndicator = lazy(() => import('./components/InstallPrompt').then(m => ({ default: m.OfflineIndicator })));
+const KUIEDashboard = lazy(() => import('./components/KUIEDashboard'));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -205,6 +206,7 @@ function App() {
   const [openingExplorer, setOpeningExplorer] = useState(false);
   const [lessonsMode, setLessonsMode] = useState(false);
   const [showKrogLeaderboard, setShowKrogLeaderboard] = useState(false);
+  const [showKUIEDashboard, setShowKUIEDashboard] = useState(false);
   const [showFAQ, setShowFAQ] = useState(false);
   const [mobileNavTab, setMobileNavTab] = useState('home');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(() => {
@@ -2004,6 +2006,32 @@ function App() {
             </button>
 
             <button
+              onClick={() => setShowKUIEDashboard(true)}
+              style={{
+                flex: '1 1 calc(50% - 5px)',
+                minWidth: isMobile ? '90px' : '100px',
+                minHeight: isMobile ? '50px' : 'auto',
+                background: 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)',
+                border: 'none',
+                color: 'white',
+                padding: isMobile ? '12px 10px' : '15px 12px',
+                borderRadius: isMobile ? '10px' : '6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: isMobile ? '0.9rem' : '1rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: isMobile ? '6px' : '8px',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+            >
+              <span style={{ fontSize: isMobile ? '1.1rem' : '1.2rem' }}>🔬</span>
+              {isMobile ? 'KUIE' : 'Research'}
+            </button>
+
+            <button
               onClick={() => setShowFAQ(true)}
               style={{
                 flex: '1 1 calc(50% - 5px)',
@@ -2144,6 +2172,13 @@ function App() {
             language={language}
           />
         </Suspense>
+
+        {/* KUIE Research Dashboard - Lobby */}
+        {showKUIEDashboard && (
+          <Suspense fallback={<LoadingFallback />}>
+            <KUIEDashboard onClose={() => setShowKUIEDashboard(false)} />
+          </Suspense>
+        )}
 
         {/* FAQ Modal - Lobby */}
         <Suspense fallback={null}>
@@ -3794,6 +3829,13 @@ Learn chess with KROG's proprietary rule validation!`;
           language={language}
         />
       </Suspense>
+
+      {/* KUIE Research Dashboard */}
+      {showKUIEDashboard && (
+        <Suspense fallback={<LoadingFallback />}>
+          <KUIEDashboard onClose={() => setShowKUIEDashboard(false)} />
+        </Suspense>
+      )}
 
       {/* FAQ Modal */}
       <Suspense fallback={null}>
