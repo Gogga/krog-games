@@ -9,10 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@krog/types": "workspace:*",
-    "@krog/analytics": "workspace:*",
-    "@krog/learning-engine": "workspace:*",
-    "@krog/recommendation": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
