@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 
 // API Configuration - use environment variable or default to production
 const API_URL = import.meta.env.VITE_API_URL || 'https://kind-magic-production-32c8.up.railway.app';
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'krog2025';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'Heavenly#Neuro73';
 
 type Page = 'overview' | 'decisions' | 'transfer' | 'rtypes' | 'experiments' | 'export' | 'neurosymbolic';
 
