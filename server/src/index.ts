@@ -939,12 +939,6 @@ function makeComputerMove(room: Room, roomCode: string) {
         const gameIdForTracking = room.dbGameId || `anon_${roomCode}`;
         const moveNumber = Math.ceil(history.length / 2);
 
-        console.log('=== COMPUTER MOVE MADE ===');
-        console.log('san:', result.san);
-        console.log('roomCode:', roomCode);
-        console.log('gameIdForTracking:', gameIdForTracking);
-        console.log('rType:', rType);
-
         const moveRecord: MoveRecord = {
             game_id: gameIdForTracking,
             move_number: moveNumber,
@@ -968,9 +962,8 @@ function makeComputerMove(room: Room, roomCode: string) {
             is_checkmate: room.game.isCheckmate()
         };
 
-        dbOperations.insertMove(moveRecord)
-            .then(() => console.log('=== COMPUTER MOVE PERSISTED ===', result.san))
-            .catch(err => console.error('=== COMPUTER MOVE PERSIST FAILED ===', err));
+        // Fire-and-forget persistence (don't block game flow)
+        dbOperations.insertMove(moveRecord).catch(() => {});
 
         // Send clock update
         const times = getCurrentClockTimes(room);
@@ -1723,14 +1716,6 @@ io.on('connection', (socket) => {
             const moveHistory = room.game.history({ verbose: true });
             const moveNumber = Math.ceil(moveHistory.length / 2);
 
-            console.log('=== MOVE MADE ===');
-            console.log('san:', result.san);
-            console.log('roomId:', roomId);
-            console.log('room.dbGameId:', room.dbGameId);
-            console.log('gameIdForTracking:', gameIdForTracking);
-            console.log('moveNumber:', moveNumber);
-            console.log('rType:', rType);
-
             const moveRecord: MoveRecord = {
                 game_id: gameIdForTracking,
                 move_number: moveNumber,
@@ -1752,10 +1737,8 @@ io.on('connection', (socket) => {
                 is_checkmate: room.game.isCheckmate()
             };
 
-            // Persist with explicit error logging
-            dbOperations.insertMove(moveRecord)
-                .then(() => console.log('=== MOVE PERSISTED SUCCESSFULLY ===', result.san))
-                .catch(err => console.error('=== MOVE PERSIST FAILED ===', err));
+            // Fire-and-forget persistence (don't block game flow)
+            dbOperations.insertMove(moveRecord).catch(() => {});
 
             // Send updated clock times
             const times = getCurrentClockTimes(room);
