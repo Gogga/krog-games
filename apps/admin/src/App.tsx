@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 
 // API Configuration - use environment variable or default to production
 const API_URL = import.meta.env.VITE_API_URL || 'https://kind-magic-production-32c8.up.railway.app';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'krog2025';
 
 type Page = 'overview' | 'decisions' | 'transfer' | 'rtypes' | 'experiments' | 'export' | 'neurosymbolic';
 
@@ -139,10 +140,71 @@ const T_TYPES_LABELS: Record<string, string> = {
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('overview');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState(false);
+
+  // Check localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('krog_admin_authenticated');
+    if (stored === 'true') setIsAuthenticated(true);
+  }, []);
+
+  // Login handler
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+      setLoginError(false);
+      localStorage.setItem('krog_admin_authenticated', 'true');
+    } else {
+      setLoginError(true);
+      setPassword('');
+    }
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('krog_admin_authenticated');
+  };
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="login-container">
+        <div className="login-box">
+          <div className="login-header">
+            <h1>KROG Analytics</h1>
+            <p>Research Dashboard</p>
+          </div>
+          <form onSubmit={handleLogin}>
+            <div className="login-field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter admin password"
+                autoFocus
+              />
+            </div>
+            {loginError && (
+              <div className="login-error">Invalid password</div>
+            )}
+            <button type="submit" className="login-button">
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard">
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
       <main className="main-content">
         {currentPage === 'overview' && <OverviewPage />}
         {currentPage === 'decisions' && <DecisionAnalysisPage />}
@@ -156,7 +218,7 @@ function App() {
   );
 }
 
-function Sidebar({ currentPage, setCurrentPage }: { currentPage: Page; setCurrentPage: (p: Page) => void }) {
+function Sidebar({ currentPage, setCurrentPage, onLogout }: { currentPage: Page; setCurrentPage: (p: Page) => void; onLogout: () => void }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -218,6 +280,12 @@ function Sidebar({ currentPage, setCurrentPage }: { currentPage: Page; setCurren
           </div>
         </div>
       </nav>
+
+      <div className="sidebar-footer">
+        <button className="logout-button" onClick={onLogout}>
+          Logout
+        </button>
+      </div>
     </aside>
   );
 }
