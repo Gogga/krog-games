@@ -246,6 +246,17 @@ export {
   getTeachingFeedback
 } from './ranker';
 
+// KROG JSON-LD formulas for neurosymbolic reasoning
+export {
+  T_TYPES,
+  R_TYPES,
+  CHESS_R_TYPE_MAPPING,
+  generateKROGLD,
+  getKROGRType,
+  getTType,
+  getRType
+} from './formulas';
+
 // Convenience type for API responses
 export interface KROGExplanationResponse {
   formula: string;

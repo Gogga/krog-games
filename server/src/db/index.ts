@@ -319,6 +319,7 @@ export interface MoveRecord {
   fen_after: string;
   is_check: boolean;
   is_checkmate: boolean;
+  krog_ld?: string; // JSON-LD logical formulas for neurosymbolic AI
   created_at?: string;
 }
 
@@ -440,8 +441,8 @@ export const dbOperations = {
       `INSERT INTO moves (
         game_id, move_number, color, san, from_square, to_square,
         piece, captured, promotion, flags, r_type, r_type_description,
-        conditions, fide_ref, move_type, fen_after, is_check, is_checkmate
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+        conditions, fide_ref, move_type, fen_after, is_check, is_checkmate, krog_ld
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
       [
         move.game_id,
         move.move_number,
@@ -460,7 +461,8 @@ export const dbOperations = {
         move.move_type,
         move.fen_after,
         move.is_check,
-        move.is_checkmate
+        move.is_checkmate,
+        move.krog_ld ? JSON.parse(move.krog_ld) : null
       ]
     );
   },

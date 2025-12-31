@@ -21,7 +21,9 @@ import {
     MoveSuggestion,
     // KROG Framework Engine
     createKROGEngine,
-    KROGValidation
+    KROGValidation,
+    // KROG JSON-LD formulas
+    generateKROGLD
 } from './krog';
 import { dbOperations, calculateEloChange, User, Game, DailyPuzzleStreak, MoveRecord, pool } from './db';
 import * as auth from './auth';
@@ -939,6 +941,17 @@ function makeComputerMove(room: Room, roomCode: string) {
         const gameIdForTracking = room.dbGameId || `anon_${roomCode}`;
         const moveNumber = Math.ceil(history.length / 2);
 
+        // Generate KROG JSON-LD for neurosymbolic AI research
+        const krogLD = generateKROGLD({
+            san: result.san,
+            from: result.from,
+            to: result.to,
+            piece: result.piece,
+            captured: result.captured,
+            color: room.computerColor,
+            game_id: gameIdForTracking
+        }, rType);
+
         const moveRecord: MoveRecord = {
             game_id: gameIdForTracking,
             move_number: moveNumber,
@@ -959,7 +972,8 @@ function makeComputerMove(room: Room, roomCode: string) {
                        result.flags.includes('p') ? 'promotion' : 'normal',
             fen_after: room.game.fen(),
             is_check: room.game.inCheck(),
-            is_checkmate: room.game.isCheckmate()
+            is_checkmate: room.game.isCheckmate(),
+            krog_ld: JSON.stringify(krogLD)
         };
 
         // Fire-and-forget persistence (don't block game flow)
@@ -1716,6 +1730,18 @@ io.on('connection', (socket) => {
             const moveHistory = room.game.history({ verbose: true });
             const moveNumber = Math.ceil(moveHistory.length / 2);
 
+            // Generate KROG JSON-LD for neurosymbolic AI research
+            const krogLD = generateKROGLD({
+                san: result.san,
+                from: result.from,
+                to: result.to,
+                piece: result.piece,
+                captured: result.captured,
+                fide_ref: legalExplanation.fide ? legalExplanation.fide.article : undefined,
+                color: currentTurn,
+                game_id: gameIdForTracking
+            }, rType);
+
             const moveRecord: MoveRecord = {
                 game_id: gameIdForTracking,
                 move_number: moveNumber,
@@ -1734,7 +1760,8 @@ io.on('connection', (socket) => {
                 move_type: legalExplanation.moveType || 'normal',
                 fen_after: room.game.fen(),
                 is_check: room.game.inCheck(),
-                is_checkmate: room.game.isCheckmate()
+                is_checkmate: room.game.isCheckmate(),
+                krog_ld: JSON.stringify(krogLD)
             };
 
             // Fire-and-forget persistence (don't block game flow)
