@@ -27,6 +27,7 @@ const LeaguePanel = lazy(() => import('./components/LeaguePanel').then(m => ({ d
 const GestureHelp = lazy(() => import('./components/GestureHelp'));
 const InstallPrompt = lazy(() => import('./components/InstallPrompt').then(m => ({ default: m.InstallPrompt })));
 const OfflineIndicator = lazy(() => import('./components/InstallPrompt').then(m => ({ default: m.OfflineIndicator })));
+const AnalysisPanel = lazy(() => import('./components/AnalysisPanel'));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -3281,6 +3282,22 @@ Learn chess with KROG's proprietary rule validation!`;
             )}
           </div>
         )}
+      </div>
+
+      {/* Analysis Panel with Stockfish Engine */}
+      <div style={{ marginTop: '20px' }}>
+        <Suspense fallback={<LoadingFallback />}>
+          <AnalysisPanel
+            game={game}
+            socket={socket}
+            roomCode={roomCode}
+            language={language}
+            isMyTurn={isMyTurn}
+            onMoveClick={handleMove}
+            boardHeight={400}
+            flipped={playerColor === 'black'}
+          />
+        </Suspense>
       </div>
 
       {/* Move Suggestions Panel */}

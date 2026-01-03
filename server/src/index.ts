@@ -2639,6 +2639,98 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Analyze position with engine moves (for Analysis Mode)
+    socket.on('analyze_position', ({ fen, engineMoves }: {
+        fen: string;
+        engineMoves: Array<{
+            move: string;  // UCI format
+            san: string;   // SAN format
+            from: string;
+            to: string;
+            score: number;
+            mate?: number;
+        }>;
+    }) => {
+        try {
+            const tempGame = new Chess(fen);
+            const moves = engineMoves.map((engineMove) => {
+                try {
+                    // Make the move temporarily to analyze it
+                    const moveResult = tempGame.move({
+                        from: engineMove.from,
+                        to: engineMove.to
+                    });
+
+                    let explanation = { en: '', no: '' };
+                    let rType: string | undefined;
+                    const principles: string[] = [];
+
+                    if (moveResult) {
+                        // Get R-type classification using the move result
+                        rType = classifyMoveRType({
+                            piece: moveResult.piece,
+                            flags: moveResult.flags,
+                            san: moveResult.san
+                        });
+
+                        // Get KROG explanation - need to undo first since explainMove tests the move
+                        tempGame.undo();
+                        const krogExplanation = explainMove(
+                            tempGame,
+                            moveResult.from as Square,
+                            moveResult.to as Square,
+                            moveResult.promotion
+                        );
+                        // Re-make the move for proper undo at end
+                        tempGame.move({
+                            from: moveResult.from,
+                            to: moveResult.to,
+                            promotion: moveResult.promotion
+                        });
+
+                        if (krogExplanation && 'explanation' in krogExplanation) {
+                            explanation = krogExplanation.explanation;
+                        }
+
+                        // Extract principle names from explanation if available
+                        if (krogExplanation && 'conditions' in krogExplanation) {
+                            const conditions = (krogExplanation as MoveExplanation).conditions;
+                            conditions
+                                .filter(c => c.met)
+                                .slice(0, 3)
+                                .forEach(c => principles.push(c.name));
+                        }
+
+                        // Undo the move to analyze next one
+                        tempGame.undo();
+                    }
+
+                    return {
+                        uci: engineMove.move,
+                        san: engineMove.san,
+                        rType,
+                        explanation,
+                        principles
+                    };
+                } catch (err) {
+                    console.error('Error analyzing move:', engineMove.move, err);
+                    return {
+                        uci: engineMove.move,
+                        san: engineMove.san,
+                        rType: undefined,
+                        explanation: { en: '', no: '' },
+                        principles: []
+                    };
+                }
+            });
+
+            socket.emit('analysis_result', { moves });
+        } catch (error) {
+            console.error('Error in analyze_position:', error);
+            socket.emit('error', { message: 'Failed to analyze position' });
+        }
+    });
+
     // ==================== PUZZLE MODE ====================
 
     // Get list of puzzles with optional filters
