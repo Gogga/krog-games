@@ -1460,6 +1460,48 @@ label {
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* Force square aspect ratio with fallback for older browsers (Safari <15) */
+  aspect-ratio: 1 / 1;
+}
+
+/* Fallback for browsers without aspect-ratio support (pre-2021 browsers) */
+@supports not (aspect-ratio: 1 / 1) {
+  .chess-square {
+    /* Padding-bottom trick creates square using width as reference */
+    height: 0;
+    padding-bottom: 100%;
+  }
+  .chess-square > * {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Last move indicator - gold corner markers for visibility on any square color */
+.chess-square.last-move::before,
+.chess-square.last-move::after {
+  content: '';
+  position: absolute;
+  width: 20%;
+  height: 20%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chess-square.last-move::before {
+  top: 2px;
+  left: 2px;
+  border-top: 3px solid rgba(255, 215, 0, 0.9);
+  border-left: 3px solid rgba(255, 215, 0, 0.9);
+}
+
+.chess-square.last-move::after {
+  bottom: 2px;
+  right: 2px;
+  border-bottom: 3px solid rgba(255, 215, 0, 0.9);
+  border-right: 3px solid rgba(255, 215, 0, 0.9);
 }
 
 /* Touch feedback - slight scale on press */

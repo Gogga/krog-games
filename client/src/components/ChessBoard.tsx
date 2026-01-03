@@ -619,17 +619,19 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                                     ? 'rgba(129, 182, 76, 0.7)'
                                     : isHovered && learnMode
                                         ? 'rgba(155, 89, 182, 0.6)'
-                                        : isLastMove
-                                            ? 'rgba(181, 136, 99, 0.5)'
-                                            : color,
+                                        : color, // Keep base square color, lastMove indicator is now a ring
                             position: 'relative',
                             cursor: 'pointer',
                             display: 'flex',
+                            // Force square aspect ratio with fallback for older browsers
+                            aspectRatio: '1 / 1',
                             boxShadow: isSelected
                                 ? 'inset 0 0 0 3px #81b64c'
                                 : isInCheck
                                     ? 'inset 0 0 0 3px rgba(255, 0, 0, 0.8)'
-                                    : 'none',
+                                    : isLastMove
+                                        ? 'inset 0 0 0 4px rgba(255, 215, 0, 0.8)' // Gold border for last move
+                                        : 'none',
                             transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
                             touchAction: 'manipulation',
                             userSelect: 'none',

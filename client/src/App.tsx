@@ -181,7 +181,7 @@ function App() {
   const [playerColor, setPlayerColor] = useState<PlayerColor>(null);
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlType>('rapid');
+  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControlType>('unlimited');
   const [timeControl, setTimeControl] = useState<TimeControl | null>(null);
   const [clock, setClock] = useState<ClockState>({ white: 0, black: 0, activeColor: null });
   const [gameOverMessage, setGameOverMessage] = useState<string | null>(null);
