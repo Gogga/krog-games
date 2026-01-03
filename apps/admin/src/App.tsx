@@ -295,11 +295,12 @@ function OverviewPage() {
   const [domains, setDomains] = useState<DomainData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchData(isInitial = false) {
       try {
-        setLoading(true);
+        if (isInitial) setLoading(true);
 
         // Fetch all decisions and domains in parallel (with cache-busting)
         const cacheBuster = Date.now();
@@ -315,16 +316,21 @@ function OverviewPage() {
 
         setAllDecisions(decisionsData.decisions || []);
         setDomains(domainsData.domains || []);
+        setLastUpdated(new Date());
         setError(null);
       } catch (err) {
         console.error('Failed to fetch data:', err);
         setError('Failed to load data from API');
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     }
 
-    fetchData();
+    fetchData(true);
+
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => fetchData(false), 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Compute stats from decisions
@@ -355,7 +361,14 @@ function OverviewPage() {
     <>
       <div className="page-header">
         <h1>Analytics Overview</h1>
-        <p>Real-time decision analysis from KROG Games</p>
+        <p>
+          Real-time decision analysis from KROG Games
+          {lastUpdated && (
+            <span style={{ marginLeft: '1rem', color: 'var(--color-primary)', fontSize: '0.85rem' }}>
+              • Auto-refreshing every 10s (Last: {lastUpdated.toLocaleTimeString()})
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="card-grid">
