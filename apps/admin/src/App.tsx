@@ -301,10 +301,11 @@ function OverviewPage() {
       try {
         setLoading(true);
 
-        // Fetch all decisions and domains in parallel
+        // Fetch all decisions and domains in parallel (with cache-busting)
+        const cacheBuster = Date.now();
         const [decisionsRes, domainsRes] = await Promise.all([
-          fetch(`${API_URL}/api/research/decisions?limit=1000`),
-          fetch(`${API_URL}/api/research/domains`),
+          fetch(`${API_URL}/api/research/decisions?limit=1000&_t=${cacheBuster}`, { cache: 'no-store' }),
+          fetch(`${API_URL}/api/research/domains?_t=${cacheBuster}`, { cache: 'no-store' }),
         ]);
 
         const [decisionsData, domainsData] = await Promise.all([
@@ -492,7 +493,7 @@ function DecisionAnalysisPage() {
   const fetchDecisions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/research/decisions?limit=500`);
+      const response = await fetch(`${API_URL}/api/research/decisions?limit=500&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await response.json();
       setAllDecisions(data.decisions || []);
       setError(null);
@@ -673,7 +674,7 @@ function TransferLearningPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch(`${API_URL}/api/research/decisions?limit=1000`);
+        const response = await fetch(`${API_URL}/api/research/decisions?limit=1000&_t=${Date.now()}`, { cache: 'no-store' });
         const data = await response.json();
         setAllDecisions(data.decisions || []);
       } catch (err) {
@@ -793,7 +794,7 @@ function RTypeMasteryPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch(`${API_URL}/api/research/decisions?limit=1000`);
+        const response = await fetch(`${API_URL}/api/research/decisions?limit=1000&_t=${Date.now()}`, { cache: 'no-store' });
         const data = await response.json();
         setAllDecisions(data.decisions || []);
       } catch (err) {
@@ -949,7 +950,7 @@ function DataExportPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const domainsRes = await fetch(`${API_URL}/api/research/domains`);
+        const domainsRes = await fetch(`${API_URL}/api/research/domains?_t=${Date.now()}`, { cache: 'no-store' });
         const domainsData = await domainsRes.json();
         const total = domainsData.domains?.reduce((sum: number, d: DomainData) => sum + (d.count || 0), 0) || 0;
         setStats({ total, domains: domainsData.domains || [] });
@@ -964,7 +965,7 @@ function DataExportPage() {
     try {
       setExportStatus('Preparing export...');
 
-      const response = await fetch(`${API_URL}/api/research/decisions?limit=1000`);
+      const response = await fetch(`${API_URL}/api/research/decisions?limit=1000&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await response.json();
 
       let exportData: string;
